@@ -1,26 +1,160 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Fonts */
+  --font-sans:    var(--font-inter), system-ui, -apple-system, sans-serif;
+  --font-mono:    var(--font-jetbrains), ui-monospace, "Courier New", monospace;
+
+  /* Radius */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  /* Tailwind utility → CSS variable mapping */
+  --color-background:         var(--background);
+  --color-foreground:         var(--foreground);
+  --color-card:               var(--card);
+  --color-card-foreground:    var(--card-foreground);
+  --color-popover:            var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary:            var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary:          var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted:              var(--muted);
+  --color-muted-foreground:   var(--muted-foreground);
+  --color-accent:             var(--accent);
+  --color-accent-foreground:  var(--accent-foreground);
+  --color-destructive:        var(--destructive);
+  --color-border:             var(--border);
+  --color-input:              var(--input);
+  --color-ring:               var(--ring);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ── KURO Light Mode ─────────────────────────────────────── */
+:root {
+  --radius: 0.5rem;
+
+  /* shadcn tokens */
+  --background:        #F7F7F2;
+  --foreground:        #121113;
+  --card:              #FFFFFF;
+  --card-foreground:   #121113;
+  --popover:           #FFFFFF;
+  --popover-foreground:#121113;
+  --primary:           #475c38;
+  --primary-foreground:#F7F7F2;
+  --secondary:         #E4E6C3;
+  --secondary-foreground: #121113;
+  --muted:             #ece9e0;
+  --muted-foreground:  #5c6355;
+  --accent:            #475c38;
+  --accent-foreground: #F7F7F2;
+  --destructive:       #b83030;
+  --border:            #dde0ca;
+  --input:             #dde0ca;
+  --ring:              #475c38;
+
+  /* Sidebar verde militar (light) */
+  --sidebar-bg:          #1a2c1a;
+  --sidebar-surface:     #1e3020;
+  --sidebar-border:      #2d4230;
+  --sidebar-text:        #5a7850;
+  --sidebar-text-hover:  #8ab080;
+  --sidebar-text-active: #dff0d4;
+  --sidebar-accent:      #c8d8a8;
+  --sidebar-accent-bg:   rgba(200, 216, 168, 0.10);
+  --sidebar-label:       #3a5035;
+  --sidebar-footer:      #172518;
+
+  /* Semántico */
+  --kuro-success: #2d7a2d;
+  --kuro-warning: #b87820;
+  --kuro-danger:  #b83030;
+  --kuro-info:    #1a5c9a;
+}
+
+/* ── KURO Dark Mode ──────────────────────────────────────── */
+.dark {
+  /* shadcn tokens */
+  --background:        #121113;
+  --foreground:        #F7F7F2;
+  --card:              #1e2420;
+  --card-foreground:   #F7F7F2;
+  --popover:           #1e2420;
+  --popover-foreground:#F7F7F2;
+  --primary:           #899878;
+  --primary-foreground:#121113;
+  --secondary:         #E4E6C3;
+  --secondary-foreground: #121113;
+  --muted:             #252c25;
+  --muted-foreground:  #8a9480;
+  --accent:            #899878;
+  --accent-foreground: #121113;
+  --destructive:       #d45858;
+  --border:            #2a2e28;
+  --input:             #2a2e28;
+  --ring:              #899878;
+
+  /* Sidebar onyx (dark) */
+  --sidebar-bg:          #0f1210;
+  --sidebar-surface:     #141918;
+  --sidebar-border:      #252c25;
+  --sidebar-text:        #6a7868;
+  --sidebar-text-hover:  #a8b8a0;
+  --sidebar-text-active: #e8ece0;
+  --sidebar-accent:      #899878;
+  --sidebar-accent-bg:   rgba(137, 152, 120, 0.08);
+  --sidebar-label:       #384036;
+  --sidebar-footer:      #0c0f0c;
+
+  /* Semántico */
+  --kuro-success: #6ca86c;
+  --kuro-warning: #d4923a;
+  --kuro-danger:  #d45858;
+  --kuro-info:    #5a98c0;
+}
+
+/* ── Base ────────────────────────────────────────────────── */
+* {
+  border-color: var(--border);
+}
+
+html {
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
 }
+
+/* ── Utilidades KURO ─────────────────────────────────────── */
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+.font-display {
+  font-family: var(--font-display), system-ui, sans-serif;
+}
+
+.font-kuro-mono {
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+}
+
+/* Fajas */
+.belt-branca  { background: #f0f0ec; color: #555550; }
+.belt-azul    { background: #1a4fa0; color: #ffffff; }
+.belt-roxa    { background: #6a1b9a; color: #ffffff; }
+.belt-marrom  { background: #5d3a1a; color: #ffffff; }
+.belt-preta   { background: #111111; color: #d0d0c8; }
+.belt-coral   { background: #d2502a; color: #ffffff; }
