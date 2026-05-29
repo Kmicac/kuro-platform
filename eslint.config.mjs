@@ -12,6 +12,12 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Componentes de cult-ui (registry externo) — no modificar el código
+    // de terceros. Las reglas se aplican al código propio en app/, lib/,
+    // components/kuro/, components/sessions/, components/shared/, etc.
+    "components/ui/grid-beam.tsx",
+    "components/ui/side-panel.tsx",
+    "components/ui/texture-card.tsx",
   ]),
 ]);
 

@@ -4,15 +4,15 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useTheme } from 'next-themes'
 import {
-  LayoutDashboard, Network, Users, UserPlus, ClipboardList, Globe,
-  CalendarDays, Calendar, ClipboardCheck, GraduationCap, CalendarCheck,
-  BookOpen, MessageSquare, Bell, Award, FileCheck, CreditCard, Trophy,
-  BarChart2, ShieldCheck, Settings, ChevronLeft, ChevronRight, LogOut,
+  LayoutDashboard, Network, Users, UserPlus, ClipboardList, Calendar,
+  ChevronLeft, ChevronRight, LogOut,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { KuroLogo } from '@/components/kuro/logo'
 import { useUiStore } from '@/stores/ui.store'
 import { useAuthStore } from '@/stores/auth.store'
+import { authApi } from '@/lib/api/client'
 import { cn } from '@/lib/utils'
 
 // ── Colores por tema ──────────────────────────────────────────
@@ -35,13 +35,22 @@ const MILITAR = {
 
 // ── Navegación ───────────────────────────────────────────────
 
+// scope:
+//  - 'org'    → href = /org/[orgId]{path}
+//  - 'branch' → href = /org/[orgId]/branches/[currentBranchId]{path}
+//               (deshabilitado si no hay filial seleccionada)
+//
+// Solo se listan items con pantalla REAL construida. Los módulos del
+// roadmap (clases, asistencia, instructores, eventos, notas, comms,
+// promociones, certificados, facturación, competencias, analytics,
+// auditoría, perfil público, settings) se agregarán a su grupo cuando
+// existan — NO se renderizan como "próximamente".
 type NavItem = {
   id: string
   label: string
   icon: LucideIcon
+  scope: 'org' | 'branch'
   path: string
-  badge?: boolean
-  cautious?: boolean
 }
 
 type NavSection = {
@@ -52,41 +61,17 @@ type NavSection = {
 const NAV: NavSection[] = [
   {
     items: [
-      { id: 'overview', label: 'Dashboard', icon: LayoutDashboard, path: '' },
+      { id: 'overview', label: 'Dashboard',   icon: LayoutDashboard, scope: 'org', path: '' },
+      { id: 'calendar', label: 'Calendario',  icon: Calendar,        scope: 'org', path: '/calendar' },
+      { id: 'claims',   label: 'Invitaciones', icon: UserPlus,       scope: 'org', path: '/claims' },
     ],
   },
   {
-    label: 'Academia',
+    label: 'Filial',
     items: [
-      { id: 'branches',    label: 'Org / Filiales',  icon: Network,       path: '/branches' },
-      { id: 'students',    label: 'Alumnos',          icon: Users,         path: '/students' },
-      { id: 'claims',      label: 'Invitaciones',     icon: UserPlus,      path: '/claims' },
-      { id: 'intake',      label: 'Academy Intake',   icon: ClipboardList, path: '/intake' },
-      { id: 'profile',     label: 'Perfil público',   icon: Globe,         path: '/public-profile' },
-    ],
-  },
-  {
-    label: 'Operaciones',
-    items: [
-      { id: 'classes',     label: 'Clases',           icon: CalendarDays,   path: '/classes' },
-      { id: 'calendar',    label: 'Calendario',       icon: Calendar,       path: '/calendar' },
-      { id: 'attendance',  label: 'Asistencia',       icon: ClipboardCheck, path: '/attendance' },
-      { id: 'instructors', label: 'Instructores',     icon: GraduationCap,  path: '/instructors' },
-      { id: 'events',      label: 'Eventos',          icon: CalendarCheck,  path: '/events' },
-      { id: 'notes',       label: 'Notas técnicas',   icon: BookOpen,       path: '/notes' },
-    ],
-  },
-  {
-    label: 'Gobernanza',
-    items: [
-      { id: 'comms',       label: 'Comunicaciones',   icon: MessageSquare,  path: '/communications', badge: true },
-      { id: 'notifs',      label: 'Notificaciones',   icon: Bell,           path: '/notifications' },
-      { id: 'promotions',  label: 'Promociones',      icon: Award,          path: '/promotions' },
-      { id: 'certs',       label: 'Certificados',     icon: FileCheck,      path: '/certificates' },
-      { id: 'billing',     label: 'Facturación',      icon: CreditCard,     path: '/billing',      cautious: true },
-      { id: 'comps',       label: 'Competencias',     icon: Trophy,         path: '/competitions', cautious: true },
-      { id: 'analytics',   label: 'Analytics',        icon: BarChart2,      path: '/analytics' },
-      { id: 'audit',       label: 'Auditoría',        icon: ShieldCheck,    path: '/audit' },
+      { id: 'branch',   label: 'Panel de filial', icon: Network,       scope: 'branch', path: '' },
+      { id: 'students', label: 'Alumnos',         icon: Users,         scope: 'branch', path: '/students' },
+      { id: 'intake',   label: 'Academy Intake',  icon: ClipboardList, scope: 'branch', path: '/intake' },
     ],
   },
 ]
@@ -99,17 +84,46 @@ interface SidebarProps {
 
 export function Sidebar({ orgId }: SidebarProps) {
   const pathname = usePathname()
+  const router = useRouter()
   const { resolvedTheme } = useTheme()
   const { sidebarCollapsed, toggleSidebar } = useUiStore()
-  const { user, logout } = useAuthStore()
+  const user = useAuthStore((s) => s.user)
+  const currentBranchId = useAuthStore((s) => s.currentBranchId)
+
+  const handleLogout = async () => {
+    await authApi.logout()
+    router.replace('/login')
+  }
 
   const isDark = resolvedTheme !== 'light'
   const c = isDark ? DARK : MILITAR
 
-  const isActive = (path: string) => {
-    const base = `/org/${orgId}`
-    if (path === '') return pathname === base || pathname === `${base}/`
-    return pathname.startsWith(`${base}${path}`)
+  const orgBase = `/org/${orgId}`
+  const branchBase = currentBranchId
+    ? `${orgBase}/branches/${currentBranchId}`
+    : null
+
+  // href absoluto del item según su scope (null si branch-scoped sin filial).
+  const hrefFor = (item: NavItem): string | null => {
+    if (item.scope === 'org') return `${orgBase}${item.path}`
+    return branchBase ? `${branchBase}${item.path}` : null
+  }
+
+  const isActive = (item: NavItem): boolean => {
+    if (item.scope === 'org') {
+      if (item.path === '')
+        return pathname === orgBase || pathname === `${orgBase}/`
+      return pathname.startsWith(`${orgBase}${item.path}`)
+    }
+    // branch-scoped: comparar contra cualquier filial en la URL, no solo
+    // la seleccionada (así "Alumnos" queda activo aunque navegues a otra).
+    const branchPrefix = `${orgBase}/branches/`
+    if (!pathname.startsWith(branchPrefix)) return false
+    const afterBranch = pathname.slice(branchPrefix.length) // "[id]" o "[id]/students"
+    const slashIdx = afterBranch.indexOf('/')
+    const subPath = slashIdx === -1 ? '' : afterBranch.slice(slashIdx)
+    if (item.path === '') return subPath === '' || subPath === '/'
+    return subPath.startsWith(item.path)
   }
 
   const initials = user
@@ -160,13 +174,50 @@ export function Sidebar({ orgId }: SidebarProps) {
               ))}
 
             {section.items.map((item) => {
-              const active = isActive(item.path)
+              const active = isActive(item)
               const Icon = item.icon
+              const href = hrefFor(item)
+              // branch-scoped sin filial seleccionada → deshabilitado.
+              const disabled = href === null
+              const disabledTitle =
+                'Seleccioná una filial para ver esta sección'
+
+              if (disabled) {
+                return (
+                  <div
+                    key={item.id}
+                    aria-disabled
+                    title={
+                      sidebarCollapsed
+                        ? `${item.label} — ${disabledTitle}`
+                        : disabledTitle
+                    }
+                    className={cn(
+                      'flex items-center text-[11.5px] cursor-not-allowed opacity-40 select-none',
+                      sidebarCollapsed
+                        ? 'justify-center h-9 mx-2 rounded-md'
+                        : 'border-l-2 px-4 py-[6px]'
+                    )}
+                    style={{ borderLeftColor: 'transparent', color: c.text }}
+                  >
+                    <Icon
+                      size={14}
+                      aria-hidden
+                      style={{ color: c.label, flexShrink: 0 }}
+                    />
+                    {!sidebarCollapsed && (
+                      <span className="ml-2.5 flex-1 truncate">
+                        {item.label}
+                      </span>
+                    )}
+                  </div>
+                )
+              }
 
               return (
                 <Link
                   key={item.id}
-                  href={`/org/${orgId}${item.path}`}
+                  href={href}
                   title={sidebarCollapsed ? item.label : undefined}
                   className={cn(
                     'flex items-center text-[11.5px] transition-colors duration-100',
@@ -197,23 +248,7 @@ export function Sidebar({ orgId }: SidebarProps) {
                   />
 
                   {!sidebarCollapsed && (
-                    <>
-                      <span className="ml-2.5 flex-1 truncate">{item.label}</span>
-                      {item.badge && (
-                        <span
-                          className="text-[9px] font-bold px-1.5 py-0.5 rounded-full leading-none flex-shrink-0"
-                          style={{ background: c.badge.bg, color: c.badge.text }}
-                        >
-                          3
-                        </span>
-                      )}
-                      {item.cautious && !item.badge && (
-                        <span
-                          className="w-1.5 h-1.5 rounded-full flex-shrink-0 opacity-40"
-                          style={{ background: c.accent }}
-                        />
-                      )}
-                    </>
+                    <span className="ml-2.5 flex-1 truncate">{item.label}</span>
                   )}
                 </Link>
               )
@@ -227,36 +262,6 @@ export function Sidebar({ orgId }: SidebarProps) {
         className="flex-shrink-0"
         style={{ borderTop: `0.5px solid ${c.border}`, background: c.footer }}
       >
-        {/* Settings */}
-        <Link
-          href={`/org/${orgId}/settings`}
-          title={sidebarCollapsed ? 'Configuración' : undefined}
-          className={cn(
-            'flex items-center text-[11.5px] transition-colors duration-100',
-            sidebarCollapsed
-              ? 'justify-center h-9 mx-2 my-0.5 rounded-md'
-              : 'border-l-2 px-4 py-[6px]'
-          )}
-          style={{
-            borderLeftColor:
-              !sidebarCollapsed && isActive('/settings')
-                ? c.accent
-                : 'transparent',
-            background: isActive('/settings') ? c.accentBg : 'transparent',
-            color: isActive('/settings') ? c.textActive : c.text,
-          }}
-        >
-          <Settings
-            size={14}
-            aria-hidden
-            style={{
-              color: isActive('/settings') ? c.accent : c.label,
-              flexShrink: 0,
-            }}
-          />
-          {!sidebarCollapsed && <span className="ml-2.5">Configuración</span>}
-        </Link>
-
         {/* User info */}
         {!sidebarCollapsed && (
           <div className="flex items-center gap-2.5 px-4 py-2.5">
@@ -285,7 +290,7 @@ export function Sidebar({ orgId }: SidebarProps) {
               </div>
             </div>
             <button
-              onClick={() => logout()}
+              onClick={handleLogout}
               title="Cerrar sesión"
               className="flex-shrink-0 transition-colors duration-100"
               style={{ color: c.label, background: 'none', border: 'none', cursor: 'pointer' }}

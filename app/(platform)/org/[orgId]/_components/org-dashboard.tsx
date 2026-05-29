@@ -1,19 +1,25 @@
 'use client'
 
-import { useQuery } from '@tanstack/react-query'
+import Link from 'next/link'
 import {
-  Building2,
-  Users,
-  Calendar,
-  Inbox,
   AlertCircle,
+  AlertTriangle,
+  Building2,
+  Calendar,
+  ChevronRight,
+  Inbox,
   Lock,
+  Users,
 } from 'lucide-react'
 import {
   TextureCard,
   TextureCardContent,
 } from '@/components/ui/texture-card'
-import { ApiError, analyticsApi, organizationsApi } from '@/lib/api/client'
+import { Badge } from '@/components/ui/badge'
+import { ApiError } from '@/lib/api/client'
+import { useOrganization, useTreeSummary } from '@/lib/hooks'
+import { EmptyState, KpiCard, PageHeader } from '@/components/shared'
+import type { TreeSummaryBranchNode } from '@/lib/api/types'
 import { cn } from '@/lib/utils'
 
 interface OrgDashboardProps {
@@ -21,15 +27,8 @@ interface OrgDashboardProps {
 }
 
 export function OrgDashboard({ orgId }: OrgDashboardProps) {
-  const orgQuery = useQuery({
-    queryKey: ['organization', orgId],
-    queryFn: () => organizationsApi.get(orgId),
-  })
-
-  const treeQuery = useQuery({
-    queryKey: ['analytics', 'tree-summary', orgId],
-    queryFn: () => analyticsApi.treeSummary(orgId),
-  })
+  const orgQuery = useOrganization(orgId)
+  const treeQuery = useTreeSummary(orgId)
 
   const totals = treeQuery.data?.totals
   const branches = treeQuery.data?.branches ?? []
@@ -37,42 +36,26 @@ export function OrgDashboard({ orgId }: OrgDashboardProps) {
   const totalBranches =
     totals?.branches ?? (treeQuery.data ? branches.length : undefined)
 
-  const sum = (key: 'activeStudents' | 'classesToday' | 'pendingIntake') =>
-    totals?.[key] ??
-    (treeQuery.data
-      ? branches.reduce((acc, b) => acc + (b[key] ?? 0), 0)
-      : undefined)
+  const sumBranches = (
+    pick: (b: TreeSummaryBranchNode) => number | undefined
+  ) =>
+    treeQuery.data
+      ? branches.reduce((acc, b) => acc + (pick(b) ?? 0), 0)
+      : undefined
 
-  const cards: StatCardConfig[] = [
-    {
-      label: 'Total filiales',
-      value: totalBranches,
-      icon: Building2,
-      hint: 'Filiales activas en la organización',
-    },
-    {
-      label: 'Alumnos activos',
-      value: sum('activeStudents'),
-      icon: Users,
-      hint: 'Membresías al día',
-    },
-    {
-      label: 'Clases hoy',
-      value: sum('classesToday'),
-      icon: Calendar,
-      hint: 'Sesiones programadas para hoy',
-    },
-    {
-      label: 'Intake pendiente',
-      value: sum('pendingIntake'),
-      icon: Inbox,
-      hint: 'Solicitudes esperando revisión',
-    },
-  ]
+  const activeStudents =
+    totals?.activeStudents ??
+    sumBranches((b) => b.population?.activeStudentsTotal)
+
+  const classesToday =
+    totals?.classesToday ?? sumBranches((b) => b.classes?.todayCount)
+
+  const pendingIntake =
+    totals?.pendingIntake ?? sumBranches((b) => b.requests?.pendingIntake)
 
   return (
     <div className="p-6 space-y-6">
-      <DashboardHeader
+      <HeaderSection
         orgName={orgQuery.data?.name}
         orgSlug={orgQuery.data?.slug}
         isLoading={orgQuery.isLoading}
@@ -83,51 +66,63 @@ export function OrgDashboard({ orgId }: OrgDashboardProps) {
         aria-label="Indicadores principales"
         className="grid grid-cols-2 lg:grid-cols-4 gap-4"
       >
-        {cards.map((card) => (
-          <StatCard
-            key={card.label}
-            config={card}
-            isLoading={treeQuery.isLoading}
-            error={treeQuery.error}
-          />
-        ))}
+        <KpiCard
+          label="Total filiales"
+          value={totalBranches}
+          icon={Building2}
+          hint="Filiales activas en la organización"
+          isLoading={treeQuery.isLoading}
+          error={treeQuery.error}
+        />
+        <KpiCard
+          label="Alumnos activos"
+          value={activeStudents}
+          icon={Users}
+          hint="Membresías al día"
+          isLoading={treeQuery.isLoading}
+          error={treeQuery.error}
+        />
+        <KpiCard
+          label="Clases hoy"
+          value={classesToday}
+          icon={Calendar}
+          hint="Sesiones programadas para hoy"
+          isLoading={treeQuery.isLoading}
+          error={treeQuery.error}
+        />
+        <KpiCard
+          label="Intake pendiente"
+          value={pendingIntake}
+          icon={Inbox}
+          hint="Solicitudes esperando revisión"
+          isLoading={treeQuery.isLoading}
+          error={treeQuery.error}
+        />
       </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <PanelPlaceholder
-          title="Resumen por filial"
-          description={
-            treeQuery.isLoading
-              ? 'Cargando filiales...'
-              : branches.length === 0
-                ? 'Todavía no hay filiales registradas en esta organización.'
-                : `${branches.length} ${branches.length === 1 ? 'filial' : 'filiales'} conectadas — vista detallada próximamente.`
-          }
-        />
-        <PanelPlaceholder
-          title="Actividad reciente"
-          description={`Próximo paso — conectar GET /organizations/${orgId}/audit`}
-        />
-      </div>
+      <BranchListSection
+        orgId={orgId}
+        branches={branches}
+        isLoading={treeQuery.isLoading}
+        error={treeQuery.error}
+      />
     </div>
   )
 }
 
 // ── Header ─────────────────────────────────────────────────
 
-interface DashboardHeaderProps {
-  orgName?: string
-  orgSlug?: string
-  isLoading: boolean
-  error: unknown
-}
-
-function DashboardHeader({
+function HeaderSection({
   orgName,
   orgSlug,
   isLoading,
   error,
-}: DashboardHeaderProps) {
+}: {
+  orgName?: string
+  orgSlug?: string
+  isLoading: boolean
+  error: unknown
+}) {
   if (isLoading) {
     return (
       <header className="space-y-2">
@@ -139,152 +134,180 @@ function DashboardHeader({
 
   if (error instanceof ApiError && error.status === 403) {
     return (
-      <header>
-        <h1 className="text-xl font-semibold text-foreground">
-          Sin acceso a esta organización
-        </h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          No tenés permisos para ver este panel.
-        </p>
-      </header>
+      <PageHeader
+        title="Sin acceso a esta organización"
+        subtitle="No tenés permisos para ver este panel."
+      />
     )
   }
 
   return (
-    <header>
-      <p className="text-[11px] tracking-widest uppercase text-muted-foreground font-medium">
-        Organización
-      </p>
-      <h1 className="text-xl font-semibold text-foreground mt-1">
-        {orgName ?? 'Dashboard'}
-      </h1>
-      <p className="text-sm text-muted-foreground mt-0.5">
-        {orgSlug
+    <PageHeader
+      eyebrow="Organización"
+      title={orgName ?? 'Dashboard'}
+      subtitle={
+        orgSlug
           ? `Vista completa de todas las filiales · ${orgSlug}`
-          : 'Vista completa de todas las filiales'}
-      </p>
-    </header>
+          : 'Vista completa de todas las filiales'
+      }
+    />
   )
 }
 
-// ── Stat card ──────────────────────────────────────────────
+// ── Branch list ────────────────────────────────────────────
 
-interface StatCardConfig {
-  label: string
-  value: number | undefined
-  icon: React.ComponentType<{ className?: string }>
-  hint: string
-}
-
-interface StatCardProps {
-  config: StatCardConfig
-  isLoading: boolean
-  error: unknown
-}
-
-function StatCard({ config, isLoading, error }: StatCardProps) {
-  const { label, value, icon: Icon, hint } = config
-
-  const status = resolveStatStatus({ isLoading, error, value })
-
-  return (
-    <TextureCard>
-      <TextureCardContent className="p-5">
-        <div className="flex items-start justify-between">
-          <div className="space-y-1">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              {label}
-            </p>
-            <StatValue status={status} value={value} />
-          </div>
-          <span
-            className={cn(
-              'flex h-9 w-9 items-center justify-center rounded-md',
-              'bg-primary/10 text-primary'
-            )}
-          >
-            <Icon className="h-4 w-4" />
-          </span>
-        </div>
-        <p className="text-xs text-muted-foreground mt-3">
-          {status === 'error'
-            ? 'No se pudo cargar este indicador.'
-            : status === 'forbidden'
-              ? 'Sin permiso para ver este dato.'
-              : hint}
-        </p>
-      </TextureCardContent>
-    </TextureCard>
-  )
-}
-
-type StatStatus = 'loading' | 'forbidden' | 'error' | 'empty' | 'ready'
-
-function resolveStatStatus({
+function BranchListSection({
+  orgId,
+  branches,
   isLoading,
   error,
-  value,
 }: {
+  orgId: string
+  branches: TreeSummaryBranchNode[]
   isLoading: boolean
   error: unknown
-  value: number | undefined
-}): StatStatus {
-  if (isLoading) return 'loading'
-  if (error instanceof ApiError && error.status === 403) return 'forbidden'
-  if (error) return 'error'
-  if (value == null) return 'empty'
-  return 'ready'
-}
-
-function StatValue({
-  status,
-  value,
-}: {
-  status: StatStatus
-  value: number | undefined
 }) {
-  if (status === 'loading') {
-    return <div className="h-7 w-16 rounded-md bg-muted animate-pulse mt-1" />
-  }
-
-  if (status === 'forbidden') {
-    return (
-      <p className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground mt-1">
-        <Lock className="h-3.5 w-3.5" /> Restringido
-      </p>
-    )
-  }
-
-  if (status === 'error') {
-    return (
-      <p className="flex items-center gap-1.5 text-sm font-medium text-destructive mt-1">
-        <AlertCircle className="h-3.5 w-3.5" /> Error
-      </p>
-    )
-  }
-
   return (
-    <p className="text-2xl font-semibold text-foreground tabular-nums mt-1">
-      {(value ?? 0).toLocaleString('es-AR')}
-    </p>
+    <section aria-label="Filiales" className="space-y-3">
+      <div>
+        <h2 className="text-sm font-semibold text-foreground">Filiales</h2>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          Seleccioná una filial para abrir su tablero operativo.
+        </p>
+      </div>
+
+      {isLoading && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="h-28 rounded-[24px] bg-muted/50 animate-pulse"
+            />
+          ))}
+        </div>
+      )}
+
+      {error instanceof ApiError && error.status === 403 && (
+        <EmptyState
+          icon={Lock}
+          title="Sin permisos sobre filiales"
+          description="Tu rol no permite listar filiales de esta organización."
+        />
+      )}
+
+      {Boolean(error) &&
+        !(error instanceof ApiError && error.status === 403) && (
+          <EmptyState
+            icon={AlertCircle}
+            title="No se pudo cargar el listado"
+            description="Revisá la conexión e intentá nuevamente."
+          />
+        )}
+
+      {!isLoading && !error && branches.length === 0 && (
+        <EmptyState
+          icon={Building2}
+          title="Sin filiales todavía"
+          description="No hay filiales registradas en esta organización."
+        />
+      )}
+
+      {!isLoading && !error && branches.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {branches.map((b) => (
+            <BranchCard key={b.id} orgId={orgId} branch={b} />
+          ))}
+        </div>
+      )}
+    </section>
   )
 }
 
-// ── Panel placeholder ──────────────────────────────────────
-
-function PanelPlaceholder({
-  title,
-  description,
+function BranchCard({
+  orgId,
+  branch,
 }: {
-  title: string
-  description: string
+  orgId: string
+  branch: TreeSummaryBranchNode
 }) {
+  const stats = [
+    { label: 'Activos', value: branch.population?.activeStudentsTotal },
+    { label: 'Clases hoy', value: branch.classes?.todayCount },
+    { label: 'Intake', value: branch.requests?.pendingIntake },
+  ]
+  const needsReview = Boolean(branch.attention?.needsReview)
+
   return (
-    <TextureCard>
-      <TextureCardContent className="p-5">
-        <p className="text-sm font-medium text-foreground">{title}</p>
-        <p className="text-xs text-muted-foreground mt-1.5">{description}</p>
-      </TextureCardContent>
-    </TextureCard>
+    <Link href={`/org/${orgId}/branches/${branch.id}`} className="block group">
+      <TextureCard className="transition-transform group-hover:-translate-y-0.5">
+        <TextureCardContent className="p-4">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-semibold text-foreground truncate">
+                  {branch.name}
+                </p>
+                {branch.isHeadquarter && (
+                  <Badge variant="outline" className="text-[10px]">
+                    HQ
+                  </Badge>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                {branch.city ?? branch.slug ?? '—'}
+              </p>
+            </div>
+            <BranchStatusDot status={branch.status} />
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 mt-3">
+            {stats.map((s) => (
+              <div key={s.label}>
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                  {s.label}
+                </p>
+                <p className="text-sm font-semibold text-foreground tabular-nums">
+                  {s.value != null ? s.value.toLocaleString('es-AR') : '—'}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/60">
+            {needsReview ? (
+              <span className="flex items-center gap-1.5 text-[11px] text-amber-600 dark:text-amber-400">
+                <AlertTriangle className="h-3 w-3" />
+                Requiere revisión
+              </span>
+            ) : (
+              <span className="text-[11px] text-muted-foreground">
+                Sin alertas
+              </span>
+            )}
+            <span className="flex items-center gap-0.5 text-[11px] font-medium text-primary group-hover:gap-1 transition-all">
+              Abrir
+              <ChevronRight className="h-3 w-3" />
+            </span>
+          </div>
+        </TextureCardContent>
+      </TextureCard>
+    </Link>
+  )
+}
+
+function BranchStatusDot({ status }: { status?: string }) {
+  const normalized = (status ?? 'ACTIVE').toUpperCase()
+  const tone =
+    normalized === 'SUSPENDED'
+      ? 'bg-amber-500'
+      : normalized === 'INACTIVE'
+        ? 'bg-muted-foreground/40'
+        : 'bg-primary'
+  return (
+    <span
+      title={normalized}
+      aria-label={`Estado ${normalized}`}
+      className={cn('h-2 w-2 rounded-full flex-shrink-0 mt-1.5', tone)}
+    />
   )
 }
