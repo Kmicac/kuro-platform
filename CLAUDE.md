@@ -2,6 +2,10 @@
 ## CLAUDE.md v3 — stack real confirmado
 
 ---
+## Documentos de referencia (leer SIEMPRE primero)
+- CLAUDE.md (este archivo) — contexto del proyecto y stack
+- BUILD-PLAYBOOK.md — proceso de 7 pasos por pantalla
+- API-CONTRACT.md — contrato completo del backend (cuando esté disponible)
 
 ## Stack REAL instalado en el proyecto
 
@@ -285,3 +289,10 @@ Endpoints a conectar:
 
 Usar TextureCard de cult-ui para stat cards (instalar primero).
 Usar TanStack Query `useQuery` para todos los fetches.
+
+## Stack de primitivos UI
+
+- shadcn clásico (Radix-based) en components/ui/
+- Si Claude Code necesita instalar un nuevo primitivo (alert, dialog, etc):
+  pnpm dlx shadcn@2.x@latest add <componente>
+  (NO la v4 que usa @base-ui/react — incompatible con el ecosistema 21st/cult-ui)
