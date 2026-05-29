@@ -1,0 +1,483 @@
+/**
+ * KURO API — Endpoints tipados
+ * Usar junto con lib/api/client.ts (api.get/post/patch/delete)
+ */
+
+import { api } from './client'
+import type {
+  Branch,
+  BranchActionSummary,
+  BranchTreeSummary,
+  ClassCalendarResponse,
+  ClassSchedule,
+  ClassSessionDetail,
+  ClassSessionGap,
+  ClassSessionListItem,
+  ClassSessionStatus,
+  ClassType,
+  PromotionRankCatalogEntry,
+  RiskRoster,
+  SessionAttendance,
+  SessionTechnicalRoster,
+  TrainingCalendarResponse,
+  CapabilitiesResponse,
+  PaginatedResponse,
+  IntakeRequest,
+  StudentListItem,
+  StudentDetail,
+  Weekday,
+} from './types'
+
+// ── Public catalogs (sin tenant scope) ───────────────────────
+
+export const catalogsApi = {
+  /** GET /catalogs/promotion-ranks — público, cacheable indefinidamente */
+  promotionRanks: () =>
+    api.get<PromotionRankCatalogEntry[]>('/catalogs/promotion-ranks'),
+}
+
+// ── Organizations ────────────────────────────────────────────
+
+export const organizationsApi = {
+  get: (orgId: string) =>
+    api.get<{
+      id: string
+      name: string
+      slug: string
+      status: string
+      description: string | null
+      timezone: string | null
+      countryCode: string | null
+    }>(`/organizations/${orgId}`),
+}
+
+// ── Capabilities ─────────────────────────────────────────────
+
+export const capabilitiesApi = {
+  get: (orgId: string) =>
+    api.get<CapabilitiesResponse>(`/organizations/${orgId}/me/capabilities`),
+}
+
+// ── Branches ─────────────────────────────────────────────────
+
+export const branchesApi = {
+  /**
+   * Lista de filiales — normaliza varios envelopes posibles del backend:
+   *   - Branch[]                  → array directo
+   *   - { items: Branch[] }       → paginated envelope
+   *   - { branches: Branch[] }    → resource envelope
+   *   - { data: Branch[] }        → genérico
+   */
+  list: async (orgId: string): Promise<Branch[]> => {
+    const raw = await api.get<unknown>(`/organizations/${orgId}/branches`)
+    if (Array.isArray(raw)) return raw as Branch[]
+    if (raw && typeof raw === 'object') {
+      const obj = raw as Record<string, unknown>
+      if (Array.isArray(obj.items)) return obj.items as Branch[]
+      if (Array.isArray(obj.branches)) return obj.branches as Branch[]
+      if (Array.isArray(obj.data)) return obj.data as Branch[]
+    }
+    return []
+  },
+
+  tree: (orgId: string) =>
+    api.get<unknown>(`/organizations/${orgId}/branches/tree`),
+
+  get: (orgId: string, branchId: string) =>
+    api.get<Branch>(`/organizations/${orgId}/branches/${branchId}`),
+
+  create: (orgId: string, body: {
+    name: string
+    slug: string
+    city: string
+    countryCode: string
+    timezone?: string
+    parentBranchId?: string
+  }) =>
+    api.post<Branch>(`/organizations/${orgId}/branches`, body),
+
+  update: (orgId: string, branchId: string, body: Partial<{
+    name: string
+    city: string
+    countryCode: string
+    timezone: string
+  }>) =>
+    api.patch<Branch>(`/organizations/${orgId}/branches/${branchId}`, body),
+}
+
+// ── Analytics ─────────────────────────────────────────────────
+
+export const analyticsApi = {
+  treeSummary: (orgId: string, params?: { activityWindowDays?: number }) => {
+    const q = params?.activityWindowDays
+      ? `?activityWindowDays=${params.activityWindowDays}`
+      : ''
+    return api.get<BranchTreeSummary>(
+      `/organizations/${orgId}/analytics/branches/tree-summary${q}`
+    )
+  },
+
+  actionSummary: (
+    orgId: string,
+    branchId: string,
+    params?: { activityWindowDays?: number }
+  ) => {
+    const q = params?.activityWindowDays
+      ? `?activityWindowDays=${params.activityWindowDays}`
+      : ''
+    return api.get<BranchActionSummary>(
+      `/organizations/${orgId}/analytics/branches/${branchId}/action-summary${q}`
+    )
+  },
+
+  riskRoster: (
+    orgId: string,
+    branchId: string,
+    params?: { activityWindowDays?: number; limit?: number }
+  ) => {
+    const p = new URLSearchParams()
+    if (params?.activityWindowDays)
+      p.set('activityWindowDays', String(params.activityWindowDays))
+    if (params?.limit) p.set('limit', String(params.limit))
+    const q = p.toString() ? `?${p}` : ''
+    return api.get<RiskRoster>(
+      `/organizations/${orgId}/analytics/branches/${branchId}/risk-roster${q}`
+    )
+  },
+}
+
+// ── Training Calendar ─────────────────────────────────────────
+
+export const trainingCalendarApi = {
+  get: (
+    orgId: string,
+    params: {
+      from: string  // YYYY-MM-DD (obligatorio)
+      to: string    // YYYY-MM-DD (obligatorio)
+      branchId?: string
+      view?: 'MONTH' | 'WEEK' | 'DAY' | 'LIST'
+      itemType?: 'CLASS_SESSION' | 'ACADEMY_EVENT' | 'ALL'
+      status?: string
+    }
+  ) => {
+    const p = new URLSearchParams({ from: params.from, to: params.to })
+    if (params.branchId)  p.set('branchId', params.branchId)
+    if (params.view)      p.set('view', params.view)
+    if (params.itemType)  p.set('itemType', params.itemType)
+    if (params.status)    p.set('status', params.status)
+    return api.get<TrainingCalendarResponse>(
+      `/organizations/${orgId}/training-calendar?${p}`
+    )
+  },
+}
+
+// ── Class Schedules ───────────────────────────────────────────
+
+/**
+ * Schedules son templates recurrentes que generan ClassSessions.
+ * Todos los endpoints son branch-scoped.
+ */
+export interface ClassScheduleCreateBody {
+  instructorMembershipId: string
+  title: string
+  classType: ClassType
+  description?: string
+  weekday: Weekday
+  startTime: string
+  endTime: string
+  timezone: string
+  capacity?: number
+  isActive?: boolean
+}
+
+export type ClassScheduleUpdateBody = Partial<
+  Omit<ClassScheduleCreateBody, 'capacity'>
+> & {
+  capacity?: number | null
+}
+
+export const classSchedulesApi = {
+  /** GET /organizations/:orgId/branches/:branchId/class-schedules */
+  list: (
+    orgId: string,
+    branchId: string,
+    params?: { page?: number; limit?: number }
+  ) => {
+    const p = new URLSearchParams()
+    if (params?.page) p.set('page', String(params.page))
+    if (params?.limit) p.set('limit', String(params.limit))
+    const q = p.toString() ? `?${p}` : ''
+    return api.get<PaginatedResponse<ClassSchedule>>(
+      `/organizations/${orgId}/branches/${branchId}/class-schedules${q}`
+    )
+  },
+
+  /** POST /organizations/:orgId/branches/:branchId/class-schedules */
+  create: (orgId: string, branchId: string, body: ClassScheduleCreateBody) =>
+    api.post<ClassSchedule>(
+      `/organizations/${orgId}/branches/${branchId}/class-schedules`,
+      body
+    ),
+
+  /** PATCH /organizations/:orgId/branches/:branchId/class-schedules/:scheduleId */
+  update: (
+    orgId: string,
+    branchId: string,
+    scheduleId: string,
+    body: ClassScheduleUpdateBody
+  ) =>
+    api.patch<ClassSchedule>(
+      `/organizations/${orgId}/branches/${branchId}/class-schedules/${scheduleId}`,
+      body
+    ),
+}
+
+// ── Class Sessions ────────────────────────────────────────────
+
+/**
+ * Endpoints branch-scoped. El backend NO expone una variante org-scoped:
+ * cualquier acceso a una sesión requiere branchId en la ruta.
+ */
+export interface ClassSessionCreateBody {
+  classScheduleId?: string
+  instructorMembershipId?: string
+  title: string
+  classType: ClassType
+  scheduledDate: string
+  startAt: string
+  endAt: string
+  capacity?: number
+  notes?: string
+}
+
+export interface ClassSessionUpdateBody {
+  instructorMembershipId?: string
+  title?: string
+  classType?: ClassType
+  scheduledDate?: string
+  startAt?: string
+  endAt?: string
+  capacity?: number
+  status?: ClassSessionStatus
+  cancellationReason?: string
+  notes?: string
+}
+
+export interface SessionsGenerateBody {
+  fromDate: string
+  toDate: string
+}
+
+export interface SessionsGenerateResponse {
+  fromDate: string
+  toDate: string
+  processedSchedules: number
+  candidateCount: number
+  generatedCount: number
+  skippedExistingCount: number
+  skippedConflictCount: number
+  missingCandidateCount?: number
+}
+
+export interface ClassSessionsListParams {
+  fromDate?: string
+  toDate?: string
+  page?: number
+  limit?: number
+}
+
+export const classSessionsApi = {
+  /** GET .../class-sessions/:sessionId — endpoint de detalle individual */
+  get: (orgId: string, branchId: string, sessionId: string) =>
+    api.get<ClassSessionDetail>(
+      `/organizations/${orgId}/branches/${branchId}/class-sessions/${sessionId}`
+    ),
+
+  /** GET .../class-sessions — list paginado por rango de fechas */
+  list: (
+    orgId: string,
+    branchId: string,
+    params?: ClassSessionsListParams
+  ) => {
+    const p = new URLSearchParams()
+    if (params?.fromDate) p.set('fromDate', params.fromDate)
+    if (params?.toDate) p.set('toDate', params.toDate)
+    if (params?.page) p.set('page', String(params.page))
+    if (params?.limit) p.set('limit', String(params.limit))
+    const q = p.toString() ? `?${p}` : ''
+    return api.get<PaginatedResponse<ClassSessionListItem>>(
+      `/organizations/${orgId}/branches/${branchId}/class-sessions${q}`
+    )
+  },
+
+  /** GET .../class-sessions/assigned — sesiones donde el caller es instructor */
+  assigned: (
+    orgId: string,
+    branchId: string,
+    params?: { page?: number; limit?: number }
+  ) => {
+    const p = new URLSearchParams()
+    if (params?.page) p.set('page', String(params.page))
+    if (params?.limit) p.set('limit', String(params.limit))
+    const q = p.toString() ? `?${p}` : ''
+    return api.get<PaginatedResponse<ClassSessionListItem>>(
+      `/organizations/${orgId}/branches/${branchId}/class-sessions/assigned${q}`
+    )
+  },
+
+  /** GET .../class-calendar — vista DAY o WEEK agrupada por día */
+  calendar: (
+    orgId: string,
+    branchId: string,
+    params: { startDate: string; view?: 'DAY' | 'WEEK' }
+  ) => {
+    const p = new URLSearchParams({ startDate: params.startDate })
+    if (params.view) p.set('view', params.view)
+    return api.get<ClassCalendarResponse>(
+      `/organizations/${orgId}/branches/${branchId}/class-calendar?${p}`
+    )
+  },
+
+  /** GET .../class-session-gaps — huecos entre schedules y sesiones materializadas */
+  gaps: (
+    orgId: string,
+    branchId: string,
+    params: { fromDate: string; toDate: string }
+  ) => {
+    const p = new URLSearchParams({
+      fromDate: params.fromDate,
+      toDate: params.toDate,
+    })
+    return api.get<ClassSessionGap>(
+      `/organizations/${orgId}/branches/${branchId}/class-session-gaps?${p}`
+    )
+  },
+
+  /** POST .../class-sessions */
+  create: (orgId: string, branchId: string, body: ClassSessionCreateBody) =>
+    api.post<ClassSessionDetail>(
+      `/organizations/${orgId}/branches/${branchId}/class-sessions`,
+      body
+    ),
+
+  /** PATCH .../class-sessions/:sessionId */
+  update: (
+    orgId: string,
+    branchId: string,
+    sessionId: string,
+    body: ClassSessionUpdateBody
+  ) =>
+    api.patch<ClassSessionDetail>(
+      `/organizations/${orgId}/branches/${branchId}/class-sessions/${sessionId}`,
+      body
+    ),
+
+  /** POST .../class-sessions/generate */
+  generate: (orgId: string, branchId: string, body: SessionsGenerateBody) =>
+    api.post<SessionsGenerateResponse>(
+      `/organizations/${orgId}/branches/${branchId}/class-sessions/generate`,
+      body
+    ),
+
+  /** POST .../class-sessions/generate-missing */
+  generateMissing: (
+    orgId: string,
+    branchId: string,
+    body: SessionsGenerateBody
+  ) =>
+    api.post<SessionsGenerateResponse>(
+      `/organizations/${orgId}/branches/${branchId}/class-sessions/generate-missing`,
+      body
+    ),
+
+  /**
+   * POST .../class-schedules/:scheduleId/class-sessions
+   *
+   * Crea una única sesión materializada para una fecha específica desde
+   * un schedule activo. Diferente de `generate` (rango + counters) y de
+   * `generateMissing` (solo huecos del rango). Útil cuando el manager
+   * quiere instanciar una sesión puntual fuera del flujo automático.
+   */
+  generateFromSchedule: (
+    orgId: string,
+    branchId: string,
+    scheduleId: string,
+    body: { scheduledDate: string; notes?: string }
+  ) =>
+    api.post<ClassSessionDetail>(
+      `/organizations/${orgId}/branches/${branchId}/class-schedules/${scheduleId}/class-sessions`,
+      body
+    ),
+
+  /** GET .../class-sessions/:sessionId/attendance */
+  attendance: (orgId: string, branchId: string, sessionId: string) =>
+    api.get<SessionAttendance>(
+      `/organizations/${orgId}/branches/${branchId}/class-sessions/${sessionId}/attendance`
+    ),
+
+  /** GET .../class-sessions/:sessionId/attendance/technical-roster */
+  technicalRoster: (orgId: string, branchId: string, sessionId: string) =>
+    api.get<SessionTechnicalRoster>(
+      `/organizations/${orgId}/branches/${branchId}/class-sessions/${sessionId}/attendance/technical-roster`
+    ),
+}
+
+// ── Intake ────────────────────────────────────────────────────
+
+export const intakeApi = {
+  list: (
+    orgId: string,
+    branchId: string,
+    params?: {
+      page?: number
+      limit?: number
+      status?: string
+    }
+  ) => {
+    const p = new URLSearchParams()
+    if (params?.page)   p.set('page', String(params.page))
+    if (params?.limit)  p.set('limit', String(params.limit))
+    if (params?.status) p.set('status', params.status)
+    const q = p.toString() ? `?${p}` : ''
+    return api.get<PaginatedResponse<IntakeRequest>>(
+      `/organizations/${orgId}/branches/${branchId}/intake-requests${q}`
+    )
+  },
+}
+
+// ── Students ──────────────────────────────────────────────────
+
+export const studentsApi = {
+  listByBranch: (
+    orgId: string,
+    branchId: string,
+    params?: { page?: number; limit?: number }
+  ) => {
+    const p = new URLSearchParams()
+    if (params?.page)  p.set('page', String(params.page))
+    if (params?.limit) p.set('limit', String(params.limit))
+    const q = p.toString() ? `?${p}` : ''
+    return api.get<PaginatedResponse<StudentListItem>>(
+      `/organizations/${orgId}/branches/${branchId}/students${q}`
+    )
+  },
+
+  get: (orgId: string, studentId: string) =>
+    api.get<StudentDetail>(`/organizations/${orgId}/students/${studentId}`),
+
+  update: (orgId: string, studentId: string, body: Partial<StudentDetail>) =>
+    api.patch<StudentDetail>(
+      `/organizations/${orgId}/students/${studentId}`,
+      body
+    ),
+
+  invite: (
+    orgId: string,
+    studentId: string,
+    body?: { email?: string; message?: string }
+  ) =>
+    api.post<{ ok: true } | { invitationId: string }>(
+      `/organizations/${orgId}/students/${studentId}/invite`,
+      body ?? {}
+    ),
+}
