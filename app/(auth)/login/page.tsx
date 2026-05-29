@@ -7,7 +7,7 @@ import {
   LayoutGrid, ShieldCheck, Award,
 } from 'lucide-react'
 import { KuroLogo } from '@/components/kuro/logo'
-import { authApi, ApiError } from '@/lib/api/client'
+import { authApi, ApiError, principalToSession } from '@/lib/api/client'
 import { useAuthStore } from '@/stores/auth.store'
 import { cn } from '@/lib/utils'
 
@@ -31,7 +31,7 @@ const FEATURES = [
 
 export default function LoginPage() {
   const router = useRouter()
-  const { setToken, setUser, setCurrentOrg, setOrganizationId, setMembershipId } = useAuthStore()
+  const hydrateSession = useAuthStore((s) => s.hydrateSession)
 
   const [email,     setEmail]     = useState('')
   const [password,  setPassword]  = useState('')
@@ -50,24 +50,38 @@ export default function LoginPage() {
     setFormState('loading')
     try {
       const res = await authApi.login(email, password, orgSlug || undefined)
-      const { user, membership } = res.principal
-      setToken(res.accessToken)
-      setUser({
-        id: user.id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        primaryRole: membership.assignedRoles[0] ?? 'STAFF',
-      })
-      setOrganizationId(membership.organizationId)
-      setMembershipId(membership.id)
-      setCurrentOrg({
-        id: membership.organizationId,
-        name: membership.organizationName,
-        slug: membership.organizationSlug,
-      })
+      // Misma transición atómica que usa el bootstrap post-F5 → el store
+      // queda idéntico tanto si recién logueaste como si restauraste sesión.
+      hydrateSession(principalToSession(res.accessToken, res.principal))
+
+      const membership = res.principal.membership
+      const orgId = membership?.organizationId
+      if (!membership || !orgId) {
+        // Usuario PUBLIC sin membership de tenant — no hay flujo público aún.
+        router.replace('/login')
+        return
+      }
+
       setFormState('success')
-      router.push(`/org/${membership.organizationId}`)
+
+      // Destino según scope/rol del membership:
+      //  - org-wide (MESTRE / ORG_ADMIN / ORGANIZATION_WIDE) → dashboard org
+      //  - branch-scoped → su filial primaria (evita el org dashboard
+      //    "Restringido" que pega a analytics org-wide)
+      //  - branch-scoped sin primaryBranchId → org dashboard (prompt)
+      const roles = membership.assignedRoles ?? []
+      const isOrgWide =
+        membership.scopeType === 'ORGANIZATION_WIDE' ||
+        roles.includes('MESTRE') ||
+        roles.includes('ORG_ADMIN')
+
+      if (isOrgWide) {
+        router.push(`/org/${orgId}`)
+      } else if (membership.primaryBranchId) {
+        router.push(`/org/${orgId}/branches/${membership.primaryBranchId}`)
+      } else {
+        router.push(`/org/${orgId}`)
+      }
     } catch (err: unknown) {
       if (err instanceof ApiError) {
         if (err.status === 401) {
