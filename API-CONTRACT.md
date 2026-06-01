@@ -12,6 +12,7 @@
 ## 1. Introducción
 
 ### Autenticación y sesión
+
 - Access token: sent as `Authorization: Bearer <token>`.
 - Refresh token: `httpOnly` cookie named by backend runtime config.
 - CSRF token: issued alongside refresh cookie on login/signup/refresh and re-bootstrapped through `GET /auth/csrf` after a browser reload.
@@ -23,16 +24,19 @@
 - Public signup creates identity only. It never creates `Student`, `OrganizationMembership`, roles, branch access, billing, attendance, or tenant access.
 
 ### Paginación
+
 - Standard query params: `page` and `limit`.
 - Defaults: `page=1`, `limit=20`.
 - Max `limit`: `100` unless a specific endpoint says otherwise.
 
 ### Fechas
+
 - ISO timestamps: UTC ISO 8601 strings, example `2026-05-26T10:30:00.000Z`.
 - Date-only fields and filters: `YYYY-MM-DD`.
 - Time-only schedule fields: backend stores and returns them as strings such as `08:30:00`.
 
 ### Errores
+
 - Standard error shape:
 
 ```json
@@ -158,6 +162,8 @@ Controller-verified on 2026-05-28. This index is the parity list used to keep th
 - `GET /organizations/:organizationId/students/me`
 - `GET /organizations/:organizationId/students/me/attendance`
 - `GET /organizations/:organizationId/students/me/calendar`
+- `POST /organizations/:organizationId/students/me/check-ins/qr`
+- `GET /organizations/:organizationId/students/me/home`
 - `GET /organizations/:organizationId/students/me/notes`
 - `GET /organizations/:organizationId/students/me/training-itinerary`
 - `GET /organizations/:organizationId/training-calendar`
@@ -272,9 +278,11 @@ Controller-verified on 2026-05-28. This index is the parity list used to keep th
 - `PUT /organizations/:organizationId/branches/:branchId/class-sessions/:sessionId/attendance/intent`
 - `PUT /organizations/:organizationId/memberships/:membershipId/roles`
 - `PUT /organizations/:organizationId/memberships/:membershipId/scopes`
+
 ## Public Catalogs
 
 ### Promotion rank catalog
+
 `GET /catalogs/promotion-ranks`
 
 **Roles permitted**: anonymous/public
@@ -283,6 +291,7 @@ Controller-verified on 2026-05-28. This index is the parity list used to keep th
 **Scope**: no aplica
 
 #### Response 200/201 — shape REAL del backend
+
 ```json
 [
   {
@@ -303,6 +312,7 @@ Controller-verified on 2026-05-28. This index is the parity list used to keep th
 ```
 
 **Notes**
+
 - This is a public read-only catalog with no tenant data.
 - Frontend should cache this catalog aggressively; it changes only when backend rank policy changes.
 - `rank` is the stable enum key. Do not parse rank labels or split enum strings to infer color/track.
@@ -311,6 +321,7 @@ Controller-verified on 2026-05-28. This index is the parity list used to keep th
 ## 2. Autenticación
 
 ### Bootstrap inicial del sistema
+
 `POST /auth/bootstrap`
 
 **Roles permitidos**: no aplica, endpoint público pero disabled outside controlled setup
@@ -319,6 +330,7 @@ Controller-verified on 2026-05-28. This index is the parity list used to keep th
 **Scope**: no aplica
 
 #### Request body
+
 ```json
 {
   "organizationName": "string",
@@ -343,6 +355,7 @@ Controller-verified on 2026-05-28. This index is the parity list used to keep th
 ```
 
 #### Response 200/201
+
 ```json
 {
   "accessToken": "string",
@@ -370,15 +383,17 @@ Controller-verified on 2026-05-28. This index is the parity list used to keep th
 ```
 
 #### Errores específicos
-| Status | Caso | Mensaje |
-|---|---|---|
-| 403 | bootstrap disabled in runtime | Bootstrap is disabled outside controlled setup operations |
-| 409 | system is not empty | Bootstrap is only allowed on an empty system |
-| 422 | validation | Invalid payload |
+
+| Status | Caso                          | Mensaje                                                   |
+| ------ | ----------------------------- | --------------------------------------------------------- |
+| 403    | bootstrap disabled in runtime | Bootstrap is disabled outside controlled setup operations |
+| 409    | system is not empty           | Bootstrap is only allowed on an empty system              |
+| 422    | validation                    | Invalid payload                                           |
 
 **Nota**: este endpoint existe en código, pero en producción está deshabilitado por policy/config.
 
 ### Public signup
+
 `POST /auth/signup`
 
 **Roles permitidos**: público
@@ -387,6 +402,7 @@ Controller-verified on 2026-05-28. This index is the parity list used to keep th
 **Scope**: no aplica
 
 #### Request body
+
 ```json
 {
   "email": "person@example.com",
@@ -398,6 +414,7 @@ Controller-verified on 2026-05-28. This index is the parity list used to keep th
 ```
 
 #### Response 200/201 — shape REAL del backend
+
 ```json
 {
   "accessToken": "string",
@@ -416,19 +433,22 @@ Controller-verified on 2026-05-28. This index is the parity list used to keep th
 ```
 
 **Side effects**
+
 - Sets refresh cookie.
 - Sets CSRF cookie and response header.
 - Creates `User` only.
 - Does not return refresh token in JSON.
 
 #### Errores específicos
-| Status | Caso | Mensaje |
-|---|---|---|
-| 409 | email already exists | User already exists |
-| 422 | validation | Invalid payload |
-| 429 | auth route rate limit | Too Many Requests |
+
+| Status | Caso                  | Mensaje             |
+| ------ | --------------------- | ------------------- |
+| 409    | email already exists  | User already exists |
+| 422    | validation            | Invalid payload     |
+| 429    | auth route rate limit | Too Many Requests   |
 
 ### Login
+
 `POST /auth/login`
 
 **Roles permitidos**: público
@@ -437,6 +457,7 @@ Controller-verified on 2026-05-28. This index is the parity list used to keep th
 **Scope**: no aplica
 
 #### Request body
+
 ```json
 {
   "email": "string",
@@ -446,6 +467,7 @@ Controller-verified on 2026-05-28. This index is the parity list used to keep th
 ```
 
 #### Response 200/201
+
 ```json
 {
   "accessToken": "string",
@@ -473,6 +495,7 @@ Controller-verified on 2026-05-28. This index is the parity list used to keep th
 ```
 
 Public user without active membership response:
+
 ```json
 {
   "accessToken": "string",
@@ -491,15 +514,18 @@ Public user without active membership response:
 ```
 
 **Side effects**
+
 - Sets refresh cookie.
 - Sets CSRF cookie and response header.
 
 #### Errores específicos
-| Status | Caso | Mensaje |
-|---|---|---|
-| 401 | invalid credentials | Invalid credentials |
+
+| Status | Caso                | Mensaje             |
+| ------ | ------------------- | ------------------- |
+| 401    | invalid credentials | Invalid credentials |
 
 ### CSRF bootstrap
+
 `GET /auth/csrf`
 
 **Roles permitidos**: valid refresh-cookie session
@@ -508,22 +534,26 @@ Public user without active membership response:
 **Scope**: no aplica
 
 #### Request
+
 - No body.
 - Browser clients must call with `credentials: include`.
 - Does not require a previous `x-csrf-token` request header.
 - When `REFRESH_TOKEN_COOKIE_SAMESITE=none`, the request `Origin` must exactly match one configured value in `CORS_ORIGINS`.
 
 #### Response 200
+
 ```json
 {}
 ```
 
 Headers:
+
 ```http
 x-csrf-token: <token>
 ```
 
 **Side effects**
+
 - Requires a valid refresh cookie/session.
 - Issues or rotates the CSRF cookie.
 - Exposes the CSRF token in the configured response header.
@@ -532,12 +562,14 @@ x-csrf-token: <token>
 - Does not return refresh token in JSON.
 
 #### Errores específicos
-| Status | Caso | Mensaje |
-|---|---|---|
-| 401 | missing/invalid refresh cookie or session | Refresh token not available |
-| 403 | Origin not allowlisted in cross-site cookie mode | Origin not allowed |
+
+| Status | Caso                                             | Mensaje                     |
+| ------ | ------------------------------------------------ | --------------------------- |
+| 401    | missing/invalid refresh cookie or session        | Refresh token not available |
+| 403    | Origin not allowlisted in cross-site cookie mode | Origin not allowed          |
 
 ### Refresh
+
 `POST /auth/refresh`
 
 **Roles permitidos**: JWT-authenticated session
@@ -546,6 +578,7 @@ x-csrf-token: <token>
 **Scope**: no aplica
 
 #### Response 200/201
+
 ```json
 {
   "accessToken": "string"
@@ -553,6 +586,7 @@ x-csrf-token: <token>
 ```
 
 **Side effects**
+
 - Requires refresh cookie.
 - Requires `x-csrf-token` when cross-site cookie mode is enabled.
 - Rotates refresh cookie.
@@ -560,6 +594,7 @@ x-csrf-token: <token>
 - Does not return refresh token in JSON.
 
 ### Logout current session
+
 `POST /auth/logout`
 
 **Roles permitidos**: JWT-authenticated session
@@ -568,6 +603,7 @@ x-csrf-token: <token>
 **Scope**: no aplica
 
 #### Response 200/201
+
 ```json
 {
   "sessionId": "string",
@@ -576,11 +612,13 @@ x-csrf-token: <token>
 ```
 
 **Side effects**
+
 - Requires refresh cookie.
 - Clears refresh cookie.
 - Clears CSRF cookie/header.
 
 ### Step-up authentication
+
 `POST /auth/step-up`
 
 **Roles permitidos**: JWT-authenticated session
@@ -589,6 +627,7 @@ x-csrf-token: <token>
 **Scope**: no aplica
 
 #### Request body
+
 ```json
 {
   "password": "string"
@@ -596,6 +635,7 @@ x-csrf-token: <token>
 ```
 
 #### Response 200/201
+
 ```json
 {
   "sessionId": "string",
@@ -604,6 +644,7 @@ x-csrf-token: <token>
 ```
 
 ### Current principal
+
 `GET /auth/me`
 
 **Roles permitidos**: JWT-authenticated session
@@ -612,6 +653,7 @@ x-csrf-token: <token>
 **Scope**: no aplica
 
 #### Response 200/201
+
 ```json
 {
   "authContext": "TENANT",
@@ -637,6 +679,7 @@ x-csrf-token: <token>
 ```
 
 Public principal response:
+
 ```json
 {
   "authContext": "PUBLIC",
@@ -653,6 +696,7 @@ Public principal response:
 ```
 
 ### List user sessions
+
 `GET /auth/sessions`
 
 **Roles permitidos**: JWT-authenticated session
@@ -661,6 +705,7 @@ Public principal response:
 **Scope**: no aplica
 
 #### Response 200/201
+
 ```json
 [
   {
@@ -679,6 +724,7 @@ Public principal response:
 ```
 
 ### Logout all sessions
+
 `POST /auth/logout-all`
 
 **Roles permitidos**: JWT-authenticated session
@@ -687,6 +733,7 @@ Public principal response:
 **Scope**: no aplica
 
 #### Response 200/201
+
 ```json
 {
   "revokedAt": "2026-05-26T10:30:00.000Z",
@@ -695,6 +742,7 @@ Public principal response:
 ```
 
 ### Accept invitation
+
 `POST /auth/accept-invitation`
 
 **Roles permitidos**: público
@@ -711,6 +759,7 @@ When `EXPOSE_INVITATION_TOKEN_IN_RESPONSE=false`, the response token is `null`
 and the client must use the token from the delivered invitation link.
 
 #### Request body
+
 ```json
 {
   "token": "string",
@@ -719,6 +768,7 @@ and the client must use the token from the delivered invitation link.
 ```
 
 #### Response 200/201
+
 ```json
 {
   "accessToken": "string",
@@ -745,6 +795,7 @@ and the client must use the token from the delivered invitation link.
 ```
 
 ### Accept student claim
+
 `POST /auth/accept-student-claim`
 
 **Roles permitidos**: público
@@ -761,6 +812,7 @@ When `EXPOSE_INVITATION_TOKEN_IN_RESPONSE=false`, the response token is `null`
 and the client must use the token from the delivered claim link.
 
 #### Request body
+
 ```json
 {
   "token": "string",
@@ -769,6 +821,7 @@ and the client must use the token from the delivered claim link.
 ```
 
 #### Response 200/201
+
 ```json
 {
   "accessToken": "string",
@@ -797,6 +850,7 @@ and the client must use the token from the delivered claim link.
 ## 3. Capabilities & Roles
 
 ### Effective capabilities
+
 `GET /organizations/:organizationId/me/capabilities`
 
 **Roles permitidos**: JWT-authenticated member with organization access
@@ -805,6 +859,7 @@ and the client must use the token from the delivered claim link.
 **Scope**: ORGANIZATION_WIDE
 
 #### Response 200/201
+
 ```json
 {
   "organizationId": "string",
@@ -1003,6 +1058,7 @@ and the client must use the token from the delivered claim link.
 ```
 
 ### Roles enum
+
 `MembershipRole`
 
 - `MESTRE`
@@ -1014,6 +1070,7 @@ and the client must use the token from the delivered claim link.
 - `STUDENT`
 
 ### Scopes enum
+
 `MembershipScopeType`
 
 - `ORGANIZATION_WIDE`
@@ -1023,83 +1080,83 @@ and the client must use the token from the delivered claim link.
 
 The backend exposes capabilities as a read model. Use these as route-family guidance:
 
-| Capability | Protects |
-|---|---|
-| `organizations.canReadOrganization` | `GET /organizations/:organizationId` |
-| `organizations.canManageOrganization` | `PATCH /organizations/:organizationId`, `PATCH /organizations/:organizationId/status` |
-| `organizations.canReadBranches` | branch list/tree/detail routes |
-| `organizations.canManageBranches` | branch create/update routes |
-| `organizations.canReadGovernance` | branch governance-sensitive reads |
-| `usersMemberships.canInviteMembers` | `POST /organizations/:organizationId/users/invite` |
-| `usersMemberships.canReadMembers` | `GET /organizations/:organizationId/users`, `GET /organizations/:organizationId/members`, `GET /organizations/:organizationId/users/:userId` |
-| `usersMemberships.canManageMemberships` | membership status changes and session revocation |
-| `usersMemberships.canManageRolesAndScopes` | membership roles/scopes updates |
-| `usersMemberships.canCreateStudentMembershipFromClaim` | `POST /organizations/:organizationId/students/:studentId/invite`, `POST /organizations/:organizationId/students/bulk-invite` |
-| `students.canCreateStudent` | `POST /organizations/:organizationId/students` |
-| `students.canReadStudentPrivateProfile` | student detail private reads |
-| `students.canReadStudentTechnicalProfile` | `GET /organizations/:organizationId/students/:studentId/technical-profile` |
-| `students.canUpdateStudent` | `PATCH /organizations/:organizationId/students/:studentId` |
-| `students.canManageBranchVisits` | branch visit create/update |
-| `students.canInviteExistingStudent` | student claim invite |
-| `students.canBulkInviteStudents` | bulk claim invite |
-| `classes.canReadClasses` | class schedules/sessions reads |
-| `classes.canManageSchedules` | class schedule create/update and session generation |
-| `classes.canAssignInstructor` | instructor assignment on class schedules/sessions |
-| `classes.canExecuteAssignedClass` | instructor execution views and assigned session operations |
-| `classes.canReadAssignedSessions` | assigned sessions list |
-| `classes.canReadClassTechnicalRoster` | technical roster endpoint |
-| `attendance.canReadSessionAttendance` | session attendance listing |
-| `attendance.canValidateAttendance` | attendance record/write endpoints |
-| `attendance.canCorrectAttendanceWithinWindow` | attendance correction within allowed window |
-| `attendance.canCorrectAttendanceAsAdmin` | administrative attendance correction |
-| `attendance.canReadAttendanceBehaviorSignals` | branch attendance signals and follow-up queues |
-| `promotions.canReadPromotionContext` | student promotion context |
-| `promotions.canProposePromotion` | create promotion request |
-| `promotions.canEvaluatePromotion` | promotion evaluation upsert |
-| `promotions.canReadPromotionBranchQueue` | branch promotions list/detail |
-| `promotions.canReadPromotionOrgQueue` | org promotions list/detail |
-| `promotions.canApprovePromotion` | approval routes |
-| `promotions.canRejectPromotion` | rejection routes |
-| `certificates.canUploadCertificate` | promotion certificate upload |
-| `certificates.canReadOwnCertificates` | `/certificates/mine` |
-| `certificates.canReadCertificateHistory` | student certificate history |
-| `certificates.canDownloadCertificate` | certificate detail/download |
-| `certificates.canVoidCertificate` | certificate void route |
-| `certificates.canReissueCertificate` | certificate reissue route |
-| `competitions.canReadCompetitionProfile` | competition profile reads |
-| `competitions.canLinkCompetitionProfile` | link/unlink smoothcomp profile |
-| `competitions.canRequestCompetitionSync` | competition sync route |
-| `competitions.canOperateCompetitionImports` | import run operational routes |
-| `competitions.canRemediateCompetitionOwnership` | legacy ownership remediation |
-| `billing.canReadBilling` | billing reads |
-| `billing.canWriteBilling` | billing create/update/payment recording |
-| `billing.canCreateMercadoPagoPreference` | Mercado Pago preference creation |
-| `billing.canManagePaymentIntegrations` | integration management for payment providers |
-| `billing.canReadWebhookEvents` | integration webhook event listing |
-| `billing.canReprocessWebhookEvents` | webhook reprocess |
-| `communications.canReadOwnInbox` | own notifications/inbox |
-| `communications.canSendBranchAnnouncement` | branch announcements |
-| `communications.canSendOrgAnnouncement` | org announcements |
-| `academyIntake.canReadBranchRequests` | intake request list/detail |
-| `academyIntake.canManageBranchRequests` | intake transitions and conversion |
-| `academyEvents.canCreate` | academy event create |
-| `academyEvents.canReadBranch` | branch event reads |
-| `academyEvents.canReadOrg` | org-wide event reads |
-| `academyEvents.canUpdate` | academy event update |
-| `academyEvents.canPublish` | academy event publish |
-| `academyEvents.canCancel` | academy event cancel |
-| `academyEvents.canArchive` | academy event archive |
-| `analytics.canReadHierarchyAnalytics` | tree-summary and subtree-summary |
-| `analytics.canReadBranchActionableAnalytics` | action-summary |
-| `analytics.canReadRiskRoster` | risk-roster |
-| `audit.canReadBranchAudit` | branch-scoped audit log |
-| `audit.canReadOrgAudit` | org-scoped audit log |
-| `integrations.canReadIntegrations` | integration list/detail reads |
-| `integrations.canManageIntegrations` | create/update/test/sync integrations |
-| `integrations.canReadIntegrationWebhookEvents` | webhook event listing/detail |
-| `integrations.canReprocessIntegrationWebhookEvents` | webhook event reprocess |
-| `notifications.canReadOwnNotifications` | notifications list/count/read |
-| `notifications.canManageNotificationDelivery` | delivery stats/process |
+| Capability                                             | Protects                                                                                                                                     |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `organizations.canReadOrganization`                    | `GET /organizations/:organizationId`                                                                                                         |
+| `organizations.canManageOrganization`                  | `PATCH /organizations/:organizationId`, `PATCH /organizations/:organizationId/status`                                                        |
+| `organizations.canReadBranches`                        | branch list/tree/detail routes                                                                                                               |
+| `organizations.canManageBranches`                      | branch create/update routes                                                                                                                  |
+| `organizations.canReadGovernance`                      | branch governance-sensitive reads                                                                                                            |
+| `usersMemberships.canInviteMembers`                    | `POST /organizations/:organizationId/users/invite`                                                                                           |
+| `usersMemberships.canReadMembers`                      | `GET /organizations/:organizationId/users`, `GET /organizations/:organizationId/members`, `GET /organizations/:organizationId/users/:userId` |
+| `usersMemberships.canManageMemberships`                | membership status changes and session revocation                                                                                             |
+| `usersMemberships.canManageRolesAndScopes`             | membership roles/scopes updates                                                                                                              |
+| `usersMemberships.canCreateStudentMembershipFromClaim` | `POST /organizations/:organizationId/students/:studentId/invite`, `POST /organizations/:organizationId/students/bulk-invite`                 |
+| `students.canCreateStudent`                            | `POST /organizations/:organizationId/students`                                                                                               |
+| `students.canReadStudentPrivateProfile`                | student detail private reads                                                                                                                 |
+| `students.canReadStudentTechnicalProfile`              | `GET /organizations/:organizationId/students/:studentId/technical-profile`                                                                   |
+| `students.canUpdateStudent`                            | `PATCH /organizations/:organizationId/students/:studentId`                                                                                   |
+| `students.canManageBranchVisits`                       | branch visit create/update                                                                                                                   |
+| `students.canInviteExistingStudent`                    | student claim invite                                                                                                                         |
+| `students.canBulkInviteStudents`                       | bulk claim invite                                                                                                                            |
+| `classes.canReadClasses`                               | class schedules/sessions reads                                                                                                               |
+| `classes.canManageSchedules`                           | class schedule create/update and session generation                                                                                          |
+| `classes.canAssignInstructor`                          | instructor assignment on class schedules/sessions                                                                                            |
+| `classes.canExecuteAssignedClass`                      | instructor execution views and assigned session operations                                                                                   |
+| `classes.canReadAssignedSessions`                      | assigned sessions list                                                                                                                       |
+| `classes.canReadClassTechnicalRoster`                  | technical roster endpoint                                                                                                                    |
+| `attendance.canReadSessionAttendance`                  | session attendance listing                                                                                                                   |
+| `attendance.canValidateAttendance`                     | attendance record/write endpoints                                                                                                            |
+| `attendance.canCorrectAttendanceWithinWindow`          | attendance correction within allowed window                                                                                                  |
+| `attendance.canCorrectAttendanceAsAdmin`               | administrative attendance correction                                                                                                         |
+| `attendance.canReadAttendanceBehaviorSignals`          | branch attendance signals and follow-up queues                                                                                               |
+| `promotions.canReadPromotionContext`                   | student promotion context                                                                                                                    |
+| `promotions.canProposePromotion`                       | create promotion request                                                                                                                     |
+| `promotions.canEvaluatePromotion`                      | promotion evaluation upsert                                                                                                                  |
+| `promotions.canReadPromotionBranchQueue`               | branch promotions list/detail                                                                                                                |
+| `promotions.canReadPromotionOrgQueue`                  | org promotions list/detail                                                                                                                   |
+| `promotions.canApprovePromotion`                       | approval routes                                                                                                                              |
+| `promotions.canRejectPromotion`                        | rejection routes                                                                                                                             |
+| `certificates.canUploadCertificate`                    | promotion certificate upload                                                                                                                 |
+| `certificates.canReadOwnCertificates`                  | `/certificates/mine`                                                                                                                         |
+| `certificates.canReadCertificateHistory`               | student certificate history                                                                                                                  |
+| `certificates.canDownloadCertificate`                  | certificate detail/download                                                                                                                  |
+| `certificates.canVoidCertificate`                      | certificate void route                                                                                                                       |
+| `certificates.canReissueCertificate`                   | certificate reissue route                                                                                                                    |
+| `competitions.canReadCompetitionProfile`               | competition profile reads                                                                                                                    |
+| `competitions.canLinkCompetitionProfile`               | link/unlink smoothcomp profile                                                                                                               |
+| `competitions.canRequestCompetitionSync`               | competition sync route                                                                                                                       |
+| `competitions.canOperateCompetitionImports`            | import run operational routes                                                                                                                |
+| `competitions.canRemediateCompetitionOwnership`        | legacy ownership remediation                                                                                                                 |
+| `billing.canReadBilling`                               | billing reads                                                                                                                                |
+| `billing.canWriteBilling`                              | billing create/update/payment recording                                                                                                      |
+| `billing.canCreateMercadoPagoPreference`               | Mercado Pago preference creation                                                                                                             |
+| `billing.canManagePaymentIntegrations`                 | integration management for payment providers                                                                                                 |
+| `billing.canReadWebhookEvents`                         | integration webhook event listing                                                                                                            |
+| `billing.canReprocessWebhookEvents`                    | webhook reprocess                                                                                                                            |
+| `communications.canReadOwnInbox`                       | own notifications/inbox                                                                                                                      |
+| `communications.canSendBranchAnnouncement`             | branch announcements                                                                                                                         |
+| `communications.canSendOrgAnnouncement`                | org announcements                                                                                                                            |
+| `academyIntake.canReadBranchRequests`                  | intake request list/detail                                                                                                                   |
+| `academyIntake.canManageBranchRequests`                | intake transitions and conversion                                                                                                            |
+| `academyEvents.canCreate`                              | academy event create                                                                                                                         |
+| `academyEvents.canReadBranch`                          | branch event reads                                                                                                                           |
+| `academyEvents.canReadOrg`                             | org-wide event reads                                                                                                                         |
+| `academyEvents.canUpdate`                              | academy event update                                                                                                                         |
+| `academyEvents.canPublish`                             | academy event publish                                                                                                                        |
+| `academyEvents.canCancel`                              | academy event cancel                                                                                                                         |
+| `academyEvents.canArchive`                             | academy event archive                                                                                                                        |
+| `analytics.canReadHierarchyAnalytics`                  | tree-summary and subtree-summary                                                                                                             |
+| `analytics.canReadBranchActionableAnalytics`           | action-summary                                                                                                                               |
+| `analytics.canReadRiskRoster`                          | risk-roster                                                                                                                                  |
+| `audit.canReadBranchAudit`                             | branch-scoped audit log                                                                                                                      |
+| `audit.canReadOrgAudit`                                | org-scoped audit log                                                                                                                         |
+| `integrations.canReadIntegrations`                     | integration list/detail reads                                                                                                                |
+| `integrations.canManageIntegrations`                   | create/update/test/sync integrations                                                                                                         |
+| `integrations.canReadIntegrationWebhookEvents`         | webhook event listing/detail                                                                                                                 |
+| `integrations.canReprocessIntegrationWebhookEvents`    | webhook event reprocess                                                                                                                      |
+| `notifications.canReadOwnNotifications`                | notifications list/count/read                                                                                                                |
+| `notifications.canManageNotificationDelivery`          | delivery stats/process                                                                                                                       |
 
 ### Enums
 
@@ -1112,6 +1169,7 @@ The backend exposes capabilities as a read model. Use these as route-family guid
 ## 4. Organizaciones
 
 ### Create organization
+
 `POST /organizations`
 
 **Roles permitidos**: authenticated member with org creation rights
@@ -1120,6 +1178,7 @@ The backend exposes capabilities as a read model. Use these as route-family guid
 **Scope**: ORGANIZATION_WIDE
 
 #### Request body
+
 ```json
 {
   "name": "string",
@@ -1130,6 +1189,7 @@ The backend exposes capabilities as a read model. Use these as route-family guid
 ```
 
 #### Response 200/201
+
 ```json
 {
   "id": "string",
@@ -1170,6 +1230,7 @@ The backend exposes capabilities as a read model. Use these as route-family guid
 ```
 
 ### List organizations
+
 `GET /organizations`
 
 **Roles permitidos**: authenticated member
@@ -1178,12 +1239,14 @@ The backend exposes capabilities as a read model. Use these as route-family guid
 **Scope**: ORGANIZATION_WIDE
 
 #### Query params
-| Param | Tipo | Default | Descripción |
-|---|---|---|---|
-| `page` | number | `1` | Página |
-| `limit` | number | `20` | Tamaño de página |
+
+| Param   | Tipo   | Default | Descripción      |
+| ------- | ------ | ------- | ---------------- |
+| `page`  | number | `1`     | Página           |
+| `limit` | number | `20`    | Tamaño de página |
 
 #### Response 200/201
+
 ```json
 {
   "items": [
@@ -1196,9 +1259,20 @@ The backend exposes capabilities as a read model. Use these as route-family guid
       "status": "ACTIVE",
       "createdAt": "2026-05-26T10:30:00.000Z",
       "updatedAt": "2026-05-26T10:30:00.000Z",
-      "identity": { "organizationId": "string", "name": "string", "slug": "string" },
-      "settings": { "defaultTimezone": "America/Argentina/Buenos_Aires", "description": null },
-      "structure": { "branchesTotal": 1, "rootBranchesTotal": 1, "headquarterBranchesTotal": 1 },
+      "identity": {
+        "organizationId": "string",
+        "name": "string",
+        "slug": "string"
+      },
+      "settings": {
+        "defaultTimezone": "America/Argentina/Buenos_Aires",
+        "description": null
+      },
+      "structure": {
+        "branchesTotal": 1,
+        "rootBranchesTotal": 1,
+        "headquarterBranchesTotal": 1
+      },
       "branchesSummary": {
         "activeBranchesTotal": 1,
         "inactiveBranchesTotal": 0,
@@ -1215,6 +1289,7 @@ The backend exposes capabilities as a read model. Use these as route-family guid
 ```
 
 ### Get organization detail
+
 `GET /organizations/:organizationId`
 
 **Roles permitidos**: authenticated member
@@ -1223,6 +1298,7 @@ The backend exposes capabilities as a read model. Use these as route-family guid
 **Scope**: ORGANIZATION_WIDE
 
 #### Response 200/201
+
 ```json
 {
   "id": "string",
@@ -1233,15 +1309,31 @@ The backend exposes capabilities as a read model. Use these as route-family guid
   "status": "ACTIVE",
   "createdAt": "2026-05-26T10:30:00.000Z",
   "updatedAt": "2026-05-26T10:30:00.000Z",
-  "identity": { "organizationId": "string", "name": "string", "slug": "string" },
-  "settings": { "defaultTimezone": "America/Argentina/Buenos_Aires", "description": null },
+  "identity": {
+    "organizationId": "string",
+    "name": "string",
+    "slug": "string"
+  },
+  "settings": {
+    "defaultTimezone": "America/Argentina/Buenos_Aires",
+    "description": null
+  },
   "structure": {
     "branchesTotal": 1,
     "rootBranchesTotal": 1,
     "headquarterBranchesTotal": 1,
     "headquarterBranch": null,
     "rootBranches": [
-      { "id": "string", "organizationId": "string", "parentBranchId": null, "isHeadquarter": true, "name": "HQ", "slug": "hq", "city": "Buenos Aires", "status": "ACTIVE" }
+      {
+        "id": "string",
+        "organizationId": "string",
+        "parentBranchId": null,
+        "isHeadquarter": true,
+        "name": "HQ",
+        "slug": "hq",
+        "city": "Buenos Aires",
+        "status": "ACTIVE"
+      }
     ]
   },
   "branchesSummary": {
@@ -1265,6 +1357,7 @@ The backend exposes capabilities as a read model. Use these as route-family guid
 ```
 
 ### Update organization settings
+
 `PATCH /organizations/:organizationId`
 
 **Roles permitidos**: authenticated member
@@ -1273,6 +1366,7 @@ The backend exposes capabilities as a read model. Use these as route-family guid
 **Scope**: ORGANIZATION_WIDE
 
 #### Request body
+
 ```json
 {
   "name": "string",
@@ -1282,9 +1376,11 @@ The backend exposes capabilities as a read model. Use these as route-family guid
 ```
 
 #### Response
+
 Returns the same shape as organization detail.
 
 ### Update organization status
+
 `PATCH /organizations/:organizationId/status`
 
 **Roles permitidos**: authenticated member
@@ -1293,6 +1389,7 @@ Returns the same shape as organization detail.
 **Scope**: ORGANIZATION_WIDE
 
 #### Request body
+
 ```json
 {
   "status": "ACTIVE"
@@ -1300,11 +1397,13 @@ Returns the same shape as organization detail.
 ```
 
 #### Response
+
 Returns the same shape as organization detail.
 
 ## 5. Branches / Filiales
 
 ### Create branch
+
 `POST /organizations/:organizationId/branches`
 
 **Roles permitidos**: authenticated member
@@ -1313,6 +1412,7 @@ Returns the same shape as organization detail.
 **Scope**: ORGANIZATION_WIDE
 
 #### Request body
+
 ```json
 {
   "parentBranchId": "string",
@@ -1347,9 +1447,11 @@ Returns the same shape as organization detail.
 ```
 
 #### Response
+
 Returns the branch detail shape below.
 
 ### List branches
+
 `GET /organizations/:organizationId/branches`
 
 **Roles permitidos**: authenticated member
@@ -1358,24 +1460,26 @@ Returns the branch detail shape below.
 **Scope**: ORGANIZATION_WIDE
 
 #### Query params
-| Param | Tipo | Default | Descripción |
-|---|---|---|---|
-| `page` | number | `1` | Página |
-| `limit` | number | `20` | Tamaño de página |
-| `status` | enum | - | `BranchStatus` |
-| `isHeadquarter` | boolean | - | Filtra headquarter |
-| `isPublicListed` | boolean | - | Filtra visibilidad pública |
-| `isPublished` | boolean | - | Perfil público publicado |
-| `rootOnly` | boolean | - | Solo raíces |
-| `needsAttention` | boolean | - | Solo con flags |
-| `operationalReady` | boolean | - | readiness operacional |
-| `communicationsReady` | boolean | - | readiness comunicaciones |
-| `analyticsReady` | boolean | - | readiness analytics |
-| `publicReady` | boolean | - | readiness pública |
-| `hasOperationalOwner` | boolean | - | Tiene responsable |
-| `hqReviewRequired` | boolean | - | Requiere revisión HQ |
+
+| Param                 | Tipo    | Default | Descripción                |
+| --------------------- | ------- | ------- | -------------------------- |
+| `page`                | number  | `1`     | Página                     |
+| `limit`               | number  | `20`    | Tamaño de página           |
+| `status`              | enum    | -       | `BranchStatus`             |
+| `isHeadquarter`       | boolean | -       | Filtra headquarter         |
+| `isPublicListed`      | boolean | -       | Filtra visibilidad pública |
+| `isPublished`         | boolean | -       | Perfil público publicado   |
+| `rootOnly`            | boolean | -       | Solo raíces                |
+| `needsAttention`      | boolean | -       | Solo con flags             |
+| `operationalReady`    | boolean | -       | readiness operacional      |
+| `communicationsReady` | boolean | -       | readiness comunicaciones   |
+| `analyticsReady`      | boolean | -       | readiness analytics        |
+| `publicReady`         | boolean | -       | readiness pública          |
+| `hasOperationalOwner` | boolean | -       | Tiene responsable          |
+| `hqReviewRequired`    | boolean | -       | Requiere revisión HQ       |
 
 #### Response 200/201
+
 ```json
 {
   "items": [
@@ -1446,6 +1550,7 @@ Returns the branch detail shape below.
 ```
 
 ### Branch tree
+
 `GET /organizations/:organizationId/branches/tree`
 
 **Roles permitidos**: authenticated member
@@ -1454,6 +1559,7 @@ Returns the branch detail shape below.
 **Scope**: ORGANIZATION_WIDE
 
 #### Response 200/201
+
 ```json
 [
   {
@@ -1471,6 +1577,7 @@ Returns the branch detail shape below.
 ```
 
 ### Get branch detail
+
 `GET /organizations/:organizationId/branches/:branchId`
 
 **Roles permitidos**: authenticated member
@@ -1479,6 +1586,7 @@ Returns the branch detail shape below.
 **Scope**: ORGANIZATION_WIDE
 
 #### Response 200/201
+
 ```json
 {
   "id": "string",
@@ -1545,11 +1653,19 @@ Returns the branch detail shape below.
   "governance": {},
   "ancestors": [],
   "children": [],
-  "lifecycle": { "summary": { "createdAt": "2026-05-26T10:30:00.000Z", "statusUpdatedAt": null, "eventsTotal": 1 }, "timeline": null }
+  "lifecycle": {
+    "summary": {
+      "createdAt": "2026-05-26T10:30:00.000Z",
+      "statusUpdatedAt": null,
+      "eventsTotal": 1
+    },
+    "timeline": null
+  }
 }
 ```
 
 ### Update branch
+
 `PATCH /organizations/:organizationId/branches/:branchId`
 
 **Roles permitidos**: authenticated member
@@ -1558,6 +1674,7 @@ Returns the branch detail shape below.
 **Scope**: ORGANIZATION_WIDE
 
 #### Request body
+
 ```json
 {
   "parentBranchId": "string",
@@ -1593,9 +1710,11 @@ Returns the branch detail shape below.
 ```
 
 #### Response
+
 Returns the same shape as branch detail.
 
 ### Tree summary
+
 `GET /organizations/:organizationId/analytics/branches/tree-summary`
 
 **Roles permitidos**: authenticated member
@@ -1604,11 +1723,13 @@ Returns the same shape as branch detail.
 **Scope**: ORGANIZATION_WIDE
 
 #### Query params
-| Param | Tipo | Default | Descripción |
-|---|---|---|---|
-| `activityWindowDays` | number | `30` | Ventana de actividad, `1..365` |
+
+| Param                | Tipo   | Default | Descripción                    |
+| -------------------- | ------ | ------- | ------------------------------ |
+| `activityWindowDays` | number | `30`    | Ventana de actividad, `1..365` |
 
 #### Response 200/201
+
 ```json
 {
   "items": [
@@ -1645,6 +1766,7 @@ Returns the same shape as branch detail.
 ```
 
 ### Subtree summary
+
 `GET /organizations/:organizationId/analytics/branches/:branchId/subtree-summary`
 
 **Roles permitidos**: authenticated member
@@ -1653,11 +1775,13 @@ Returns the same shape as branch detail.
 **Scope**: ORGANIZATION_WIDE
 
 #### Query params
-| Param | Tipo | Default | Descripción |
-|---|---|---|---|
-| `activityWindowDays` | number | `30` | Ventana de actividad, `1..365` |
+
+| Param                | Tipo   | Default | Descripción                    |
+| -------------------- | ------ | ------- | ------------------------------ |
+| `activityWindowDays` | number | `30`    | Ventana de actividad, `1..365` |
 
 #### Response 200/201
+
 ```json
 {
   "branch": {
@@ -1691,6 +1815,7 @@ Returns the same shape as branch detail.
 ## 6. Memberships y Users
 
 ### List members
+
 `GET /organizations/:organizationId/members`
 
 **Roles permitidos**: authenticated member
@@ -1699,18 +1824,20 @@ Returns the same shape as branch detail.
 **Scope**: ORGANIZATION_WIDE
 
 #### Query params
-| Param | Tipo | Default | Descripción |
-|---|---|---|---|
-| `page` | number | `1` | Página |
-| `limit` | number | `20` | Tamaño |
-| `branchId` | string | - | Filtra por branch |
-| `search` | string | - | Busca nombre/email |
-| `status` | enum | - | `MembershipStatus` |
-| `scopeType` | enum | - | `MembershipScopeType` |
-| `role` | enum | - | `MembershipRole` |
-| `userStatus` | enum | - | `UserStatus` |
+
+| Param        | Tipo   | Default | Descripción           |
+| ------------ | ------ | ------- | --------------------- |
+| `page`       | number | `1`     | Página                |
+| `limit`      | number | `20`    | Tamaño                |
+| `branchId`   | string | -       | Filtra por branch     |
+| `search`     | string | -       | Busca nombre/email    |
+| `status`     | enum   | -       | `MembershipStatus`    |
+| `scopeType`  | enum   | -       | `MembershipScopeType` |
+| `role`       | enum   | -       | `MembershipRole`      |
+| `userStatus` | enum   | -       | `UserStatus`          |
 
 #### Response 200/201
+
 ```json
 {
   "items": [
@@ -1782,6 +1909,7 @@ Returns the same shape as branch detail.
 ```
 
 ### Get member detail
+
 `GET /organizations/:organizationId/memberships/:membershipId`
 
 **Roles permitidos**: authenticated member
@@ -1790,6 +1918,7 @@ Returns the same shape as branch detail.
 **Scope**: ORGANIZATION_WIDE
 
 #### Response
+
 Returns the membership detail shape:
 
 ```json
@@ -1817,7 +1946,12 @@ Returns the membership detail shape:
     "createdAt": "2026-05-26T10:30:00.000Z",
     "updatedAt": "2026-05-26T10:30:00.000Z"
   },
-  "identity": { "userId": "string", "membershipId": "string", "fullName": "John Doe", "email": "john@example.com" },
+  "identity": {
+    "userId": "string",
+    "membershipId": "string",
+    "fullName": "John Doe",
+    "email": "john@example.com"
+  },
   "access": {
     "scopeType": "SELECTED_BRANCHES",
     "organizationWide": false,
@@ -1840,11 +1974,15 @@ Returns the membership detail shape:
     "lastAuthenticatedAt": null
   },
   "attention": { "needsReview": false, "flags": [] },
-  "lifecycle": { "summary": { "eventsTotal": 0, "createdAt": null, "acceptedAt": null }, "timeline": null }
+  "lifecycle": {
+    "summary": { "eventsTotal": 0, "createdAt": null, "acceptedAt": null },
+    "timeline": null
+  }
 }
 ```
 
 ### Update member roles
+
 `PUT /organizations/:organizationId/memberships/:membershipId/roles`
 
 **Roles permitted**: authenticated member
@@ -1853,6 +1991,7 @@ Returns the membership detail shape:
 **Scope**: ORGANIZATION_WIDE
 
 #### Request body
+
 ```json
 {
   "roles": ["INSTRUCTOR"]
@@ -1860,9 +1999,11 @@ Returns the membership detail shape:
 ```
 
 #### Response
+
 Returns membership summary after role replacement.
 
 ### Update member scopes
+
 `PUT /organizations/:organizationId/memberships/:membershipId/scopes`
 
 **Roles permitted**: authenticated member
@@ -1871,6 +2012,7 @@ Returns membership summary after role replacement.
 **Scope**: ORGANIZATION_WIDE
 
 #### Request body
+
 ```json
 {
   "scopeType": "SELECTED_BRANCHES",
@@ -1880,9 +2022,11 @@ Returns membership summary after role replacement.
 ```
 
 #### Response
+
 Returns membership summary after scope replacement.
 
 ### Update member status
+
 `PATCH /organizations/:organizationId/memberships/:membershipId/status`
 
 **Roles permitted**: authenticated member
@@ -1891,6 +2035,7 @@ Returns membership summary after scope replacement.
 **Scope**: ORGANIZATION_WIDE
 
 #### Request body
+
 ```json
 {
   "status": "SUSPENDED"
@@ -1898,6 +2043,7 @@ Returns membership summary after scope replacement.
 ```
 
 #### Response
+
 ```json
 {
   "membership": {
@@ -1917,6 +2063,7 @@ Returns membership summary after scope replacement.
 ```
 
 ### Revoke member sessions
+
 `POST /organizations/:organizationId/memberships/:membershipId/sessions/revoke`
 
 **Roles permitted**: authenticated member
@@ -1925,6 +2072,7 @@ Returns membership summary after scope replacement.
 **Scope**: ORGANIZATION_WIDE
 
 #### Response 200/201
+
 ```json
 {
   "revokedAt": "2026-05-26T10:30:00.000Z",
@@ -1933,6 +2081,7 @@ Returns membership summary after scope replacement.
 ```
 
 ### List users
+
 `GET /organizations/:organizationId/users`
 
 **Roles permitted**: authenticated member
@@ -1941,19 +2090,21 @@ Returns membership summary after scope replacement.
 **Scope**: ORGANIZATION_WIDE
 
 #### Query params
-| Param | Tipo | Default | Descripción |
-|---|---|---|---|
-| `page` | number | `1` | Página |
-| `limit` | number | `20` | Tamaño |
-| `membershipStatus` | enum | - | `MembershipStatus` |
-| `role` | enum | - | `MembershipRole` |
-| `search` | string | - | Busca persona |
-| `userStatus` | enum | - | `UserStatus` |
-| `accessState` | enum | - | `INVITED_PENDING`, `INVITATION_EXPIRED`, `ACTIVE`, `ACTIVE_NO_SESSIONS`, `MEMBERSHIP_SUSPENDED`, `MEMBERSHIP_REVOKED`, `USER_SUSPENDED`, `ACCESS_REVIEW` |
-| `hasActiveSessions` | boolean | - | Filtro |
-| `needsAttention` | boolean | - | Filtro |
+
+| Param               | Tipo    | Default | Descripción                                                                                                                                              |
+| ------------------- | ------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `page`              | number  | `1`     | Página                                                                                                                                                   |
+| `limit`             | number  | `20`    | Tamaño                                                                                                                                                   |
+| `membershipStatus`  | enum    | -       | `MembershipStatus`                                                                                                                                       |
+| `role`              | enum    | -       | `MembershipRole`                                                                                                                                         |
+| `search`            | string  | -       | Busca persona                                                                                                                                            |
+| `userStatus`        | enum    | -       | `UserStatus`                                                                                                                                             |
+| `accessState`       | enum    | -       | `INVITED_PENDING`, `INVITATION_EXPIRED`, `ACTIVE`, `ACTIVE_NO_SESSIONS`, `MEMBERSHIP_SUSPENDED`, `MEMBERSHIP_REVOKED`, `USER_SUSPENDED`, `ACCESS_REVIEW` |
+| `hasActiveSessions` | boolean | -       | Filtro                                                                                                                                                   |
+| `needsAttention`    | boolean | -       | Filtro                                                                                                                                                   |
 
 #### Response 200/201
+
 ```json
 {
   "items": [
@@ -2028,6 +2179,7 @@ Returns membership summary after scope replacement.
 ```
 
 ### Get user detail
+
 `GET /organizations/:organizationId/users/:userId`
 
 **Roles permitted**: authenticated member
@@ -2036,7 +2188,9 @@ Returns membership summary after scope replacement.
 **Scope**: ORGANIZATION_WIDE
 
 #### Response
+
 Same as list item plus:
+
 - `user.createdAt`
 - `user.updatedAt`
 - `invitation.history[]`
@@ -2044,6 +2198,7 @@ Same as list item plus:
 - `lifecycle`
 
 ### Invite user
+
 `POST /organizations/:organizationId/users/invite`
 
 **Roles permitted**: authenticated member
@@ -2052,6 +2207,7 @@ Same as list item plus:
 **Scope**: ORGANIZATION_WIDE
 
 #### Request body
+
 ```json
 {
   "email": "string",
@@ -2068,6 +2224,7 @@ Same as list item plus:
 ```
 
 #### Response 200/201
+
 ```json
 {
   "user": {
@@ -2104,10 +2261,12 @@ Same as list item plus:
 ```
 
 **Side effects**
+
 - Sends invitation email.
 - Writes audit event.
 
 ### Reissue invitation
+
 `POST /organizations/:organizationId/users/invitations/:membershipId/reissue`
 
 **Roles permitted**: authenticated member
@@ -2116,9 +2275,11 @@ Same as list item plus:
 **Scope**: ORGANIZATION_WIDE
 
 #### Response
+
 Same as invite user, but `membership.status` reflects existing membership and audit action is `user.invitation.reissued`.
 
 ### Revoke invitation
+
 `POST /organizations/:organizationId/users/invitations/:membershipId/revoke`
 
 **Roles permitted**: authenticated member
@@ -2127,6 +2288,7 @@ Same as invite user, but `membership.status` reflects existing membership and au
 **Scope**: ORGANIZATION_WIDE
 
 #### Response 200/201
+
 ```json
 {
   "membership": {
@@ -2147,6 +2309,7 @@ Same as invite user, but `membership.status` reflects existing membership and au
 ```
 
 ### Membership / user sessions revoke
+
 `POST /organizations/:organizationId/memberships/:membershipId/sessions/revoke`
 
 See membership section above.
@@ -2154,6 +2317,7 @@ See membership section above.
 ## 7. Students
 
 ### Create student
+
 `POST /organizations/:organizationId/students`
 
 **Roles permitted**: authenticated member
@@ -2162,6 +2326,7 @@ See membership section above.
 **Scope**: BRANCH_SCOPED
 
 #### Request body
+
 ```json
 {
   "primaryBranchId": "string",
@@ -2184,9 +2349,11 @@ See membership section above.
 ```
 
 #### Response
+
 Returns the student admin view with private data.
 
 ### List students by branch
+
 `GET /organizations/:organizationId/branches/:branchId/students`
 
 **Roles permitted**: authenticated member
@@ -2195,15 +2362,18 @@ Returns the student admin view with private data.
 **Scope**: BRANCH_SCOPED
 
 #### Query params
-| Param | Tipo | Default | Descripción |
-|---|---|---|---|
-| `page` | number | `1` | Página |
-| `limit` | number | `20` | Tamaño |
+
+| Param   | Tipo   | Default | Descripción |
+| ------- | ------ | ------- | ----------- |
+| `page`  | number | `1`     | Página      |
+| `limit` | number | `20`    | Tamaño      |
 
 #### Response
+
 `{ items: [...], meta: { page, limit, total } }`
 
 ### Get student detail
+
 `GET /organizations/:organizationId/students/:studentId`
 
 **Roles permitted**: authenticated member
@@ -2212,13 +2382,16 @@ Returns the student admin view with private data.
 **Scope**: BRANCH_SCOPED
 
 #### Response shape
+
 The private student view:
+
 - list fields: `id`, `organizationId`, `primaryBranchId`, `firstName`, `lastName`, `email`, `phone`, `status`, `promotionTrack`, `currentBelt`, `currentStripes`, `createdAt`, `updatedAt`
 - detail-only fields: `userId`, `dateOfBirth`, `startedBjjAt`, `joinedOrganizationAt`, `parentTutorName`, `parentTutorPhone`, `parentTutorRelation`, `primaryBranch`, `branchAssignments`, `branchVisits`, `activeBranchVisits`
 - private field `technicalNotes` is hidden unless the caller has access
 - `promotionCertificates` is hidden in the private view
 
 ### Get student technical profile
+
 `GET /organizations/:organizationId/students/:studentId/technical-profile`
 
 **Roles permitted**: authenticated member
@@ -2227,6 +2400,7 @@ The private student view:
 **Scope**: BRANCH_SCOPED
 
 #### Response
+
 ```json
 {
   "id": "string",
@@ -2250,6 +2424,7 @@ The private student view:
 ```
 
 ### Update student
+
 `PATCH /organizations/:organizationId/students/:studentId`
 
 **Roles permitted**: authenticated member
@@ -2258,7 +2433,9 @@ The private student view:
 **Scope**: BRANCH_SCOPED
 
 #### Request body
+
 Same writable student fields as create, plus:
+
 ```json
 {
   "primaryBranchChangeReason": "string",
@@ -2267,14 +2444,17 @@ Same writable student fields as create, plus:
 ```
 
 #### Response
+
 Same as student private detail view.
 
 ### Archive student
+
 `PATCH /organizations/:organizationId/students/:studentId`
 
 **Note**: archiving is represented as a status transition through the same update endpoint in current code.
 
 ### Student branch visit create
+
 `POST /organizations/:organizationId/students/:studentId/branch-visits`
 
 **Roles permitted**: authenticated member
@@ -2283,6 +2463,7 @@ Same as student private detail view.
 **Scope**: BRANCH_SCOPED
 
 #### Request body
+
 ```json
 {
   "hostBranchId": "string",
@@ -2294,6 +2475,7 @@ Same as student private detail view.
 ```
 
 #### Response
+
 ```json
 {
   "id": "string",
@@ -2312,6 +2494,7 @@ Same as student private detail view.
 ```
 
 ### Student branch visit update
+
 `PATCH /organizations/:organizationId/students/:studentId/branch-visits/:visitId`
 
 **Roles permitted**: authenticated member
@@ -2320,6 +2503,7 @@ Same as student private detail view.
 **Scope**: BRANCH_SCOPED
 
 #### Request body
+
 ```json
 {
   "startsAt": "2026-05-26T10:30:00.000Z",
@@ -2331,9 +2515,11 @@ Same as student private detail view.
 ```
 
 #### Response
+
 Same visit record shape as create.
 
 ### Account claim invitation
+
 `POST /organizations/:organizationId/students/:studentId/invite`
 
 **Roles permitted**: authenticated member
@@ -2342,6 +2528,7 @@ Same visit record shape as create.
 **Scope**: BRANCH_SCOPED
 
 #### Request body
+
 ```json
 {
   "email": "string",
@@ -2350,6 +2537,7 @@ Same visit record shape as create.
 ```
 
 #### Response 200/201
+
 ```json
 {
   "invitation": {
@@ -2376,10 +2564,12 @@ Same visit record shape as create.
 ```
 
 **Side effects**
+
 - Sends claim invitation email.
 - Writes audit event.
 
 ### Bulk invite student claims
+
 `POST /organizations/:organizationId/students/bulk-invite`
 
 **Roles permitted**: authenticated member
@@ -2388,6 +2578,7 @@ Same visit record shape as create.
 **Scope**: BRANCH_SCOPED
 
 #### Request body
+
 ```json
 {
   "studentIds": ["string"],
@@ -2396,6 +2587,7 @@ Same visit record shape as create.
 ```
 
 #### Response 200/201
+
 ```json
 {
   "summary": {
@@ -2427,6 +2619,7 @@ Same visit record shape as create.
 ## 8. Academy Intake
 
 ### Public intake create
+
 `POST /public/branches/:branchId/intake-requests`
 
 **Roles permitted**: público
@@ -2435,10 +2628,12 @@ Same visit record shape as create.
 **Scope**: no aplica
 
 **Notes**
+
 - Public rate limiting applies.
 - Duplicate active requests by branch/email are blocked.
 
 #### Request body
+
 ```json
 {
   "fullName": "string",
@@ -2455,6 +2650,7 @@ Same visit record shape as create.
 ```
 
 #### Response 200/201
+
 ```json
 {
   "id": "string",
@@ -2470,6 +2666,7 @@ Same visit record shape as create.
 ```
 
 ### Authenticated join request create
+
 `POST /public/branches/:branchId/join-requests`
 
 **Roles permitidos**: public authenticated user or tenant authenticated user
@@ -2478,6 +2675,7 @@ Same visit record shape as create.
 **Scope**: public requester-owned
 
 **Notes**
+
 - Requires bearer access token.
 - Creates `AcademyIntakeRequest` with `requesterUserId=current user`.
 - Does not create `Student`, `OrganizationMembership`, roles, branch access, billing, attendance, or academy access.
@@ -2486,6 +2684,7 @@ Same visit record shape as create.
 - Branch must be active, public-listed, and published. Hidden branches return not found.
 
 #### Request body
+
 ```json
 {
   "phone": null,
@@ -2500,6 +2699,7 @@ Same visit record shape as create.
 ```
 
 #### Response 200/201 — shape REAL del backend
+
 ```json
 {
   "id": "req_123",
@@ -2515,15 +2715,17 @@ Same visit record shape as create.
 ```
 
 #### Errores específicos del endpoint
-| Status | Caso | Mensaje |
-|---|---|---|
-| 401 | no bearer token | Unauthorized |
-| 404 | branch inactive/private/unlisted/unpublished | Branch is not accepting public intake requests |
-| 409 | duplicate active requester request | ACTIVE_INTAKE_REQUEST_EXISTS |
-| 422 | invalid body | Invalid payload |
-| 429 | route/IP or branch-volume rate limit | Too Many Requests / PUBLIC_INTAKE_BRANCH_RATE_LIMITED |
+
+| Status | Caso                                         | Mensaje                                               |
+| ------ | -------------------------------------------- | ----------------------------------------------------- |
+| 401    | no bearer token                              | Unauthorized                                          |
+| 404    | branch inactive/private/unlisted/unpublished | Branch is not accepting public intake requests        |
+| 409    | duplicate active requester request           | ACTIVE_INTAKE_REQUEST_EXISTS                          |
+| 422    | invalid body                                 | Invalid payload                                       |
+| 429    | route/IP or branch-volume rate limit         | Too Many Requests / PUBLIC_INTAKE_BRANCH_RATE_LIMITED |
 
 ### My intake requests
+
 `GET /me/intake-requests`
 
 **Roles permitidos**: authenticated user
@@ -2532,12 +2734,14 @@ Same visit record shape as create.
 **Scope**: requester-owned
 
 #### Query params
-| Param | Tipo | Default | Descripción |
-|---|---|---|---|
-| page | number | 1 | Page number |
-| limit | number | 20 | Page size |
+
+| Param | Tipo   | Default | Descripción |
+| ----- | ------ | ------- | ----------- |
+| page  | number | 1       | Page number |
+| limit | number | 20      | Page size   |
 
 #### Response 200/201 — shape REAL del backend
+
 ```json
 {
   "items": [
@@ -2580,12 +2784,14 @@ Same visit record shape as create.
 ```
 
 #### Errores específicos del endpoint
-| Status | Caso | Mensaje |
-|---|---|---|
-| 401 | no bearer token | Unauthorized |
-| 422 | invalid pagination | Invalid query |
+
+| Status | Caso               | Mensaje       |
+| ------ | ------------------ | ------------- |
+| 401    | no bearer token    | Unauthorized  |
+| 422    | invalid pagination | Invalid query |
 
 ### List intake requests by branch
+
 `GET /organizations/:organizationId/branches/:branchId/intake-requests`
 
 **Roles permitted**: authenticated member
@@ -2594,6 +2800,7 @@ Same visit record shape as create.
 **Scope**: BRANCH_SCOPED
 
 #### Response 200/201
+
 ```json
 {
   "items": [
@@ -2642,6 +2849,7 @@ Same visit record shape as create.
 ```
 
 ### Intake request detail
+
 `GET /organizations/:organizationId/intake-requests/:requestId`
 
 **Roles permitted**: authenticated member
@@ -2650,9 +2858,11 @@ Same visit record shape as create.
 **Scope**: BRANCH_SCOPED
 
 #### Response
+
 Same object as list item.
 
 ### Transition intake request
+
 `POST /organizations/:organizationId/intake-requests/:requestId/transition`
 
 **Roles permitted**: authenticated member
@@ -2661,6 +2871,7 @@ Same object as list item.
 **Scope**: BRANCH_SCOPED
 
 #### Request body
+
 ```json
 {
   "status": "REVIEWING",
@@ -2672,9 +2883,11 @@ Same object as list item.
 ```
 
 #### Response
+
 The full intake request view.
 
 ### Convert intake request
+
 `POST /organizations/:organizationId/intake-requests/:requestId/convert`
 
 **Roles permitted**: authenticated member
@@ -2683,6 +2896,7 @@ The full intake request view.
 **Scope**: BRANCH_SCOPED
 
 #### Request body
+
 ```json
 {
   "conversionReason": "string"
@@ -2690,6 +2904,7 @@ The full intake request view.
 ```
 
 #### Response 200/201
+
 ```json
 {
   "request": {},
@@ -2717,6 +2932,7 @@ The full intake request view.
 ## 9. Classes & Schedules
 
 ### Create class schedule
+
 `POST /organizations/:organizationId/branches/:branchId/class-schedules`
 
 **Roles permitted**: authenticated member
@@ -2725,6 +2941,7 @@ The full intake request view.
 **Scope**: BRANCH_SCOPED
 
 #### Request body
+
 ```json
 {
   "instructorMembershipId": "string",
@@ -2741,6 +2958,7 @@ The full intake request view.
 ```
 
 #### Response
+
 ```json
 {
   "id": "string",
@@ -2766,6 +2984,7 @@ The full intake request view.
 ```
 
 ### List class schedules
+
 `GET /organizations/:organizationId/branches/:branchId/class-schedules`
 
 **Roles permitted**: authenticated member
@@ -2774,9 +2993,11 @@ The full intake request view.
 **Scope**: BRANCH_SCOPED
 
 #### Response
+
 `{ items: [...], meta: { page, limit, total } }`
 
 ### Update class schedule
+
 `PATCH /organizations/:organizationId/branches/:branchId/class-schedules/:scheduleId`
 
 **Roles permitted**: authenticated member
@@ -2785,12 +3006,15 @@ The full intake request view.
 **Scope**: BRANCH_SCOPED
 
 #### Request body
+
 Same as create, all optional, `capacity` can be `null`.
 
 #### Response
+
 Same as schedule item.
 
 ### Create class session
+
 `POST /organizations/:organizationId/branches/:branchId/class-sessions`
 
 **Roles permitted**: authenticated member
@@ -2799,6 +3023,7 @@ Same as schedule item.
 **Scope**: BRANCH_SCOPED
 
 #### Request body
+
 ```json
 {
   "classScheduleId": "string",
@@ -2813,7 +3038,31 @@ Same as schedule item.
 }
 ```
 
+#### Conflict 409
+
+Manual creation validates branch overlap and instructor overlap before insert. When a conflict is detected the response is stable and parseable:
+
+```json
+{
+  "statusCode": 409,
+  "error": "Conflict",
+  "code": "CLASS_SESSION_CONFLICT",
+  "message": "Class session conflicts with an existing session.",
+  "conflict": {
+    "type": "BRANCH_OVERLAP",
+    "classSessionId": "class_session_existing",
+    "branchId": "branch_123",
+    "instructorMembershipId": "membership_123",
+    "startAt": "2026-06-01T18:00:00.000Z",
+    "endAt": "2026-06-01T19:00:00.000Z"
+  }
+}
+```
+
+`conflict.type` can be `BRANCH_OVERLAP`, `INSTRUCTOR_OVERLAP` or `SCHEDULE_OVERLAP`. The payload intentionally does not include class title, notes or other private session fields.
+
 ### Create class session from schedule
+
 `POST /organizations/:organizationId/branches/:branchId/class-schedules/:scheduleId/class-sessions`
 
 **Roles permitted**: authenticated member
@@ -2822,6 +3071,7 @@ Same as schedule item.
 **Scope**: BRANCH_SCOPED
 
 #### Request body
+
 ```json
 {
   "scheduledDate": "2026-06-03",
@@ -2830,6 +3080,7 @@ Same as schedule item.
 ```
 
 #### Response 200/201 — shape REAL del backend
+
 Returns the created `ClassSession` record. The endpoint creates exactly one session instance from one active schedule for the given `scheduledDate`.
 
 ```json
@@ -2849,12 +3100,12 @@ Returns the created `ClassSession` record. The endpoint creates exactly one sess
   "cancellationReason": null,
   "notes": "Optional internal class session notes",
   "createdAt": "2026-05-27T10:30:00.000Z",
-  "updatedAt": "2026-05-27T10:30:00.000Z",
-  "deletedAt": null
+  "updatedAt": "2026-05-27T10:30:00.000Z"
 }
 ```
 
 **Behavior**
+
 - Uses the schedule snapshot for title, class type, instructor, start/end local time, timezone and capacity.
 - Requires `scheduledDate` in `YYYY-MM-DD` format and it must match the schedule weekday.
 - Runs the same branch overlap and instructor overlap validations as manual session creation.
@@ -2862,14 +3113,16 @@ Returns the created `ClassSession` record. The endpoint creates exactly one sess
 - Diff vs branch missing-session generation: this endpoint does not inspect a date range for gaps; missing-session generation scans existing materialized sessions and fills missing schedule/date instances.
 
 #### Errores específicos del endpoint
-| Status | Caso | Mensaje |
-|---|---|---|
-| 400 | date does not match schedule weekday or invalid time window | Scheduled date does not match schedule weekday |
-| 403 | no schedule management capability for branch | Insufficient class schedule management capability |
-| 404 | schedule/branch not found in organization | Class schedule not found |
-| 409 | session already exists or overlaps branch/instructor session | Class session already exists for schedule/date |
+
+| Status | Caso                                                         | Mensaje / código                                            |
+| ------ | ------------------------------------------------------------ | ----------------------------------------------------------- |
+| 400    | date does not match schedule weekday or invalid time window  | Scheduled date does not match schedule weekday              |
+| 403    | no schedule management capability for branch                 | Insufficient class schedule management capability           |
+| 404    | schedule/branch not found in organization                    | Class schedule not found                                    |
+| 409    | session already exists or overlaps branch/instructor session | `CLASS_SESSION_CONFLICT`; see conflict response shape above |
 
 ### Generate class sessions
+
 `POST /organizations/:organizationId/branches/:branchId/class-sessions/generate`
 
 **Roles permitted**: authenticated member
@@ -2878,6 +3131,7 @@ Returns the created `ClassSession` record. The endpoint creates exactly one sess
 **Scope**: BRANCH_SCOPED
 
 #### Request body
+
 ```json
 {
   "fromDate": "2026-06-01",
@@ -2886,19 +3140,63 @@ Returns the created `ClassSession` record. The endpoint creates exactly one sess
 ```
 
 #### Response
+
 ```json
 {
+  "status": "COMPLETED",
   "fromDate": "2026-06-01",
   "toDate": "2026-06-30",
   "processedSchedules": 10,
   "candidateCount": 42,
+  "created": 12,
+  "skipped": 20,
+  "conflicts": 10,
+  "errors": 0,
   "generatedCount": 12,
   "skippedExistingCount": 20,
-  "skippedConflictCount": 10
+  "skippedConflictCount": 10,
+  "items": [
+    {
+      "scheduleId": "class_schedule_123",
+      "classSessionId": "class_session_123",
+      "date": "2026-06-01",
+      "status": "CREATED"
+    },
+    {
+      "scheduleId": "class_schedule_124",
+      "classSessionId": "class_session_existing",
+      "date": "2026-06-02",
+      "status": "SKIPPED_EXISTING"
+    },
+    {
+      "scheduleId": "class_schedule_125",
+      "classSessionId": "class_session_conflict",
+      "date": "2026-06-03",
+      "status": "CONFLICT",
+      "conflict": {
+        "type": "BRANCH_OVERLAP",
+        "classSessionId": "class_session_conflict",
+        "branchId": "branch_123",
+        "instructorMembershipId": "membership_123",
+        "startAt": "2026-06-03T18:00:00.000Z",
+        "endAt": "2026-06-03T19:00:00.000Z"
+      }
+    }
+  ]
 }
 ```
 
+**Behavior**
+
+- Synchronous operation. There is no job/status endpoint for this flow.
+- Date range is limited by backend policy to 42 calendar days.
+- Generation is protected by branch and instructor advisory locks inside a serializable transaction.
+- Existing schedule/date materializations are skipped, not duplicated.
+- Branch or instructor overlaps are skipped and reported per item as `status: "CONFLICT"`.
+- Legacy counters (`generatedCount`, `skippedExistingCount`, `skippedConflictCount`) remain for compatibility; frontend should prefer `created`, `skipped`, `conflicts`, `errors` for UI summaries.
+
 ### Generate missing class sessions
+
 `POST /organizations/:organizationId/branches/:branchId/class-sessions/generate-missing`
 
 **Roles permitted**: authenticated member
@@ -2907,12 +3205,54 @@ Returns the created `ClassSession` record. The endpoint creates exactly one sess
 **Scope**: BRANCH_SCOPED
 
 #### Request body
+
 Same as generate.
 
 #### Response
-Same response shape, with `missingCandidateCount` if the backend returns that counter.
+
+Same synchronous response shape as generate, plus:
+
+```json
+{
+  "status": "COMPLETED",
+  "fromDate": "2026-06-01",
+  "toDate": "2026-06-30",
+  "processedSchedules": 10,
+  "candidateCount": 42,
+  "missingCandidateCount": 12,
+  "created": 12,
+  "skipped": 30,
+  "conflicts": 0,
+  "errors": 0,
+  "generatedCount": 12,
+  "skippedExistingCount": 30,
+  "skippedConflictCount": 0,
+  "items": [
+    {
+      "scheduleId": "class_schedule_123",
+      "classSessionId": "class_session_existing",
+      "date": "2026-06-01",
+      "status": "SKIPPED_EXISTING"
+    },
+    {
+      "scheduleId": "class_schedule_123",
+      "classSessionId": "class_session_created",
+      "date": "2026-06-08",
+      "status": "CREATED"
+    }
+  ]
+}
+```
+
+**Behavior**
+
+- Synchronous operation. There is no job/status endpoint for this flow.
+- Date range is limited by backend policy to 42 calendar days.
+- Idempotent for existing schedule/date pairs: re-running the same range reports `SKIPPED_EXISTING` instead of creating duplicates.
+- `candidateCount` is the total expected schedule/date pairs in range; `missingCandidateCount` is the subset sent to generation after already materialized sessions are excluded.
 
 ### Assigned class sessions
+
 `GET /organizations/:organizationId/branches/:branchId/class-sessions/assigned`
 
 **Roles permitted**: authenticated member
@@ -2921,9 +3261,11 @@ Same response shape, with `missingCandidateCount` if the backend returns that co
 **Scope**: BRANCH_SCOPED
 
 #### Response
+
 `{ items: [...], meta: { page, limit, total } }`
 
 ### List class sessions
+
 `GET /organizations/:organizationId/branches/:branchId/class-sessions`
 
 **Roles permitted**: authenticated member
@@ -2932,23 +3274,28 @@ Same response shape, with `missingCandidateCount` if the backend returns that co
 **Scope**: BRANCH_SCOPED
 
 #### Query params
-| Param | Tipo | Default | Descripción |
-|---|---|---|---|
-| `page` | number | `1` | Página |
-| `limit` | number | `20` | Tamaño |
-| `fromDate` | date | - | inicio |
-| `toDate` | date | - | fin |
+
+| Param      | Tipo   | Default | Descripción |
+| ---------- | ------ | ------- | ----------- |
+| `page`     | number | `1`     | Página      |
+| `limit`    | number | `20`    | Tamaño      |
+| `fromDate` | date   | -       | inicio      |
+| `toDate`   | date   | -       | fin         |
 
 #### Response
+
 `{ items: [...], meta: { page, limit, total } }`
 
 **Frontend contract note**
+
 - This endpoint returns the compact branch operations list shape from `ClassSession`.
+- Canonical compact list items expose instructor identity through `instructor`, not `instructorMembership`, and expose capacity as `{ "max": number | null, "enrolled": number }`.
 - `scheduledDate` is serialized as an ISO timestamp (`YYYY-MM-DDT00:00:00.000Z`), not a bare `YYYY-MM-DD`.
 - `status` values are exactly `SCHEDULED`, `COMPLETED`, `CANCELED`; there is no `CANCELLED` or `IN_PROGRESS` status in the backend enum.
 - Use `GET /organizations/:organizationId/branches/:branchId/class-sessions/:sessionId` for Session Detail, because it adds branch, instructor, capacity and attendance summaries.
 
 ### Class session detail
+
 `GET /organizations/:organizationId/branches/:branchId/class-sessions/:sessionId`
 
 **Roles permitted**: authenticated member
@@ -2957,6 +3304,7 @@ Same response shape, with `missingCandidateCount` if the backend returns that co
 **Scope**: BRANCH_SCOPED
 
 #### Response 200/201 — shape REAL del backend
+
 ```json
 {
   "id": "class_session_123",
@@ -3013,6 +3361,7 @@ Same response shape, with `missingCandidateCount` if the backend returns that co
 ```
 
 **Notes**
+
 - `description` mirrors `ClassSession.notes`; `notes` is kept for compatibility with existing class-session surfaces.
 - `instructor.primaryBelt` is a rich `PromotionRank` catalog entry or `null`; frontend must not parse rank strings with `split("_")`.
 - `status` uses the backend enum value `CANCELED`, not `CANCELLED`.
@@ -3021,12 +3370,14 @@ Same response shape, with `missingCandidateCount` if the backend returns that co
 - `cancelledAt` and `cancelledByMembershipId` are derived from the latest `class_session.canceled` audit entry when available.
 
 #### Errores específicos del endpoint
-| Status | Caso | Mensaje |
-|---|---|---|
-| 403 | no branch class read capability | Insufficient class session read capability |
-| 404 | session does not exist in branch/org | Class session not found |
+
+| Status | Caso                                 | Mensaje                                    |
+| ------ | ------------------------------------ | ------------------------------------------ |
+| 403    | no branch class read capability      | Insufficient class session read capability |
+| 404    | session does not exist in branch/org | Class session not found                    |
 
 ### Class calendar
+
 `GET /organizations/:organizationId/branches/:branchId/class-calendar`
 
 **Roles permitted**: authenticated member
@@ -3035,32 +3386,106 @@ Same response shape, with `missingCandidateCount` if the backend returns that co
 **Scope**: BRANCH_SCOPED
 
 #### Query params
-| Param | Tipo | Default | Descripción |
-|---|---|---|---|
-| `startDate` | date | required | Start of view |
-| `view` | enum | `DAY` | `DAY`, `WEEK` |
+
+| Param       | Tipo | Default  | Descripción                    |
+| ----------- | ---- | -------- | ------------------------------ |
+| `startDate` | date | required | Start of view                  |
+| `view`      | enum | `DAY`    | `DAY`, `WEEK`, `MONTH`, `LIST` |
+
+#### Range behavior
+
+- `DAY`: returns `startDate` only.
+- `WEEK`: returns seven days starting at `startDate`; it does not auto-align to Monday/Sunday.
+- `MONTH`: returns the complete calendar UI grid containing the month of `startDate`, aligned Monday to Sunday. The range includes neighboring days from the previous/next month when needed and is always 35 or 42 days.
+- `LIST`: returns the full calendar month containing `startDate`, with frontend expected to render the top-level flat `items` array chronologically.
+- The endpoint groups by the persisted `ClassSession.scheduledDate` calendar date. Session timestamps remain UTC ISO strings.
 
 #### Response
+
 ```json
 {
   "view": "WEEK",
   "startDate": "2026-05-26",
   "endDate": "2026-06-01",
+  "items": [
+    {
+      "id": "class_session_123",
+      "organizationId": "org_123",
+      "branchId": "branch_123",
+      "classScheduleId": "class_schedule_123",
+      "instructorMembershipId": "membership_123",
+      "title": "Fundamentals",
+      "classType": "GI",
+      "scheduledDate": "2026-05-26T00:00:00.000Z",
+      "startAt": "2026-05-26T18:00:00.000Z",
+      "endAt": "2026-05-26T19:00:00.000Z",
+      "capacity": {
+        "max": 20,
+        "enrolled": 3
+      },
+      "status": "SCHEDULED",
+      "cancellationReason": null,
+      "notes": null,
+      "createdAt": "2026-05-26T10:30:00.000Z",
+      "updatedAt": "2026-05-26T10:30:00.000Z",
+      "instructor": {
+        "membershipId": "membership_123",
+        "userId": "user_123",
+        "firstName": "Assigned",
+        "lastName": "Instructor",
+        "displayName": "Assigned Instructor"
+      }
+    }
+  ],
   "days": [
     {
       "date": "2026-05-26",
-      "items": []
+      "items": [
+        {
+          "id": "class_session_123",
+          "organizationId": "org_123",
+          "branchId": "branch_123",
+          "classScheduleId": "class_schedule_123",
+          "instructorMembershipId": "membership_123",
+          "title": "Fundamentals",
+          "classType": "GI",
+          "scheduledDate": "2026-05-26T00:00:00.000Z",
+          "startAt": "2026-05-26T18:00:00.000Z",
+          "endAt": "2026-05-26T19:00:00.000Z",
+          "capacity": {
+            "max": 20,
+            "enrolled": 3
+          },
+          "status": "SCHEDULED",
+          "cancellationReason": null,
+          "notes": null,
+          "createdAt": "2026-05-26T10:30:00.000Z",
+          "updatedAt": "2026-05-26T10:30:00.000Z",
+          "instructor": {
+            "membershipId": "membership_123",
+            "userId": "user_123",
+            "firstName": "Assigned",
+            "lastName": "Instructor",
+            "displayName": "Assigned Instructor"
+          }
+        }
+      ]
     }
   ]
 }
 ```
 
 **Frontend contract note**
+
 - This is a branch-scoped operational calendar, not the student self calendar.
 - Items use the compact class-session list shape, not the Session Detail shape.
+- The canonical compact item shape is shared by `GET /class-calendar`, `GET /class-sessions`, and `GET /class-sessions/assigned`: `instructor` is flat membership/user identity and `capacity` is an object with `max` and `enrolled`.
+- `items` is always chronological and flat. `days` is kept for grouped DAY/WEEK/MONTH compatibility.
+- For `LIST`, consume `items`; `days` remains present but should not be required for a linear UI.
 - For student-facing calendar UI, use `GET /organizations/:organizationId/students/me/calendar` or `GET /organizations/:organizationId/training-calendar`.
 
 ### Class session gaps
+
 `GET /organizations/:organizationId/branches/:branchId/class-session-gaps`
 
 **Roles permitted**: authenticated member
@@ -3069,12 +3494,14 @@ Same response shape, with `missingCandidateCount` if the backend returns that co
 **Scope**: BRANCH_SCOPED
 
 #### Query params
-| Param | Tipo | Default | Descripción |
-|---|---|---|---|
-| `fromDate` | date | required | start |
-| `toDate` | date | required | end |
+
+| Param      | Tipo | Default  | Descripción |
+| ---------- | ---- | -------- | ----------- |
+| `fromDate` | date | required | start       |
+| `toDate`   | date | required | end         |
 
 #### Response
+
 ```json
 {
   "fromDate": "2026-06-01",
@@ -3089,6 +3516,7 @@ Same response shape, with `missingCandidateCount` if the backend returns that co
 ```
 
 ### Update class session
+
 `PATCH /organizations/:organizationId/branches/:branchId/class-sessions/:sessionId`
 
 **Roles permitted**: authenticated member
@@ -3097,6 +3525,7 @@ Same response shape, with `missingCandidateCount` if the backend returns that co
 **Scope**: BRANCH_SCOPED
 
 #### Request body
+
 ```json
 {
   "instructorMembershipId": "string",
@@ -3112,9 +3541,14 @@ Same response shape, with `missingCandidateCount` if the backend returns that co
 }
 ```
 
+#### Conflict 409
+
+Uses the same `CLASS_SESSION_CONFLICT` response shape documented under create class session. `PATCH` excludes the session being updated from overlap detection.
+
 ## 10. Attendance
 
 ### Technical roster
+
 `GET /organizations/:organizationId/branches/:branchId/class-sessions/:sessionId/attendance/technical-roster`
 
 **Roles permitted**: authenticated member
@@ -3123,6 +3557,7 @@ Same response shape, with `missingCandidateCount` if the backend returns that co
 **Scope**: BRANCH_SCOPED
 
 #### Response
+
 ```json
 {
   "items": [
@@ -3156,6 +3591,7 @@ Same response shape, with `missingCandidateCount` if the backend returns that co
 ```
 
 ### List session attendance
+
 `GET /organizations/:organizationId/branches/:branchId/class-sessions/:sessionId/attendance`
 
 **Roles permitted**: authenticated member
@@ -3164,6 +3600,7 @@ Same response shape, with `missingCandidateCount` if the backend returns that co
 **Scope**: BRANCH_SCOPED
 
 #### Response
+
 ```json
 {
   "items": [],
@@ -3189,16 +3626,19 @@ Same response shape, with `missingCandidateCount` if the backend returns that co
 ```
 
 **Sensitive field note**
+
 - This is an administrative attendance view, available to branch-authorized `MESTRE`, `ORG_ADMIN`, `ACADEMY_MANAGER`, effective `HEAD_COACH`, and `STAFF`.
 - The backend intentionally returns operational fields needed for attendance correction/audit: student contact basics, attendance `notes`, actor membership ids, check-in token id, correction metadata, and history.
 - Assigned instructors should use `technical-roster` / instructor execution views when they only need technical class execution context; those views omit student email/phone and private admin-only fields.
 
 **Frontend summary mapping**
+
 - Canonical UI summary: `expected`, `present`, `absent`, `excused`, `late`, `pending`.
 - Current attendance list maps as: `present = summary.counts.PRESENT`, `late = summary.counts.LATE`, `absent = summary.counts.ABSENT`, `excused = summary.counts.EXCUSED`, `expected = summary.intentsTotal`, `pending = behavior.summary.pendingIntentValidationTotal`.
 - Session Detail already exposes the canonical subset under `attendance`.
 
 ### Record attendance
+
 `POST /organizations/:organizationId/branches/:branchId/class-sessions/:sessionId/attendance`
 
 **Roles permitted**: authenticated member
@@ -3207,6 +3647,7 @@ Same response shape, with `missingCandidateCount` if the backend returns that co
 **Scope**: BRANCH_SCOPED
 
 #### Request body
+
 ```json
 {
   "records": [
@@ -3221,6 +3662,7 @@ Same response shape, with `missingCandidateCount` if the backend returns that co
 ```
 
 #### Response
+
 ```json
 {
   "items": [],
@@ -3236,18 +3678,26 @@ Same response shape, with `missingCandidateCount` if the backend returns that co
 }
 ```
 
-### Self check-in
+### Self check-in (DEPRECATED — legacy, not recommended)
+
+> **DEPRECATED / LEGACY — DO NOT USE FOR NEW CLIENTS.**
+> In KURO V1 student self-check-in (trust-based attendance with no proof of presence) is **not** a supported or recommended flow. The official student attendance flow is **QR check-in** (`POST /organizations/:organizationId/students/me/check-ins/qr`), which records attendance against a token the instructor issues in class.
+> This endpoint is retained only for backward compatibility. It is **not** exposed in the Android Student Home (`checkIn.action` never returns `OPEN_SELF_CHECK_IN`) and **must not** be surfaced in the web frontend as a student self-attendance action. No configuration exists, or will be added, to re-enable it as a recommended flow.
+
 `POST /organizations/:organizationId/branches/:branchId/class-sessions/:sessionId/attendance/self-check-in`
 
-**Roles permitted**: authenticated student or authorized actor
-**Capability required**: `attendance.canValidateAttendance` or student self route access depending on policy
+**Roles permitted**: authenticated student (linked student profile), self only — resolved from the JWT, never marks another student
+**Capability required**: student self route access (`AttendancePolicy.ensureCanSelfCheckIn`, organization role `STUDENT`)
 **Step-up required**: no
 **Scope**: BRANCH_SCOPED
+**Status**: DEPRECATED. Records attendance with source `SELF_CHECKIN`.
 
 #### Response
+
 `{ item: attendanceRecord, created: boolean }`
 
 ### Issue QR token
+
 `POST /organizations/:organizationId/branches/:branchId/class-sessions/:sessionId/attendance/qr-token`
 
 **Roles permitted**: authenticated member
@@ -3256,6 +3706,7 @@ Same response shape, with `missingCandidateCount` if the backend returns that co
 **Scope**: BRANCH_SCOPED
 
 #### Request body
+
 ```json
 {
   "expiresInMinutes": 15
@@ -3263,6 +3714,7 @@ Same response shape, with `missingCandidateCount` if the backend returns that co
 ```
 
 #### Response
+
 ```json
 {
   "id": "string",
@@ -3278,15 +3730,20 @@ Same response shape, with `missingCandidateCount` if the backend returns that co
 }
 ```
 
-### QR check-in
+### QR check-in (session-scoped — LEGACY/compatibility)
+
+> **LEGACY / COMPATIBILITY.** This session-scoped QR endpoint requires the caller to know `branchId` and `sessionId` before scanning. It is kept for backward compatibility (web/Postman/existing tests). New mobile clients **must** use the branchless **Student self QR check-in** (`POST /organizations/:organizationId/students/me/check-ins/qr`) below, which derives branch/session from the scanned token.
+> Both endpoints apply identical validations (token validity/expiration/revocation, check-in window, branch access including approved visits, billing restriction, idempotency) and both record attendance with source `QR_CHECKIN`. There is no security or visit-support difference between them.
+
 `POST /organizations/:organizationId/branches/:branchId/class-sessions/:sessionId/attendance/qr-check-in`
 
-**Roles permitted**: authenticated member or student
-**Capability requerida**: `attendance.canValidateAttendance`
+**Roles permitted**: authenticated student (linked student profile), self only — resolved from the JWT
+**Capability requerida**: student self QR check-in (`AttendancePolicy.ensureCanQrCheckIn`, organization role `STUDENT`)
 **Step-up requerido**: no
 **Scope**: BRANCH_SCOPED
 
 #### Request body
+
 ```json
 {
   "token": "string"
@@ -3294,9 +3751,55 @@ Same response shape, with `missingCandidateCount` if the backend returns that co
 ```
 
 #### Response
+
 `{ item: attendanceRecord, created: boolean }`
 
+### Student self QR check-in (RECOMMENDED for mobile)
+
+`POST /organizations/:organizationId/students/me/check-ins/qr`
+
+**Roles permitted**: authenticated student with linked student profile
+**Capability required**: student self QR check-in through attendance policy
+**Step-up required**: no
+**Scope**: ORGANIZATION_WIDE request path, but execution is validated against the class session branch and the linked student's primary/approved-visit context
+
+#### Request body
+
+```json
+{
+  "code": "string"
+}
+```
+
+#### Response
+
+```json
+{
+  "status": "CHECKED_IN",
+  "classSessionId": "session_123",
+  "className": "Fundamentals - Gi",
+  "checkedInAt": "2026-06-01T18:25:00.000Z",
+  "checkedInAtEpochMs": 1780347900000,
+  "alreadyCheckedIn": false,
+  "message": "Check-in successful"
+}
+```
+
+#### Contract rules
+
+- This endpoint exists for mobile/app QR scanner flows so Android does not need `branchId` or `sessionId` in advance.
+- The scanned `code` is treated as the QR token raw value. Home never returns this raw value.
+- Success is idempotent: if the student was already checked in for that session, the endpoint still returns `status=CHECKED_IN` with `alreadyCheckedIn=true`.
+- `checkedInAt` uses the canonical attendance record creation timestamp and `checkedInAtEpochMs` is the same moment in epoch milliseconds.
+
+#### Error semantics
+
+- `403`: tenant mismatch, missing linked student, or the linked student is not allowed to operate in the session branch.
+- `404`: QR code/token does not exist in the organization.
+- `409`: QR token expired, QR token revoked, session is no longer inside the check-in window, session canceled, or attendance is blocked by billing restrictions.
+
 ### Kiosk check-in
+
 `POST /organizations/:organizationId/branches/:branchId/class-sessions/:sessionId/attendance/kiosk-check-in`
 
 **Roles permitted**: authenticated member or kiosk actor
@@ -3305,6 +3808,7 @@ Same response shape, with `missingCandidateCount` if the backend returns that co
 **Scope**: BRANCH_SCOPED
 
 #### Request body
+
 ```json
 {
   "studentId": "string",
@@ -3313,9 +3817,11 @@ Same response shape, with `missingCandidateCount` if the backend returns that co
 ```
 
 #### Response
+
 `{ item: attendanceRecord, created: boolean }`
 
 ### Own attendance intent
+
 `GET /organizations/:organizationId/branches/:branchId/class-sessions/:sessionId/attendance/intent`
 
 **Roles permitted**: authenticated student
@@ -3324,6 +3830,7 @@ Same response shape, with `missingCandidateCount` if the backend returns that co
 **Scope**: BRANCH_SCOPED
 
 #### Response
+
 ```json
 {
   "item": null,
@@ -3334,6 +3841,7 @@ Same response shape, with `missingCandidateCount` if the backend returns that co
 ```
 
 ### Upsert own attendance intent
+
 `PUT /organizations/:organizationId/branches/:branchId/class-sessions/:sessionId/attendance/intent`
 
 **Roles permitted**: authenticated student
@@ -3342,9 +3850,11 @@ Same response shape, with `missingCandidateCount` if the backend returns that co
 **Scope**: BRANCH_SCOPED
 
 #### Request body
+
 No body or optional intent creation payload, depending on use case wiring.
 
 #### Response
+
 ```json
 {
   "item": {},
@@ -3354,6 +3864,7 @@ No body or optional intent creation payload, depending on use case wiring.
 ```
 
 ### Cancel own attendance intent
+
 `DELETE /organizations/:organizationId/branches/:branchId/class-sessions/:sessionId/attendance/intent`
 
 **Roles permitted**: authenticated student
@@ -3362,6 +3873,7 @@ No body or optional intent creation payload, depending on use case wiring.
 **Scope**: BRANCH_SCOPED
 
 #### Response
+
 ```json
 {
   "canceled": true,
@@ -3370,6 +3882,7 @@ No body or optional intent creation payload, depending on use case wiring.
 ```
 
 ### Update attendance record
+
 `PATCH /organizations/:organizationId/branches/:branchId/class-sessions/:sessionId/attendance/:studentId`
 
 **Roles permitted**: authenticated member
@@ -3378,6 +3891,7 @@ No body or optional intent creation payload, depending on use case wiring.
 **Scope**: BRANCH_SCOPED
 
 #### Request body
+
 ```json
 {
   "status": "PRESENT",
@@ -3389,6 +3903,7 @@ No body or optional intent creation payload, depending on use case wiring.
 ```
 
 ### Delete attendance record
+
 `DELETE /organizations/:organizationId/branches/:branchId/class-sessions/:sessionId/attendance/:studentId`
 
 **Roles permitted**: authenticated member
@@ -3397,6 +3912,7 @@ No body or optional intent creation payload, depending on use case wiring.
 **Scope**: BRANCH_SCOPED
 
 #### Response
+
 ```json
 {
   "removed": true,
@@ -3406,6 +3922,7 @@ No body or optional intent creation payload, depending on use case wiring.
 ```
 
 ### Attendance follow-up queue
+
 `GET /organizations/:organizationId/branches/:branchId/attendance/follow-ups`
 
 **Roles permitted**: authenticated member
@@ -3414,11 +3931,13 @@ No body or optional intent creation payload, depending on use case wiring.
 **Scope**: BRANCH_SCOPED
 
 #### Query params
-| Param | Tipo | Default | Descripción |
-|---|---|---|---|
-| `windowDays` | number | `30` | Ventana analítica |
+
+| Param        | Tipo   | Default | Descripción       |
+| ------------ | ------ | ------- | ----------------- |
+| `windowDays` | number | `30`    | Ventana analítica |
 
 #### Response
+
 ```json
 {
   "outcomeWindowDays": 30,
@@ -3455,6 +3974,7 @@ No body or optional intent creation payload, depending on use case wiring.
 ```
 
 ### Attendance behavior signals
+
 `GET /organizations/:organizationId/branches/:branchId/attendance/behavior-signals`
 
 **Roles permitted**: MESTRE, ORG_ADMIN, ACADEMY_MANAGER, HEAD_COACH, STAFF
@@ -3463,11 +3983,13 @@ No body or optional intent creation payload, depending on use case wiring.
 **Scope**: BRANCH_SCOPED
 
 #### Query params
-| Param | Tipo | Default | Descripción |
-|---|---|---|---|
-| `windowDays` | number | `30` | Ventana analítica branch-local |
+
+| Param        | Tipo   | Default | Descripción                    |
+| ------------ | ------ | ------- | ------------------------------ |
+| `windowDays` | number | `30`    | Ventana analítica branch-local |
 
 #### Response 200 — shape REAL del backend
+
 ```json
 {
   "windowDays": 30,
@@ -3515,10 +4037,12 @@ No body or optional intent creation payload, depending on use case wiring.
 ```
 
 **Sensitive field note**
+
 - This endpoint is branch-local and intentionally includes student-level retention/risk signals for operational follow-up.
 - It does not expose billing balances or charges; `financialContext` is reduced to attendance restriction context.
 
 ### Update attendance follow-up
+
 `PATCH /organizations/:organizationId/branches/:branchId/attendance/follow-ups/:studentId`
 
 **Roles permitted**: authenticated member
@@ -3527,6 +4051,7 @@ No body or optional intent creation payload, depending on use case wiring.
 **Scope**: BRANCH_SCOPED
 
 #### Request body
+
 ```json
 {
   "actionType": "FOLLOW_UP_STARTED",
@@ -3538,6 +4063,7 @@ No body or optional intent creation payload, depending on use case wiring.
 ## 11. Training Calendar
 
 ### Branch/org training calendar
+
 `GET /organizations/:organizationId/training-calendar`
 
 **Roles permitted**: authenticated member
@@ -3546,23 +4072,25 @@ No body or optional intent creation payload, depending on use case wiring.
 **Scope**: ORGANIZATION_WIDE
 
 #### Query params
-| Param | Tipo | Default | Descripción |
-|---|---|---|---|
-| `from` | date | required | Start date |
-| `to` | date | required | End date |
-| `view` | enum | `LIST` | `MONTH`, `WEEK`, `DAY`, `LIST` |
-| `branchId` | string | - | branch filter |
-| `instructorMembershipId` | string | - | instructor filter |
-| `studentId` | string | - | student filter |
-| `status` | enum | - | item status filter |
-| `classType` | enum | - | class type filter |
-| `category` | enum | - | category filter |
-| `itemType` | enum | - | `CLASS_SESSION`, `ACADEMY_EVENT`, `ALL` |
-| `tag` | string | - | tag filter |
-| `color` | string | - | color filter |
-| `search` | string | - | search filter |
+
+| Param                    | Tipo   | Default  | Descripción                             |
+| ------------------------ | ------ | -------- | --------------------------------------- |
+| `from`                   | date   | required | Start date                              |
+| `to`                     | date   | required | End date                                |
+| `view`                   | enum   | `LIST`   | `MONTH`, `WEEK`, `DAY`, `LIST`          |
+| `branchId`               | string | -        | branch filter                           |
+| `instructorMembershipId` | string | -        | instructor filter                       |
+| `studentId`              | string | -        | student filter                          |
+| `status`                 | enum   | -        | item status filter                      |
+| `classType`              | enum   | -        | class type filter                       |
+| `category`               | enum   | -        | category filter                         |
+| `itemType`               | enum   | -        | `CLASS_SESSION`, `ACADEMY_EVENT`, `ALL` |
+| `tag`                    | string | -        | tag filter                              |
+| `color`                  | string | -        | color filter                            |
+| `search`                 | string | -        | search filter                           |
 
 #### Response
+
 ```json
 {
   "organizationId": "string",
@@ -3578,6 +4106,7 @@ No body or optional intent creation payload, depending on use case wiring.
 ### Calendar item shapes
 
 #### Class session item
+
 ```json
 {
   "id": "string",
@@ -3615,6 +4144,7 @@ No body or optional intent creation payload, depending on use case wiring.
 ```
 
 #### Academy event item
+
 ```json
 {
   "id": "string",
@@ -3642,6 +4172,7 @@ No body or optional intent creation payload, depending on use case wiring.
 ```
 
 ### Student self profile
+
 `GET /organizations/:organizationId/students/me`
 
 **Roles permitted**: authenticated student
@@ -3650,6 +4181,7 @@ No body or optional intent creation payload, depending on use case wiring.
 **Scope**: BRANCH_SCOPED
 
 #### Response
+
 ```json
 {
   "id": "string",
@@ -3667,6 +4199,7 @@ No body or optional intent creation payload, depending on use case wiring.
 ```
 
 ### Student self calendar
+
 `GET /organizations/:organizationId/students/me/calendar`
 
 **Roles permitted**: authenticated student
@@ -3674,7 +4207,158 @@ No body or optional intent creation payload, depending on use case wiring.
 **Step-up required**: no
 **Scope**: BRANCH_SCOPED
 
+#### Notes
+
+- This is the endpoint Android should use for Home `Upcoming Classes -> View All`.
+- Recommended upcoming-classes request shape:
+  `GET /organizations/:organizationId/students/me/calendar?from=YYYY-MM-DD&to=YYYY-MM-DD&view=LIST&itemType=CLASS_SESSION&status=SCHEDULED`
+- The response is chronologically ordered and contains only student-visible branches: primary branch plus approved visit branches in the requested range.
+
+### Student mobile home
+
+`GET /organizations/:organizationId/students/me/home`
+
+**Roles permitted**: authenticated tenant member with linked student profile
+**Capability required**: student self access through `trainingCalendar.canReadStudentSelfCalendar`
+**Step-up required**: no
+**Scope**: BRANCH_SCOPED, restricted to the linked student and the student's primary branch plus currently approved visit branches
+
+#### Response
+
+```json
+{
+  "user": {
+    "id": "user_123",
+    "displayName": "Joao Silva",
+    "avatarUrl": null
+  },
+  "student": {
+    "id": "student_123",
+    "primaryBranchId": "branch_123",
+    "currentStripes": 2,
+    "beltName": "Adult Blue",
+    "beltColor": "BLUE",
+    "primaryBelt": {
+      "rank": "ADULT_BLUE",
+      "label": "Adult Blue",
+      "track": "ADULT",
+      "maxStripes": 4,
+      "order": 20
+    }
+  },
+  "notifications": {
+    "unreadCount": 3
+  },
+  "stats": {
+    "classesThisMonth": 12,
+    "trainingStreakDays": 5,
+    "totalTrainingHours": 87,
+    "monthlyClassesDelta": 3,
+    "totalHoursDelta": 6
+  },
+  "activeClass": {
+    "classSessionId": "session_123",
+    "branchId": "branch_123",
+    "title": "Fundamentals - Gi",
+    "subtitle": "Starting soon",
+    "startsAt": "2026-06-01T18:30:00.000Z",
+    "endsAt": "2026-06-01T19:30:00.000Z",
+    "status": "SCHEDULED",
+    "checkIn": {
+      "available": true,
+      "mode": "QR_CHECKIN",
+      "action": "OPEN_QR_SCANNER",
+      "cta": "SCAN_QR",
+      "label": "Scan QR"
+    }
+  },
+  "nextClass": {
+    "classSessionId": "session_456",
+    "branchId": "branch_123",
+    "title": "Fundamentals - Gi",
+    "startsAt": "2026-06-01T18:30:00.000Z",
+    "endsAt": "2026-06-01T19:30:00.000Z",
+    "instructorName": "Professor Silva",
+    "durationMinutes": 60,
+    "enrolledCount": 12,
+    "capacity": 24,
+    "status": "SCHEDULED"
+  },
+  "upcomingClasses": [
+    {
+      "classSessionId": "session_789",
+      "branchId": "branch_123",
+      "title": "Advanced - No Gi",
+      "instructorName": "Professor Santos",
+      "startsAt": "2026-06-02T19:00:00.000Z",
+      "endsAt": "2026-06-02T20:30:00.000Z",
+      "durationMinutes": 90,
+      "enrolledCount": 18,
+      "capacity": 24,
+      "status": "SCHEDULED"
+    }
+  ],
+  "shortcuts": {
+    "attendance": {
+      "enabled": true
+    },
+    "trainingNotes": {
+      "enabled": true,
+      "unreadCount": null,
+      "latestAt": null
+    }
+  }
+}
+```
+
+#### Contract rules
+
+- This is a compact mobile Home snapshot. Android should use drill-down endpoints for full profile, full calendar, attendance history, notes, or check-in execution.
+- The endpoint is intentionally not a class detail endpoint, not an attendance history endpoint, not a training-notes index endpoint, and not a check-in execution endpoint.
+- `currentStripes` is the student's current stripe count for the current belt state. This is the canonical, legacy-stable field; the Home does not return a duplicate `stripesNumber`. `primaryBelt.maxStripes` is the maximum stripes allowed for that rank.
+- `beltName` is the current student-facing belt label and `beltColor` is a stable backend color token for the active rank.
+- `primaryBelt` is `null` when the student has no current rank; otherwise it uses the promotion rank catalog shape from `GET /catalogs/promotion-ranks`.
+- `classesThisMonth` counts validated `PRESENT`/`LATE` attendance records whose class session belongs to the current UTC calendar month.
+- `totalTrainingHours` sums validated `PRESENT`/`LATE` attendance durations from `ClassSession.startAt/endAt`; decimal values are possible for non-hour sessions.
+- `monthlyClassesDelta` is current calendar month classes minus previous calendar month classes.
+- `totalHoursDelta` is current calendar month training hours minus previous calendar month training hours.
+- `trainingStreakDays` is derived from consecutive attended calendar dates, anchored on today when the student trained today or yesterday when the latest attended class was yesterday. It is `0` when no recent attendance exists.
+- Metrics return `0` when there is no attendance history. They should become `null` only if a future data model makes the calculation ambiguous.
+- `activeClass` is the scheduled class inside the student self check-in window, or `null`.
+- `nextClass` is the next scheduled class in the readable student branch set. `upcomingClasses` returns the next short list after `nextClass`.
+- `checkIn.mode` may be `QR_CHECKIN` or `NONE` for the current student Home. `STAFF_MANUAL` and `KIOSK_CHECKIN` are reserved semantic values for staff/admin attendance flows but are not direct mobile student Home actions. `SELF_CHECKIN` is **deprecated** and is never returned by the Home.
+- `checkIn.action` is semantic navigation/action intent only. The only allowed values are `OPEN_QR_SCANNER`, `VIEW_DETAILS`, and `NONE`. `OPEN_SELF_CHECK_IN` is **removed** and is never returned: KURO V1 does not expose student self check-in.
+  - `OPEN_QR_SCANNER`: an instructor-issued QR token is active for the class; Android opens the scanner and posts the scanned code to `POST /organizations/:organizationId/students/me/check-ins/qr`.
+  - `VIEW_DETAILS`: a class is in the student action window but there is no actionable QR token (or check-in is not available); Android opens the session detail. No check-in is executed from Home.
+  - `NONE`: no actionable class, or the student is already checked in.
+- `checkIn.cta` may be `SCAN_QR`, `VIEW_DETAILS`, `CHECKED_IN`, or `NOT_AVAILABLE`. The self check-in `CHECK_IN` CTA is removed.
+- The endpoint never returns QR raw payloads. For QR check-in, Android must open the dedicated QR check-in flow.
+- `nextClass` and `upcomingClasses` expose only summary information plus ids needed for drill-down navigation.
+- `enrolledCount` is the active attendance-intent count for the class session. It does not expose enrolled student identities and is not a separate enrollment domain.
+- `trainingNotes.unreadCount` is `null` because the current notes model has no per-student note read receipt. `latestAt` reports the latest active `VISIBLE_TO_STUDENT` note update when present.
+- All datetime fields use ISO-8601 UTC strings. Android may derive epoch millis client-side when needed.
+
+#### Visibility and security
+
+- Tenant access is checked before resolving `Student.userId`.
+- The endpoint only resolves the authenticated user's linked student profile; it cannot read another student's Home.
+- Student-visible sessions are limited to the student's primary branch and approved active visit branches.
+- `ClassSession.notes`, attendance operational notes, correction metadata, check-in token payload/hash, training note bodies, staff-private notes, instructor-private notes, rosters, and other students' personal data are never included.
+- Notifications are reduced to unread count only.
+
+#### Drill-down endpoints
+
+- Profile: `GET /organizations/:organizationId/students/me`
+- Upcoming Classes / View All: `GET /organizations/:organizationId/students/me/calendar?from=YYYY-MM-DD&to=YYYY-MM-DD&view=LIST&itemType=CLASS_SESSION&status=SCHEDULED`
+- Attendance history: `GET /organizations/:organizationId/students/me/attendance`
+- Training notes: `GET /organizations/:organizationId/students/me/notes`
+- Session detail: `GET /organizations/:organizationId/training-calendar/class-sessions/:sessionId`
+- Training itinerary: `GET /organizations/:organizationId/students/me/training-itinerary`
+- Student QR check-in (official student attendance flow): `POST /organizations/:organizationId/students/me/check-ins/qr`
+- Note: there is no Home drill-down to self check-in. `SELF_CHECKIN` / `OPEN_SELF_CHECK_IN` are deprecated and never emitted by the Home.
+
 ### Student self attendance
+
 `GET /organizations/:organizationId/students/me/attendance`
 
 **Roles permitted**: authenticated student
@@ -3683,6 +4367,7 @@ No body or optional intent creation payload, depending on use case wiring.
 **Scope**: BRANCH_SCOPED
 
 #### Response
+
 ```json
 {
   "studentId": "string",
@@ -3713,7 +4398,14 @@ No body or optional intent creation payload, depending on use case wiring.
 }
 ```
 
+#### Notes
+
+- This is the student-safe attendance history endpoint Android should use for the Attendance module.
+- It returns the student's own validated attendance records plus a safe class-session summary.
+- It does not expose operational attendance notes, correction history, other students, or administrative actor metadata.
+
 ### Student training itinerary
+
 `GET /organizations/:organizationId/students/me/training-itinerary`
 
 **Roles permitted**: authenticated student
@@ -3722,9 +4414,16 @@ No body or optional intent creation payload, depending on use case wiring.
 **Scope**: BRANCH_SCOPED
 
 #### Response
+
 Same as training calendar response, with student itinerary notes included in the read model.
 
+#### Notes
+
+- This is richer than the Home snapshot and includes visible periodized notes inside the requested range.
+- Android should use it only when the itinerary/calendar notes experience is needed, not for the Home initial load.
+
 ### Training calendar class session detail
+
 `GET /organizations/:organizationId/training-calendar/class-sessions/:sessionId`
 
 **Roles permitted**: authenticated member
@@ -3733,20 +4432,25 @@ Same as training calendar response, with student itinerary notes included in the
 **Scope**: ORGANIZATION_WIDE
 
 #### Response
+
 Same class session item shape used by the training calendar, with the selected session and its current capability links.
 
 **Security notes**
+
 - The endpoint returns `404 Class session not found` both when the session id does not exist and when it belongs to a branch the principal cannot read. This avoids cross-branch id inference.
 - For student/self context, `ClassSession.notes` is treated as internal operational notes and is not exposed as `description`; `description` is `null`.
 - For admin/manager or assigned-instructor context, `description` may contain `ClassSession.notes`.
+- Android should use this endpoint for Next Class / View Details and class card drill-downs from Home.
 
 **Validation**
+
 - `status` must be one of the backend enum values used by class sessions or academy events. Invalid values return validation error instead of silently filtering to an empty result.
 - `category` must be one of `CLASS`, `OPEN_MAT`, `SEMINAR`, `PRIVATE_LESSON`, `COMPETITION_PREP`, `GRADING_DAY`, `SPECIAL_TRAINING`, `WORKSHOP`, `MEETING`, `HOLIDAY_CLOSURE`, `ACADEMY_EVENT`.
 
 ## 12. Academy Events
 
 ### Create academy event
+
 `POST /organizations/:organizationId/academy-events`
 
 **Roles permitted**: authenticated member
@@ -3755,6 +4459,7 @@ Same class session item shape used by the training calendar, with the selected s
 **Scope**: BRANCH_SCOPED or ORGANIZATION_WIDE depending on event branch scope
 
 #### Request body
+
 ```json
 {
   "branchId": "string",
@@ -3771,12 +4476,18 @@ Same class session item shape used by the training calendar, with the selected s
 ```
 
 #### Response
+
 ```json
 {
   "id": "string",
   "organizationId": "string",
   "branchId": "string",
-  "branch": { "id": "string", "name": "string", "slug": "string", "timezone": "America/Argentina/Buenos_Aires" },
+  "branch": {
+    "id": "string",
+    "name": "string",
+    "slug": "string",
+    "timezone": "America/Argentina/Buenos_Aires"
+  },
   "title": "string",
   "description": "string",
   "eventType": "SEMINAR",
@@ -3797,6 +4508,7 @@ Same class session item shape used by the training calendar, with the selected s
 ```
 
 ### List academy events
+
 `GET /organizations/:organizationId/academy-events`
 
 **Roles permitted**: authenticated member
@@ -3805,9 +4517,11 @@ Same class session item shape used by the training calendar, with the selected s
 **Scope**: BRANCH_SCOPED or ORGANIZATION_WIDE
 
 #### Response
+
 `{ items: [...], meta: { page, limit, total } }`
 
 ### Get academy event detail
+
 `GET /organizations/:organizationId/academy-events/:eventId`
 
 **Roles permitted**: authenticated member
@@ -3816,6 +4530,7 @@ Same class session item shape used by the training calendar, with the selected s
 **Scope**: BRANCH_SCOPED or ORGANIZATION_WIDE
 
 ### Update academy event
+
 `PATCH /organizations/:organizationId/academy-events/:eventId`
 
 **Roles permitted**: authenticated member
@@ -3824,6 +4539,7 @@ Same class session item shape used by the training calendar, with the selected s
 **Scope**: BRANCH_SCOPED or ORGANIZATION_WIDE
 
 ### Publish academy event
+
 `POST /organizations/:organizationId/academy-events/:eventId/publish`
 
 **Roles permitted**: authenticated member
@@ -3832,6 +4548,7 @@ Same class session item shape used by the training calendar, with the selected s
 **Scope**: BRANCH_SCOPED or ORGANIZATION_WIDE
 
 ### Cancel academy event
+
 `POST /organizations/:organizationId/academy-events/:eventId/cancel`
 
 **Roles permitted**: authenticated member
@@ -3840,6 +4557,7 @@ Same class session item shape used by the training calendar, with the selected s
 **Scope**: BRANCH_SCOPED or ORGANIZATION_WIDE
 
 ### Archive academy event
+
 `POST /organizations/:organizationId/academy-events/:eventId/archive`
 
 **Roles permitted**: authenticated member
@@ -3851,9 +4569,65 @@ Same class session item shape used by the training calendar, with the selected s
 
 Training notes are implemented in `src/training-notes/training-notes.controller.ts`. The active endpoints are listed in the controller-verified index above and covered by the official Postman collection.
 
+### Student self training notes
+
+`GET /organizations/:organizationId/students/me/notes`
+
+**Roles permitted**: authenticated student with linked student profile
+**Capability required**: student self training note read through training-notes policy
+**Step-up required**: no
+**Scope**: BRANCH_SCOPED
+
+#### Supported query params
+
+- `branchId` optional, but student self is restricted to the student's primary branch in this phase.
+- `classSessionId` optional.
+- `from` optional `YYYY-MM-DD`.
+- `to` optional `YYYY-MM-DD`.
+- `status` optional, but student self is restricted to `ACTIVE`.
+- `visibility` optional.
+- `noteType` optional.
+
+#### Response
+
+```json
+{
+  "studentId": "student_123",
+  "items": [
+    {
+      "id": "note_123",
+      "organizationId": "org_123",
+      "branchId": "branch_123",
+      "studentId": "student_123",
+      "status": "ACTIVE",
+      "classSessionId": null,
+      "periodStart": "2026-06-01T00:00:00.000Z",
+      "periodEnd": "2026-06-07T00:00:00.000Z",
+      "visibility": "VISIBLE_TO_STUDENT",
+      "noteType": "WEEKLY_PLAN",
+      "body": "string",
+      "revisionNumber": 1,
+      "createdAt": "2026-06-01T10:00:00.000Z",
+      "updatedAt": "2026-06-01T10:00:00.000Z",
+      "branch": {},
+      "author": {},
+      "updatedBy": null,
+      "classSession": null
+    }
+  ]
+}
+```
+
+#### Notes
+
+- This is the student-safe endpoint Android should use for the Training Notes module.
+- Student self reads are filtered by note visibility and status. `INSTRUCTOR_PRIVATE` and `STAFF_PRIVATE` notes must never appear here.
+- The current model has no note read-receipt domain, so unread counts are not available.
+
 ## 14. Instructors
 
 ### List branch instructors
+
 `GET /organizations/:organizationId/branches/:branchId/instructors`
 
 **Roles permitted**: MESTRE, ORG_ADMIN, ACADEMY_MANAGER, HEAD_COACH, INSTRUCTOR, STAFF
@@ -3862,6 +4636,7 @@ Training notes are implemented in `src/training-notes/training-notes.controller.
 **Scope**: BRANCH_SCOPED
 
 #### Response
+
 ```json
 {
   "items": [
@@ -3890,6 +4665,7 @@ Training notes are implemented in `src/training-notes/training-notes.controller.
 ```
 
 ### List instructor candidates
+
 `GET /organizations/:organizationId/branches/:branchId/instructors/candidates`
 
 **Roles permitted**: MESTRE, ORG_ADMIN, ACADEMY_MANAGER, HEAD_COACH, STAFF
@@ -3898,6 +4674,7 @@ Training notes are implemented in `src/training-notes/training-notes.controller.
 **Scope**: BRANCH_SCOPED
 
 #### Response
+
 ```json
 {
   "items": [
@@ -3929,6 +4706,7 @@ Training notes are implemented in `src/training-notes/training-notes.controller.
 ```
 
 ### My instructor profile
+
 `GET /organizations/:organizationId/instructors/me`
 
 **Roles permitted**: active tenant member with instructional capability in at least one readable branch
@@ -3937,6 +4715,7 @@ Training notes are implemented in `src/training-notes/training-notes.controller.
 **Scope**: BRANCH_SCOPED
 
 #### Response
+
 ```json
 {
   "membershipId": "membership_123",
@@ -3974,6 +4753,7 @@ Training notes are implemented in `src/training-notes/training-notes.controller.
 ```
 
 ### My instructor class sessions / calendar
+
 `GET /organizations/:organizationId/instructors/me/class-sessions`
 `GET /organizations/:organizationId/instructors/me/calendar`
 
@@ -3983,16 +4763,18 @@ Training notes are implemented in `src/training-notes/training-notes.controller.
 **Scope**: BRANCH_SCOPED
 
 #### Query params
-| Param | Tipo | Default | Descripción |
-|---|---|---|---|
-| `page` | number | `1` | Página |
-| `limit` | number | `20` | Tamaño |
-| `fromDate` | date | - | inicio |
-| `toDate` | date | - | fin |
-| `branchId` | string | - | branch dentro de scope docente |
-| `status` | enum | - | `SCHEDULED`, `COMPLETED`, `CANCELED` |
+
+| Param      | Tipo   | Default | Descripción                          |
+| ---------- | ------ | ------- | ------------------------------------ |
+| `page`     | number | `1`     | Página                               |
+| `limit`    | number | `20`    | Tamaño                               |
+| `fromDate` | date   | -       | inicio                               |
+| `toDate`   | date   | -       | fin                                  |
+| `branchId` | string | -       | branch dentro de scope docente       |
+| `status`   | enum   | -       | `SCHEDULED`, `COMPLETED`, `CANCELED` |
 
 #### Response
+
 ```json
 {
   "items": [
@@ -4036,6 +4818,7 @@ Training notes are implemented in `src/training-notes/training-notes.controller.
 ```
 
 ### Instructor admin calendar
+
 `GET /organizations/:organizationId/instructors/:membershipId/calendar`
 
 **Roles permitted**: MESTRE, ORG_ADMIN, ACADEMY_MANAGER, HEAD_COACH with branch visibility over the target instructor
@@ -4044,9 +4827,11 @@ Training notes are implemented in `src/training-notes/training-notes.controller.
 **Scope**: BRANCH_SCOPED
 
 #### Response
+
 Same paginated session item shape as instructor calendar plus an `instructor` object and aggregate `summary`. It does not expose student contact, billing, or attendance record history.
 
 ### My instructor session execution
+
 `GET /organizations/:organizationId/instructors/me/class-sessions/:sessionId/execution`
 
 **Roles permitted**: assigned instructor or authorized branch leadership according to class execution policy
@@ -4055,6 +4840,7 @@ Same paginated session item shape as instructor calendar plus an `instructor` ob
 **Scope**: BRANCH_SCOPED
 
 #### Response
+
 ```json
 {
   "session": {
@@ -4099,11 +4885,13 @@ Same paginated session item shape as instructor calendar plus an `instructor` ob
 ```
 
 **Sensitive field note**
+
 - Instructor execution uses the safe technical roster shape. It must not expose student contact data, parent/tutor data, billing data, or attendance admin history.
 
 ## 15. Promotions & Certificates
 
 ### Create promotion request
+
 `POST /organizations/:organizationId/students/:studentId/promotions`
 
 **Roles permitted**: authenticated member
@@ -4112,6 +4900,7 @@ Same paginated session item shape as instructor calendar plus an `instructor` ob
 **Scope**: BRANCH_SCOPED
 
 #### Request body
+
 ```json
 {
   "type": "BELT",
@@ -4122,9 +4911,11 @@ Same paginated session item shape as instructor calendar plus an `instructor` ob
 ```
 
 #### Response
+
 Returns the full promotion detail shape.
 
 ### Promotion catalog
+
 `GET /organizations/:organizationId/promotions/catalog`
 
 **Roles permitted**: authenticated member
@@ -4133,10 +4924,17 @@ Returns the full promotion detail shape.
 **Scope**: ORGANIZATION_WIDE
 
 #### Response 200/201
+
 ```json
 {
   "tracks": [
-    { "code": "ADULT", "label": "Adult / Juvenile", "initialRank": "ADULT_WHITE", "minAgeYears": 16, "maxAgeYears": null }
+    {
+      "code": "ADULT",
+      "label": "Adult / Juvenile",
+      "initialRank": "ADULT_WHITE",
+      "minAgeYears": 16,
+      "maxAgeYears": null
+    }
   ],
   "ranks": [
     {
@@ -4155,12 +4953,14 @@ Returns the full promotion detail shape.
 ```
 
 **Notes**
+
 - This is the tenant-bound promotion workflow catalog. It keeps the existing `code` field for backward compatibility.
 - Use public `GET /catalogs/promotion-ranks` when the frontend only needs belt/rank rendering metadata.
 - `PromotionTrack` is a graduation track (`KIDS`, `ADULT`), not a competition age division.
 - Do not model `MASTER_1..MASTER_7` or `JUVENILE_1/2` as promotion tracks/ranks unless a future explicit domain decision changes that.
 
 ### List promotions
+
 `GET /organizations/:organizationId/promotions`
 
 **Roles permitted**: authenticated member
@@ -4169,26 +4969,28 @@ Returns the full promotion detail shape.
 **Scope**: BRANCH_SCOPED or ORGANIZATION_WIDE
 
 #### Query params
-| Param | Tipo | Default | Descripción |
-|---|---|---|---|
-| `page` | number | `1` | Página |
-| `limit` | number | `20` | Tamaño |
-| `status` | enum | - | `PromotionRequestStatus` |
-| `studentId` | string | - | Filtro |
-| `branchId` | string | - | Filtro |
-| `type` | enum | - | `PromotionType` |
-| `track` | enum | - | `PromotionTrack` |
-| `targetBelt` | enum | - | `PromotionRank` |
-| `proposedByMembershipId` | string | - | Filtro |
-| `reviewedByMembershipId` | string | - | Filtro |
-| `snapshotOutOfDate` | boolean | - | Queue signal |
-| `recommendation` | enum | - | `PromotionRecommendation` |
-| `pendingOlderThanDays` | number | - | Age filter |
-| `sortBy` | enum | - | list sort |
-| `dateFrom` | date | - | Filter |
-| `dateTo` | date | - | Filter |
+
+| Param                    | Tipo    | Default | Descripción               |
+| ------------------------ | ------- | ------- | ------------------------- |
+| `page`                   | number  | `1`     | Página                    |
+| `limit`                  | number  | `20`    | Tamaño                    |
+| `status`                 | enum    | -       | `PromotionRequestStatus`  |
+| `studentId`              | string  | -       | Filtro                    |
+| `branchId`               | string  | -       | Filtro                    |
+| `type`                   | enum    | -       | `PromotionType`           |
+| `track`                  | enum    | -       | `PromotionTrack`          |
+| `targetBelt`             | enum    | -       | `PromotionRank`           |
+| `proposedByMembershipId` | string  | -       | Filtro                    |
+| `reviewedByMembershipId` | string  | -       | Filtro                    |
+| `snapshotOutOfDate`      | boolean | -       | Queue signal              |
+| `recommendation`         | enum    | -       | `PromotionRecommendation` |
+| `pendingOlderThanDays`   | number  | -       | Age filter                |
+| `sortBy`                 | enum    | -       | list sort                 |
+| `dateFrom`               | date    | -       | Filter                    |
+| `dateTo`                 | date    | -       | Filter                    |
 
 #### Response
+
 ```json
 {
   "items": [
@@ -4226,6 +5028,7 @@ Returns the full promotion detail shape.
 ```
 
 ### Promotion detail
+
 `GET /organizations/:organizationId/promotions/:promotionId`
 
 **Roles permitted**: authenticated member
@@ -4234,7 +5037,9 @@ Returns the full promotion detail shape.
 **Scope**: BRANCH_SCOPED or ORGANIZATION_WIDE
 
 #### Response
+
 Full promotion detail view including:
+
 - `branch`
 - `student`
 - `proposedByMembership`
@@ -4245,6 +5050,7 @@ Full promotion detail view including:
 - `certificate` alias
 
 ### Student promotion context
+
 `GET /organizations/:organizationId/students/:studentId/promotion-context`
 
 **Roles permitted**: authenticated member
@@ -4253,6 +5059,7 @@ Full promotion detail view including:
 **Scope**: BRANCH_SCOPED
 
 #### Response
+
 ```json
 {
   "student": {
@@ -4286,7 +5093,13 @@ Full promotion detail view including:
     }
   },
   "comparison": {
-    "currentState": { "track": "ADULT", "trackLabel": "Adult / Juvenile", "belt": null, "beltLabel": null, "stripes": 0 },
+    "currentState": {
+      "track": "ADULT",
+      "trackLabel": "Adult / Juvenile",
+      "belt": null,
+      "beltLabel": null,
+      "stripes": 0
+    },
     "lastApprovedPromotion": null,
     "pendingRequest": null,
     "deltas": {
@@ -4301,6 +5114,7 @@ Full promotion detail view including:
 ```
 
 ### Update promotion evaluation
+
 `PATCH /organizations/:organizationId/promotions/:promotionId/evaluation`
 
 **Roles permitted**: authenticated member
@@ -4309,6 +5123,7 @@ Full promotion detail view including:
 **Scope**: BRANCH_SCOPED
 
 #### Request body
+
 ```json
 {
   "guardScore": 5,
@@ -4326,6 +5141,7 @@ Full promotion detail view including:
 ```
 
 ### Elevate promotion for authority review
+
 `POST /organizations/:organizationId/promotions/:promotionId/elevate`
 
 **Roles permitted**: authenticated member
@@ -4334,6 +5150,7 @@ Full promotion detail view including:
 **Scope**: BRANCH_SCOPED or ORGANIZATION_WIDE depending on promotion type
 
 #### Request body
+
 ```json
 {
   "requestPriority": "HIGH"
@@ -4341,9 +5158,11 @@ Full promotion detail view including:
 ```
 
 **Side effects**
+
 - Creates an institutional communication/request message.
 
 ### Review promotion authority
+
 `POST /organizations/:organizationId/promotions/:promotionId/review`
 
 **Roles permitted**: authenticated member
@@ -4352,6 +5171,7 @@ Full promotion detail view including:
 **Scope**: ORGANIZATION_WIDE for belt workflows, branch-scoped for stripe workflows
 
 #### Request body
+
 ```json
 {
   "status": "HQ_IN_REVIEW",
@@ -4360,6 +5180,7 @@ Full promotion detail view including:
 ```
 
 ### Approve promotion
+
 `POST /organizations/:organizationId/promotions/:promotionId/approve`
 
 **Roles permitted**: authenticated member
@@ -4368,6 +5189,7 @@ Full promotion detail view including:
 **Scope**: ORGANIZATION_WIDE for belt, BRANCH_SCOPED for stripe
 
 #### Request body
+
 ```json
 {
   "effectiveDate": "2026-05-26",
@@ -4376,6 +5198,7 @@ Full promotion detail view including:
 ```
 
 ### Reject promotion
+
 `POST /organizations/:organizationId/promotions/:promotionId/reject`
 
 **Roles permitted**: authenticated member
@@ -4384,6 +5207,7 @@ Full promotion detail view including:
 **Scope**: ORGANIZATION_WIDE for belt, BRANCH_SCOPED for stripe
 
 #### Request body
+
 ```json
 {
   "rejectionReason": "string",
@@ -4392,6 +5216,7 @@ Full promotion detail view including:
 ```
 
 ### Upload promotion certificate
+
 `POST /organizations/:organizationId/promotions/:promotionId/certificate`
 
 **Roles permitted**: authenticated member
@@ -4400,6 +5225,7 @@ Full promotion detail view including:
 **Scope**: BRANCH_SCOPED
 
 #### Request body
+
 ```json
 {
   "certificateNumber": "string",
@@ -4413,7 +5239,9 @@ Full promotion detail view including:
 ```
 
 #### Response
+
 Promotion certificate detail:
+
 ```json
 {
   "id": "string",
@@ -4470,6 +5298,7 @@ Promotion certificate detail:
 ```
 
 ### Get promotion certificate detail
+
 `GET /organizations/:organizationId/promotions/:promotionId/certificate`
 
 **Roles permitted**: authenticated member
@@ -4478,6 +5307,7 @@ Promotion certificate detail:
 **Scope**: BRANCH_SCOPED
 
 ### List student certificates
+
 `GET /organizations/:organizationId/students/:studentId/certificates`
 
 **Roles permitted**: authenticated member
@@ -4486,12 +5316,15 @@ Promotion certificate detail:
 **Scope**: BRANCH_SCOPED
 
 #### Response
+
 Array of certificate summary objects:
+
 - `id`, `certificateNumber`, `title`, `issuedAt`, `status`, `statusReasonCode`, `statusReasonNote`, `statusChangedAt`, `authorityName`, `authorityTitle`, `fileName`, `fileMimeType`, `fileSizeBytes`, `fileSha256`, `createdAt`
 - `replacementOfCertificate`, `replacedByCertificate`
 - `promotionRequest`
 
 ### List my certificates
+
 `GET /organizations/:organizationId/certificates/mine`
 
 **Roles permitted**: authenticated member
@@ -4500,6 +5333,7 @@ Array of certificate summary objects:
 **Scope**: ORGANIZATION_WIDE
 
 ### Get certificate detail
+
 `GET /organizations/:organizationId/certificates/:certificateId`
 
 **Roles permitted**: authenticated member
@@ -4508,6 +5342,7 @@ Array of certificate summary objects:
 **Scope**: BRANCH_SCOPED
 
 ### Void certificate
+
 `POST /organizations/:organizationId/certificates/:certificateId/void`
 
 **Roles permitted**: authenticated member
@@ -4516,6 +5351,7 @@ Array of certificate summary objects:
 **Scope**: BRANCH_SCOPED
 
 #### Request body
+
 ```json
 {
   "reasonCode": "ISSUED_IN_ERROR",
@@ -4524,6 +5360,7 @@ Array of certificate summary objects:
 ```
 
 ### Reissue certificate
+
 `POST /organizations/:organizationId/certificates/:certificateId/reissue`
 
 **Roles permitted**: authenticated member
@@ -4532,6 +5369,7 @@ Array of certificate summary objects:
 **Scope**: BRANCH_SCOPED
 
 #### Request body
+
 ```json
 {
   "reasonCode": "DOCUMENT_CORRECTION",
@@ -4547,6 +5385,7 @@ Array of certificate summary objects:
 ```
 
 ### Download certificate
+
 `GET /organizations/:organizationId/certificates/:certificateId/download`
 
 **Roles permitted**: authenticated member
@@ -4555,6 +5394,7 @@ Array of certificate summary objects:
 **Scope**: BRANCH_SCOPED
 
 **Response**
+
 - `StreamableFile` with PDF bytes
 - Headers:
   - `Content-Type` = certificate mime type
@@ -4566,6 +5406,7 @@ Array of certificate summary objects:
 Communications are implemented through announcements, institutional messages, inbox, request queue, board, metrics, and request operations endpoints. The active endpoints are listed in the controller-verified index above and covered by the official Postman collection.
 
 ### Notifications unread count
+
 `GET /organizations/:organizationId/notifications/unread-count`
 
 **Roles permitted**: authenticated member
@@ -4574,6 +5415,7 @@ Communications are implemented through announcements, institutional messages, in
 **Scope**: ORGANIZATION_WIDE
 
 #### Response 200/201
+
 ```json
 {
   "unreadCount": 0
@@ -4581,6 +5423,7 @@ Communications are implemented through announcements, institutional messages, in
 ```
 
 ### List notifications
+
 `GET /organizations/:organizationId/notifications`
 
 **Roles permitted**: authenticated member
@@ -4589,12 +5432,14 @@ Communications are implemented through announcements, institutional messages, in
 **Scope**: ORGANIZATION_WIDE
 
 #### Query params
-| Param | Tipo | Default | Descripción |
-|---|---|---|---|
-| `page` | number | `1` | Página |
-| `limit` | number | `20` | Tamaño |
+
+| Param   | Tipo   | Default | Descripción |
+| ------- | ------ | ------- | ----------- |
+| `page`  | number | `1`     | Página      |
+| `limit` | number | `20`    | Tamaño      |
 
 #### Response
+
 ```json
 {
   "items": [
@@ -4613,6 +5458,7 @@ Communications are implemented through announcements, institutional messages, in
 ```
 
 ### Mark many notifications read
+
 `POST /organizations/:organizationId/notifications/read`
 
 **Roles permitted**: authenticated member
@@ -4621,6 +5467,7 @@ Communications are implemented through announcements, institutional messages, in
 **Scope**: ORGANIZATION_WIDE
 
 #### Request body
+
 ```json
 {
   "notificationIds": ["string"]
@@ -4628,6 +5475,7 @@ Communications are implemented through announcements, institutional messages, in
 ```
 
 ### Mark all notifications read
+
 `POST /organizations/:organizationId/notifications/read-all`
 
 **Roles permitted**: authenticated member
@@ -4636,6 +5484,7 @@ Communications are implemented through announcements, institutional messages, in
 **Scope**: ORGANIZATION_WIDE
 
 ### Process notification delivery
+
 `POST /organizations/:organizationId/notifications/delivery/process`
 
 **Roles permitted**: authenticated member
@@ -4644,6 +5493,7 @@ Communications are implemented through announcements, institutional messages, in
 **Scope**: ORGANIZATION_WIDE
 
 #### Request body
+
 ```json
 {
   "eventId": "string",
@@ -4653,6 +5503,7 @@ Communications are implemented through announcements, institutional messages, in
 ```
 
 ### Notification delivery stats
+
 `GET /organizations/:organizationId/notifications/delivery/stats`
 
 **Roles permitted**: authenticated member
@@ -4661,6 +5512,7 @@ Communications are implemented through announcements, institutional messages, in
 **Scope**: ORGANIZATION_WIDE
 
 #### Response
+
 ```json
 {
   "dueEventCount": 0,
@@ -4680,6 +5532,7 @@ Communications are implemented through announcements, institutional messages, in
 ```
 
 ### Mark single notification read
+
 `POST /organizations/:organizationId/notifications/:notificationId/read`
 
 **Roles permitted**: authenticated member
@@ -4704,6 +5557,7 @@ Communications are implemented through announcements, institutional messages, in
 ## 17. Public Profile (Discovery)
 
 ### Public search
+
 `GET /public/branches/search`
 
 **Roles permitted**: public
@@ -4712,19 +5566,21 @@ Communications are implemented through announcements, institutional messages, in
 **Scope**: no aplica
 
 #### Query params
-| Param | Tipo | Default | Descripción |
-|---|---|---|---|
+
+| Param         | Tipo   | Default                    | Descripción      |
+| ------------- | ------ | -------------------------- | ---------------- |
 | `countryCode` | string | required unless geo search | ISO country code |
-| `q` | string | - | search string |
-| `city` | string | - | city filter |
-| `region` | string | - | region filter |
-| `lat` | number | - | geosearch |
-| `lng` | number | - | geosearch |
-| `radiusKm` | number | - | geosearch radius |
-| `page` | number | `1` | page |
-| `limit` | number | `20` | page size |
+| `q`           | string | -                          | search string    |
+| `city`        | string | -                          | city filter      |
+| `region`      | string | -                          | region filter    |
+| `lat`         | number | -                          | geosearch        |
+| `lng`         | number | -                          | geosearch        |
+| `radiusKm`    | number | -                          | geosearch radius |
+| `page`        | number | `1`                        | page             |
+| `limit`       | number | `20`                       | page size        |
 
 #### Response
+
 ```json
 {
   "items": [
@@ -4765,6 +5621,7 @@ Communications are implemented through announcements, institutional messages, in
 ```
 
 ### Public branch detail by branch id
+
 `GET /public/branches/:branchId`
 
 **Roles permitted**: public
@@ -4773,6 +5630,7 @@ Communications are implemented through announcements, institutional messages, in
 **Scope**: no aplica
 
 ### Public branch detail by slug
+
 `GET /public/branches/slug/:publicSlug`
 
 **Roles permitted**: public
@@ -4781,6 +5639,7 @@ Communications are implemented through announcements, institutional messages, in
 **Scope**: no aplica
 
 ### Public branch schedules
+
 `GET /public/branches/:branchId/schedules`
 
 **Roles permitted**: public
@@ -4789,6 +5648,7 @@ Communications are implemented through announcements, institutional messages, in
 **Scope**: no aplica
 
 #### Response
+
 ```json
 {
   "items": [
@@ -4812,6 +5672,7 @@ Communications are implemented through announcements, institutional messages, in
 ## 18. Billing (Mercado Pago)
 
 ### Create billing plan
+
 `POST /organizations/:organizationId/branches/:branchId/billing-plans`
 
 **Roles permitted**: authenticated member
@@ -4820,6 +5681,7 @@ Communications are implemented through announcements, institutional messages, in
 **Scope**: BRANCH_SCOPED
 
 #### Request body
+
 ```json
 {
   "name": "string",
@@ -4833,6 +5695,7 @@ Communications are implemented through announcements, institutional messages, in
 ```
 
 #### Response
+
 ```json
 {
   "id": "string",
@@ -4851,6 +5714,7 @@ Communications are implemented through announcements, institutional messages, in
 ```
 
 ### List billing plans
+
 `GET /organizations/:organizationId/branches/:branchId/billing-plans`
 
 **Roles permitted**: authenticated member
@@ -4859,6 +5723,7 @@ Communications are implemented through announcements, institutional messages, in
 **Scope**: BRANCH_SCOPED
 
 ### Update billing plan
+
 `PATCH /organizations/:organizationId/branches/:branchId/billing-plans/:planId`
 
 **Roles permitted**: authenticated member
@@ -4867,6 +5732,7 @@ Communications are implemented through announcements, institutional messages, in
 **Scope**: BRANCH_SCOPED
 
 ### Create student membership
+
 `POST /organizations/:organizationId/students/:studentId/membership`
 
 **Roles permitted**: authenticated member
@@ -4875,6 +5741,7 @@ Communications are implemented through announcements, institutional messages, in
 **Scope**: BRANCH_SCOPED
 
 #### Request body
+
 ```json
 {
   "billingPlanId": "string",
@@ -4890,6 +5757,7 @@ Communications are implemented through announcements, institutional messages, in
 ```
 
 ### Get student membership
+
 `GET /organizations/:organizationId/students/:studentId/membership`
 
 **Roles permitted**: authenticated member
@@ -4898,6 +5766,7 @@ Communications are implemented through announcements, institutional messages, in
 **Scope**: BRANCH_SCOPED
 
 ### Update student membership
+
 `PATCH /organizations/:organizationId/students/:studentId/membership`
 
 **Roles permitted**: authenticated member
@@ -4906,7 +5775,9 @@ Communications are implemented through announcements, institutional messages, in
 **Scope**: BRANCH_SCOPED
 
 #### Request body
+
 Same as create, plus:
+
 ```json
 {
   "endedAt": "2026-12-31",
@@ -4916,6 +5787,7 @@ Same as create, plus:
 ```
 
 ### Create billing charge
+
 `POST /organizations/:organizationId/students/:studentId/billing-charges`
 
 **Roles permitted**: authenticated member
@@ -4924,6 +5796,7 @@ Same as create, plus:
 **Scope**: BRANCH_SCOPED
 
 #### Request body
+
 ```json
 {
   "studentMembershipId": "string",
@@ -4941,6 +5814,7 @@ Same as create, plus:
 ```
 
 ### Create Mercado Pago preference
+
 `POST /organizations/:organizationId/students/:studentId/billing-charges/:chargeId/mercado-pago/preference`
 
 **Roles permitted**: authenticated member
@@ -4949,6 +5823,7 @@ Same as create, plus:
 **Scope**: BRANCH_SCOPED
 
 #### Response
+
 ```json
 {
   "chargeId": "string",
@@ -4964,6 +5839,7 @@ Same as create, plus:
 ```
 
 ### List student billing charges
+
 `GET /organizations/:organizationId/students/:studentId/billing-charges`
 
 **Roles permitted**: authenticated member
@@ -4972,22 +5848,25 @@ Same as create, plus:
 **Scope**: BRANCH_SCOPED
 
 #### Query params
-| Param | Tipo | Default | Descripción |
-|---|---|---|---|
-| `page` | number | `1` | page |
-| `limit` | number | `20` | size |
-| `studentId` | string | - | filter |
-| `billingPlanId` | string | - | filter |
-| `chargeType` | enum | - | `BillingChargeType` |
-| `status` | enum | - | `BillingChargeStatus` |
-| `currency` | string | - | currency |
-| `dateFrom` | date | - | filter |
-| `dateTo` | date | - | filter |
+
+| Param           | Tipo   | Default | Descripción           |
+| --------------- | ------ | ------- | --------------------- |
+| `page`          | number | `1`     | page                  |
+| `limit`         | number | `20`    | size                  |
+| `studentId`     | string | -       | filter                |
+| `billingPlanId` | string | -       | filter                |
+| `chargeType`    | enum   | -       | `BillingChargeType`   |
+| `status`        | enum   | -       | `BillingChargeStatus` |
+| `currency`      | string | -       | currency              |
+| `dateFrom`      | date   | -       | filter                |
+| `dateTo`        | date   | -       | filter                |
 
 #### Response
+
 `{ items: [...], meta: { page, limit, total } }`
 
 ### List branch billing charges
+
 `GET /organizations/:organizationId/branches/:branchId/billing-charges`
 
 **Roles permitted**: authenticated member
@@ -4996,6 +5875,7 @@ Same as create, plus:
 **Scope**: BRANCH_SCOPED
 
 ### Branch student financial statuses
+
 `GET /organizations/:organizationId/branches/:branchId/student-financial-statuses`
 
 **Roles permitted**: authenticated member
@@ -5004,25 +5884,34 @@ Same as create, plus:
 **Scope**: BRANCH_SCOPED
 
 #### Query params
-| Param | Tipo | Default | Descripción |
-|---|---|---|---|
-| `page` | number | `1` | page |
-| `limit` | number | `20` | size |
-| `financialStatus` | string | - | domain financial status |
+
+| Param             | Tipo   | Default | Descripción             |
+| ----------------- | ------ | ------- | ----------------------- |
+| `page`            | number | `1`     | page                    |
+| `limit`           | number | `20`    | size                    |
+| `financialStatus` | string | -       | domain financial status |
 
 #### Response
+
 ```json
 {
   "items": [
     {
-      "student": { "id": "string", "firstName": "string", "lastName": "string" },
+      "student": {
+        "id": "string",
+        "firstName": "string",
+        "lastName": "string"
+      },
       "membership": { "id": "string", "status": "ACTIVE" },
       "financialStatus": "OK",
       "daysOverdue": 0,
       "nextDueDate": "2026-06-01",
       "hasOverdueCharges": false,
       "hasPendingCharges": false,
-      "activeRestrictionFlags": { "attendanceRestricted": false, "appUsageRestricted": false },
+      "activeRestrictionFlags": {
+        "attendanceRestricted": false,
+        "appUsageRestricted": false
+      },
       "totalDue": 0
     }
   ],
@@ -5031,6 +5920,7 @@ Same as create, plus:
 ```
 
 ### Record manual student payment
+
 `POST /organizations/:organizationId/students/:studentId/payments/manual`
 
 **Roles permitted**: authenticated member
@@ -5039,6 +5929,7 @@ Same as create, plus:
 **Scope**: BRANCH_SCOPED
 
 #### Request body
+
 ```json
 {
   "billingChargeId": "string",
@@ -5056,6 +5947,7 @@ Same as create, plus:
 ```
 
 ### Record general income
+
 `POST /organizations/:organizationId/branches/:branchId/general-income`
 
 **Roles permitted**: authenticated member
@@ -5064,6 +5956,7 @@ Same as create, plus:
 **Scope**: BRANCH_SCOPED
 
 #### Request body
+
 ```json
 {
   "grossAmount": 10000,
@@ -5080,6 +5973,7 @@ Same as create, plus:
 ```
 
 ### List student payments
+
 `GET /organizations/:organizationId/students/:studentId/payments`
 
 **Roles permitted**: authenticated member
@@ -5088,6 +5982,7 @@ Same as create, plus:
 **Scope**: BRANCH_SCOPED
 
 ### List branch payments
+
 `GET /organizations/:organizationId/branches/:branchId/payments`
 
 **Roles permitted**: authenticated member
@@ -5096,6 +5991,7 @@ Same as create, plus:
 **Scope**: BRANCH_SCOPED
 
 ### Get student billing context
+
 `GET /organizations/:organizationId/students/:studentId/billing-context`
 
 **Roles permitted**: authenticated member
@@ -5104,6 +6000,7 @@ Same as create, plus:
 **Scope**: BRANCH_SCOPED
 
 #### Response
+
 ```json
 {
   "membership": null,
@@ -5117,12 +6014,16 @@ Same as create, plus:
   "overdueCharges": [],
   "totalDue": 0,
   "totalPaidRecent": 0,
-  "activeRestrictionFlags": { "attendanceRestricted": false, "appUsageRestricted": false },
+  "activeRestrictionFlags": {
+    "attendanceRestricted": false,
+    "appUsageRestricted": false
+  },
   "flags": { "restrictAttendance": false, "restrictAppUsage": false }
 }
 ```
 
 ### Get billing policy
+
 `GET /organizations/:organizationId/branches/:branchId/billing-policy`
 
 **Roles permitted**: authenticated member
@@ -5131,6 +6032,7 @@ Same as create, plus:
 **Scope**: BRANCH_SCOPED
 
 ### Update billing policy
+
 `PATCH /organizations/:organizationId/branches/:branchId/billing-policy`
 
 **Roles permitted**: authenticated member
@@ -5139,6 +6041,7 @@ Same as create, plus:
 **Scope**: BRANCH_SCOPED
 
 #### Request body
+
 ```json
 {
   "graceDays": 10,
@@ -5152,6 +6055,7 @@ Same as create, plus:
 ```
 
 ### Review possible duplicate payments
+
 `GET /organizations/:organizationId/branches/:branchId/payments/possible-duplicates`
 
 **Roles permitted**: authenticated member
@@ -5160,19 +6064,21 @@ Same as create, plus:
 **Scope**: BRANCH_SCOPED
 
 #### Query params
-| Param | Tipo | Default | Descripción |
-|---|---|---|---|
-| `dateFrom` | date | - | filter |
-| `dateTo` | date | - | filter |
-| `method` | enum | - | `PaymentMethod` |
-| `status` | enum | - | `PaymentStatus` |
-| `paymentKind` | enum | - | `PaymentKind` |
-| `currency` | string | - | currency |
-| `studentId` | string | - | filter |
-| `windowDays` | number | - | 1..14 |
-| `limit` | number | - | 1..250 |
+
+| Param         | Tipo   | Default | Descripción     |
+| ------------- | ------ | ------- | --------------- |
+| `dateFrom`    | date   | -       | filter          |
+| `dateTo`      | date   | -       | filter          |
+| `method`      | enum   | -       | `PaymentMethod` |
+| `status`      | enum   | -       | `PaymentStatus` |
+| `paymentKind` | enum   | -       | `PaymentKind`   |
+| `currency`    | string | -       | currency        |
+| `studentId`   | string | -       | filter          |
+| `windowDays`  | number | -       | 1..14           |
+| `limit`       | number | -       | 1..250          |
 
 #### Response
+
 ```json
 {
   "items": [],
@@ -5186,6 +6092,7 @@ Same as create, plus:
 ```
 
 ### Branch billing summary
+
 `GET /organizations/:organizationId/branches/:branchId/billing-summary`
 
 **Roles permitted**: authenticated member
@@ -5194,13 +6101,15 @@ Same as create, plus:
 **Scope**: BRANCH_SCOPED
 
 #### Query params
-| Param | Tipo | Default | Descripción |
-|---|---|---|---|
-| `dateFrom` | date | - | filter |
-| `dateTo` | date | - | filter |
-| `currency` | string | - | filter |
+
+| Param      | Tipo   | Default | Descripción |
+| ---------- | ------ | ------- | ----------- |
+| `dateFrom` | date   | -       | filter      |
+| `dateTo`   | date   | -       | filter      |
+| `currency` | string | -       | filter      |
 
 #### Response
+
 ```json
 {
   "period": { "dateFrom": "2026-05-01", "dateTo": "2026-05-26" },
@@ -5227,6 +6136,7 @@ Same as create, plus:
 - `PaymentStatus`: `PENDING`, `APPROVED`, `REJECTED`, `CANCELED`, `FAILED`, `REFUNDED`, `CHARGED_BACK`
 
 ### Mercado Pago webhooks
+
 `POST /integrations/webhooks/mercado-pago`
 
 **Roles permitted**: public webhook
@@ -5235,12 +6145,14 @@ Same as create, plus:
 **Scope**: no aplica
 
 **Notes**
+
 - Public, rate-limited, and processed by the webhook ingest pipeline.
 - Response is handled by the integration ingest flow and may be `200`, `202`, or error depending on validation/processing state.
 
 ## 19. Competitions (Smoothcomp)
 
 ### Link Smoothcomp profile
+
 `POST /organizations/:organizationId/students/:studentId/competitions/smoothcomp/link`
 
 **Roles permitted**: authenticated member
@@ -5249,9 +6161,11 @@ Same as create, plus:
 **Scope**: BRANCH_SCOPED
 
 #### Response
+
 Full student competition profile response.
 
 ### Sync competition profile
+
 `POST /organizations/:organizationId/students/:studentId/competitions/sync`
 
 **Roles permitted**: authenticated member
@@ -5260,6 +6174,7 @@ Full student competition profile response.
 **Scope**: BRANCH_SCOPED
 
 ### Competition profile detail
+
 `GET /organizations/:organizationId/students/:studentId/competitions/profile`
 
 **Roles permitted**: authenticated member
@@ -5268,6 +6183,7 @@ Full student competition profile response.
 **Scope**: BRANCH_SCOPED
 
 #### Response
+
 ```json
 {
   "studentId": "string",
@@ -5286,6 +6202,7 @@ Full student competition profile response.
 ```
 
 ### Competition matches
+
 `GET /organizations/:organizationId/students/:studentId/competitions/matches`
 
 **Roles permitted**: authenticated member
@@ -5294,9 +6211,11 @@ Full student competition profile response.
 **Scope**: BRANCH_SCOPED
 
 #### Response
+
 `{ studentId, page, limit, total, items }`
 
 ### Unlink Smoothcomp profile
+
 `DELETE /organizations/:organizationId/students/:studentId/competitions/smoothcomp/link`
 
 **Roles permitted**: authenticated member
@@ -5305,6 +6224,7 @@ Full student competition profile response.
 **Scope**: BRANCH_SCOPED
 
 ### External profile links
+
 `GET /organizations/:organizationId/competitions/external-profile-links`
 
 **Roles permitted**: authenticated member
@@ -5313,6 +6233,7 @@ Full student competition profile response.
 **Scope**: ORGANIZATION_WIDE
 
 ### Legacy ownership conflicts
+
 `GET /organizations/:organizationId/competitions/legacy-ownership-conflicts`
 
 **Roles permitted**: authenticated member
@@ -5321,6 +6242,7 @@ Full student competition profile response.
 **Scope**: ORGANIZATION_WIDE
 
 ### Import runs
+
 `GET /organizations/:organizationId/competitions/import-runs`
 
 **Roles permitted**: authenticated member
@@ -5329,6 +6251,7 @@ Full student competition profile response.
 **Scope**: ORGANIZATION_WIDE
 
 ### Import runs operational snapshot
+
 `GET /organizations/:organizationId/competitions/import-runs/operational-snapshot`
 
 **Roles permitted**: authenticated member
@@ -5337,6 +6260,7 @@ Full student competition profile response.
 **Scope**: ORGANIZATION_WIDE
 
 ### Reprocess competition import run
+
 `POST /organizations/:organizationId/competitions/import-runs/:importRunId/reprocess`
 
 **Roles permitted**: authenticated member
@@ -5345,6 +6269,7 @@ Full student competition profile response.
 **Scope**: ORGANIZATION_WIDE
 
 ### Remediate legacy ownership conflict
+
 `POST /organizations/:organizationId/competitions/legacy-ownership-conflicts/:competitionProfileId/remediate-unlink`
 
 **Roles permitted**: authenticated member
@@ -5353,6 +6278,7 @@ Full student competition profile response.
 **Scope**: ORGANIZATION_WIDE
 
 ### Internal ingest
+
 `POST /internal/competitions/imports/:importRunId/smoothcomp`
 
 **Roles permitted**: internal ingest only
@@ -5361,9 +6287,11 @@ Full student competition profile response.
 **Scope**: internal
 
 #### Response
+
 `202 Accepted`
 
 ### Internal publication ingest
+
 `POST /internal/competitions/publications/smoothcomp`
 
 **Roles permitted**: internal ingest only
@@ -5372,21 +6300,25 @@ Full student competition profile response.
 **Scope**: internal
 
 #### Response
+
 `202 Accepted`
 
 ## 20. Analytics
 
 ### Tree summary
+
 `GET /organizations/:organizationId/analytics/branches/tree-summary`
 
 See branches section for detailed response shape.
 
 ### Subtree summary
+
 `GET /organizations/:organizationId/analytics/branches/:branchId/subtree-summary`
 
 See branches section for detailed response shape.
 
 ### Action summary
+
 `GET /organizations/:organizationId/analytics/branches/:branchId/action-summary`
 
 **Roles permitted**: authenticated member
@@ -5395,11 +6327,13 @@ See branches section for detailed response shape.
 **Scope**: BRANCH_SCOPED
 
 #### Query params
-| Param | Tipo | Default | Descripción |
-|---|---|---|---|
-| `activityWindowDays` | number | `30` | `1..365` |
+
+| Param                | Tipo   | Default | Descripción |
+| -------------------- | ------ | ------- | ----------- |
+| `activityWindowDays` | number | `30`    | `1..365`    |
 
 #### Response
+
 ```json
 {
   "branch": {},
@@ -5481,6 +6415,7 @@ See branches section for detailed response shape.
 ```
 
 ### Risk roster
+
 `GET /organizations/:organizationId/analytics/branches/:branchId/risk-roster`
 
 **Roles permitted**: authenticated member
@@ -5489,12 +6424,14 @@ See branches section for detailed response shape.
 **Scope**: BRANCH_SCOPED
 
 #### Query params
-| Param | Tipo | Default | Descripción |
-|---|---|---|---|
-| `activityWindowDays` | number | `30` | `1..365` |
-| `limit` | number | `25` | `1..100` |
+
+| Param                | Tipo   | Default | Descripción |
+| -------------------- | ------ | ------- | ----------- |
+| `activityWindowDays` | number | `30`    | `1..365`    |
+| `limit`              | number | `25`    | `1..100`    |
 
 #### Response
+
 ```json
 {
   "branch": {},
@@ -5540,11 +6477,13 @@ See branches section for detailed response shape.
 ```
 
 ### Branch tree summary helper endpoints
+
 The active exact route for the tree summary requested in the prompt is under analytics, not `/branches/tree-summary`.
 
 ## 21. Audit
 
 ### List audit events
+
 `GET /organizations/:organizationId/audit`
 
 **Roles permitted**: authenticated member
@@ -5553,20 +6492,22 @@ The active exact route for the tree summary requested in the prompt is under ana
 **Scope**: ORGANIZATION_WIDE or BRANCH_SCOPED
 
 #### Query params
-| Param | Tipo | Default | Descripción |
-|---|---|---|---|
-| `page` | number | `1` | page |
-| `limit` | number | `20` | size |
-| `branchId` | string | - | filter |
-| `requestId` | string | - | filter |
-| `actorMembershipId` | string | - | filter |
-| `entityType` | string | - | filter |
-| `entityId` | string | - | filter |
-| `action` | string | - | filter |
-| `from` | date-time | - | filter |
-| `to` | date-time | - | filter |
+
+| Param               | Tipo      | Default | Descripción |
+| ------------------- | --------- | ------- | ----------- |
+| `page`              | number    | `1`     | page        |
+| `limit`             | number    | `20`    | size        |
+| `branchId`          | string    | -       | filter      |
+| `requestId`         | string    | -       | filter      |
+| `actorMembershipId` | string    | -       | filter      |
+| `entityType`        | string    | -       | filter      |
+| `entityId`          | string    | -       | filter      |
+| `action`            | string    | -       | filter      |
+| `from`              | date-time | -       | filter      |
+| `to`                | date-time | -       | filter      |
 
 #### Response
+
 ```json
 {
   "items": [
@@ -5600,6 +6541,7 @@ The active exact route for the tree summary requested in the prompt is under ana
 ```
 
 ### Entity timeline
+
 `GET /organizations/:organizationId/audit/entities/:entityType/:entityId/timeline`
 
 **Roles permitted**: authenticated member
@@ -5608,12 +6550,14 @@ The active exact route for the tree summary requested in the prompt is under ana
 **Scope**: ORGANIZATION_WIDE or BRANCH_SCOPED
 
 #### Query params
-| Param | Tipo | Default | Descripción |
-|---|---|---|---|
-| `limit` | number | `100` | max `200` |
-| `relatedLimit` | number | `25` | max `100` |
+
+| Param          | Tipo   | Default | Descripción |
+| -------------- | ------ | ------- | ----------- |
+| `limit`        | number | `100`   | max `200`   |
+| `relatedLimit` | number | `25`    | max `100`   |
 
 #### Response
+
 ```json
 {
   "case": {
@@ -5636,6 +6580,7 @@ The active exact route for the tree summary requested in the prompt is under ana
 ## 22. Integrations
 
 ### Create integration connection
+
 `POST /organizations/:organizationId/integrations`
 
 **Roles permitted**: authenticated member
@@ -5644,6 +6589,7 @@ The active exact route for the tree summary requested in the prompt is under ana
 **Scope**: ORGANIZATION_WIDE or BRANCH_SCOPED depending on scopeType
 
 #### Request body
+
 ```json
 {
   "provider": "MERCADO_PAGO",
@@ -5656,6 +6602,7 @@ The active exact route for the tree summary requested in the prompt is under ana
 ```
 
 #### Response
+
 ```json
 {
   "id": "string",
@@ -5675,6 +6622,7 @@ The active exact route for the tree summary requested in the prompt is under ana
 ```
 
 ### List integration connections
+
 `GET /organizations/:organizationId/integrations`
 
 **Roles permitted**: authenticated member
@@ -5683,19 +6631,22 @@ The active exact route for the tree summary requested in the prompt is under ana
 **Scope**: ORGANIZATION_WIDE
 
 #### Query params
-| Param | Tipo | Default | Descripción |
-|---|---|---|---|
-| `page` | number | `1` | page |
-| `limit` | number | `20` | size |
-| `branchId` | string | - | filter |
-| `provider` | enum | - | `IntegrationProvider` |
-| `status` | enum | - | `IntegrationStatus` |
-| `scopeType` | enum | - | `IntegrationScopeType` |
+
+| Param       | Tipo   | Default | Descripción            |
+| ----------- | ------ | ------- | ---------------------- |
+| `page`      | number | `1`     | page                   |
+| `limit`     | number | `20`    | size                   |
+| `branchId`  | string | -       | filter                 |
+| `provider`  | enum   | -       | `IntegrationProvider`  |
+| `status`    | enum   | -       | `IntegrationStatus`    |
+| `scopeType` | enum   | -       | `IntegrationScopeType` |
 
 #### Response
+
 `{ items: [...], meta: { page, limit, total } }`
 
 ### Update integration connection
+
 `PATCH /organizations/:organizationId/integrations/:integrationId`
 
 **Roles permitted**: authenticated member
@@ -5704,6 +6655,7 @@ The active exact route for the tree summary requested in the prompt is under ana
 **Scope**: ORGANIZATION_WIDE
 
 #### Request body
+
 ```json
 {
   "displayName": "string",
@@ -5713,6 +6665,7 @@ The active exact route for the tree summary requested in the prompt is under ana
 ```
 
 ### Test integration connection
+
 `POST /organizations/:organizationId/integrations/:integrationId/test`
 
 **Roles permitted**: authenticated member
@@ -5721,6 +6674,7 @@ The active exact route for the tree summary requested in the prompt is under ana
 **Scope**: ORGANIZATION_WIDE
 
 ### Sync integration connection
+
 `POST /organizations/:organizationId/integrations/:integrationId/sync`
 
 **Roles permitted**: authenticated member
@@ -5729,6 +6683,7 @@ The active exact route for the tree summary requested in the prompt is under ana
 **Scope**: ORGANIZATION_WIDE
 
 #### Request body
+
 ```json
 {
   "syncKind": "SYNC_PAYMENT_STATUS"
@@ -5736,6 +6691,7 @@ The active exact route for the tree summary requested in the prompt is under ana
 ```
 
 ### List sync jobs
+
 `GET /organizations/:organizationId/integrations/:integrationId/sync-jobs`
 
 **Roles permitted**: authenticated member
@@ -5744,14 +6700,16 @@ The active exact route for the tree summary requested in the prompt is under ana
 **Scope**: ORGANIZATION_WIDE
 
 #### Query params
-| Param | Tipo | Default | Descripción |
-|---|---|---|---|
-| `page` | number | `1` | page |
-| `limit` | number | `20` | size |
-| `syncKind` | enum | - | `IntegrationSyncKind` |
-| `status` | enum | - | `IntegrationSyncStatus` |
+
+| Param      | Tipo   | Default | Descripción             |
+| ---------- | ------ | ------- | ----------------------- |
+| `page`     | number | `1`     | page                    |
+| `limit`    | number | `20`    | size                    |
+| `syncKind` | enum   | -       | `IntegrationSyncKind`   |
+| `status`   | enum   | -       | `IntegrationSyncStatus` |
 
 ### List integration webhook events
+
 `GET /organizations/:organizationId/integrations/:integrationId/webhook-events`
 
 **Roles permitted**: authenticated member
@@ -5760,19 +6718,21 @@ The active exact route for the tree summary requested in the prompt is under ana
 **Scope**: ORGANIZATION_WIDE
 
 #### Query params
-| Param | Tipo | Default | Descripción |
-|---|---|---|---|
-| `page` | number | `1` | page |
-| `limit` | number | `20` | size |
-| `validationStatus` | enum | - | `IntegrationWebhookValidationStatus` |
-| `processingStatus` | enum | - | `IntegrationWebhookProcessingStatus` |
-| `notificationType` | string | - | notification type |
-| `dateFrom` | date-time | - | filter |
-| `dateTo` | date-time | - | filter |
-| `onlyRecoverable` | boolean | - | filter |
-| `externalResourceId` | string | - | filter |
+
+| Param                | Tipo      | Default | Descripción                          |
+| -------------------- | --------- | ------- | ------------------------------------ |
+| `page`               | number    | `1`     | page                                 |
+| `limit`              | number    | `20`    | size                                 |
+| `validationStatus`   | enum      | -       | `IntegrationWebhookValidationStatus` |
+| `processingStatus`   | enum      | -       | `IntegrationWebhookProcessingStatus` |
+| `notificationType`   | string    | -       | notification type                    |
+| `dateFrom`           | date-time | -       | filter                               |
+| `dateTo`             | date-time | -       | filter                               |
+| `onlyRecoverable`    | boolean   | -       | filter                               |
+| `externalResourceId` | string    | -       | filter                               |
 
 #### Response
+
 ```json
 {
   "items": [
@@ -5802,6 +6762,7 @@ The active exact route for the tree summary requested in the prompt is under ana
 ```
 
 ### Get integration webhook event detail
+
 `GET /organizations/:organizationId/integrations/:integrationId/webhook-events/:eventId`
 
 **Roles permitted**: authenticated member
@@ -5810,7 +6771,9 @@ The active exact route for the tree summary requested in the prompt is under ana
 **Scope**: ORGANIZATION_WIDE
 
 #### Response
+
 Same as list item plus:
+
 - `validationError`
 - `processingError`
 - `wasReprocessed`
@@ -5819,6 +6782,7 @@ Same as list item plus:
 - `resource`
 
 ### Create external entity link
+
 `POST /organizations/:organizationId/integrations/:integrationId/external-links`
 
 **Roles permitted**: authenticated member
@@ -5827,6 +6791,7 @@ Same as list item plus:
 **Scope**: ORGANIZATION_WIDE
 
 #### Request body
+
 ```json
 {
   "entityType": "PAYMENT",
@@ -5838,6 +6803,7 @@ Same as list item plus:
 ```
 
 ### List external entity links
+
 `GET /organizations/:organizationId/integrations/:integrationId/external-links`
 
 **Roles permitted**: authenticated member
@@ -5846,15 +6812,17 @@ Same as list item plus:
 **Scope**: ORGANIZATION_WIDE
 
 #### Query params
-| Param | Tipo | Default | Descripción |
-|---|---|---|---|
-| `page` | number | `1` | page |
-| `limit` | number | `20` | size |
-| `entityType` | enum | - | `ExternalEntityType` |
-| `internalEntityId` | string | - | filter |
-| `externalEntityId` | string | - | filter |
+
+| Param              | Tipo   | Default | Descripción          |
+| ------------------ | ------ | ------- | -------------------- |
+| `page`             | number | `1`     | page                 |
+| `limit`            | number | `20`    | size                 |
+| `entityType`       | enum   | -       | `ExternalEntityType` |
+| `internalEntityId` | string | -       | filter               |
+| `externalEntityId` | string | -       | filter               |
 
 ### Reprocess webhook event
+
 `POST /organizations/:organizationId/integrations/:integrationId/webhook-events/:eventId/reprocess`
 
 **Roles permitted**: authenticated member
@@ -5876,6 +6844,7 @@ Same as list item plus:
 ## 23. Health / Observability
 
 ### API liveness
+
 `GET /health/live`
 
 **Roles permitidos**: public
@@ -5884,6 +6853,7 @@ Same as list item plus:
 **Scope**: no aplica
 
 #### Response 200/201
+
 ```json
 {
   "status": "live",
@@ -5893,6 +6863,7 @@ Same as list item plus:
 ```
 
 ### API readiness
+
 `GET /health/ready`
 
 **Roles permitidos**: public
@@ -5901,6 +6872,7 @@ Same as list item plus:
 **Scope**: no aplica
 
 #### Response 200/201
+
 ```json
 {
   "status": "ready",
@@ -5914,6 +6886,7 @@ Same as list item plus:
 ```
 
 ### Notifications worker liveness
+
 `GET /health/live` in the worker process
 
 **Roles permitidos**: public
@@ -5922,6 +6895,7 @@ Same as list item plus:
 **Scope**: no aplica
 
 #### Response
+
 ```json
 {
   "live": true,
@@ -5933,6 +6907,7 @@ Same as list item plus:
 ```
 
 ### Notifications worker readiness
+
 `GET /health/ready` in the worker process
 
 **Roles permitidos**: public
@@ -5941,6 +6916,7 @@ Same as list item plus:
 **Scope**: no aplica
 
 #### Response
+
 ```json
 {
   "ready": true,
@@ -5986,6 +6962,7 @@ Same as list item plus:
 ```
 
 ### Metrics
+
 `GET /metrics`
 
 **Roles permitidos**: public worker metrics
@@ -5994,21 +6971,23 @@ Same as list item plus:
 **Scope**: no aplica
 
 **Response**
+
 - Prometheus text format
 
 ## 24. Errores comunes globales
 
-| Status | Error | Message shape |
-|---|---|---|
-| 401 | Unauthorized | token absent, expired, invalid, or membership unavailable |
-| 403 | Forbidden | missing capability, scope mismatch, recent-auth required |
-| 404 | Not Found | resource not found or hidden by tenant isolation |
-| 409 | Conflict | duplicate resource, invalid state transition, or lifecycle conflict |
-| 422 | Validation Error | invalid request body/query structure |
-| 429 | Too Many Requests | rate-limited endpoint, especially public intake/webhooks |
-| 500 | Internal Server Error | unexpected backend failure |
+| Status | Error                 | Message shape                                                       |
+| ------ | --------------------- | ------------------------------------------------------------------- |
+| 401    | Unauthorized          | token absent, expired, invalid, or membership unavailable           |
+| 403    | Forbidden             | missing capability, scope mismatch, recent-auth required            |
+| 404    | Not Found             | resource not found or hidden by tenant isolation                    |
+| 409    | Conflict              | duplicate resource, invalid state transition, or lifecycle conflict |
+| 422    | Validation Error      | invalid request body/query structure                                |
+| 429    | Too Many Requests     | rate-limited endpoint, especially public intake/webhooks            |
+| 500    | Internal Server Error | unexpected backend failure                                          |
 
 ### Global error shape
+
 ```json
 {
   "statusCode": 403,
@@ -6028,6 +7007,7 @@ Same as list item plus:
 ## 26. Appendix: complete enums
 
 ### Academy intake
+
 - `AcademyIntakeExperienceLevel`: `NEVER_TRAINED`, `BEGINNER`, `WHITE_BELT`, `BLUE_BELT`, `PURPLE_BELT`, `BROWN_BELT`, `BLACK_BELT`, `OTHER`
 - `AcademyIntakeRequestType`: `INFO`, `VISIT`, `EVALUATION`, `JOIN_INTEREST`
 - `AcademyIntakeRequestStatus`: `NEW`, `REVIEWING`, `CONTACTED`, `VISIT_PROPOSED`, `VISIT_SCHEDULED`, `VISIT_COMPLETED`, `NO_SHOW`, `DECLINED_BY_PROSPECT`, `REJECTED_BY_ACADEMY`, `READY_TO_CONVERT`, `CONVERTED`, `CANCELLED`
@@ -6035,14 +7015,21 @@ Same as list item plus:
 - `StudentAccountClaimInvitationStatus`: `PENDING`, `ACCEPTED`, `EXPIRED`, `REVOKED`, `SUPERSEDED`
 
 ### Class domain
+
 - `Weekday`: `MONDAY`, `TUESDAY`, `WEDNESDAY`, `THURSDAY`, `FRIDAY`, `SATURDAY`, `SUNDAY`
 - `ClassType`: `GI`, `NO_GI`, `FUNDAMENTALS`, `ADVANCED`, `KIDS`, `COMPETITION`, `OPEN_MAT`, `SEMINAR`, `PRIVATE`
 - `ClassSessionStatus`: `SCHEDULED`, `COMPLETED`, `CANCELED`
 
 ### Attendance domain
+
 - `AttendanceStatus`: `PRESENT`, `LATE`, `ABSENT`, `EXCUSED`
 - `AttendanceReasonCode`: `INJURY`, `TRAVEL`, `SCHEDULE_CONFLICT`, `TEMPORARY_SUSPENSION`, `VALID_VISIT`, `OPERATIONAL_ERROR`, `OTHER`
 - `AttendanceRecordSource`: `STAFF_MANUAL`, `SELF_CHECKIN`, `QR_CHECKIN`, `KIOSK_CHECKIN`
+  - `QR_CHECKIN`: **official student attendance.** The student scans an instructor-issued QR token. Records proof-of-presence. Endpoints: `POST /students/me/check-ins/qr` (recommended, branchless) and `POST .../attendance/qr-check-in` (legacy, session-scoped).
+  - `SELF_CHECKIN`: **DEPRECATED / legacy.** Trust-based self-declared attendance with no proof of presence. Not exposed in the Android Student Home nor the web frontend. Endpoint `POST .../attendance/self-check-in` is retained only for backward compatibility.
+  - `STAFF_MANUAL`: staff/instructor records attendance for one or more students via `POST .../attendance` (roles STAFF/INSTRUCTOR/HEAD_COACH/ACADEMY_MANAGER/ORG_ADMIN/MESTRE). Not a student action.
+  - `KIOSK_CHECKIN`: staff/kiosk actor checks in a specific student via `POST .../attendance/kiosk-check-in` (passes `studentId`). Not a student action.
+  - `AttendanceIntent` (separate from records): a student's non-binding "planning to attend" signal (`PUT/GET/DELETE .../attendance/intent`). It is not an attendance record and feeds `enrolledCount`.
 - `AttendanceIntentStatus`: `ACTIVE`, `CANCELED`
 - `AttendanceIntentCancelReasonCode`: `PLAN_CHANGED`, `INJURY`, `TRAVEL`, `SCHEDULE_CONFLICT`, `TEMPORARY_SUSPENSION`, `OTHER`
 - `AttendanceFollowUpStatus`: `PENDING`, `IN_PROGRESS`, `CONTACTED`, `REACTIVATED`, `UNRESPONSIVE`
@@ -6052,16 +7039,19 @@ Same as list item plus:
 - `AttendanceRecordEventType`: `CHECKED_IN`, `CORRECTED`, `REMOVED`
 
 ### Training calendar
+
 - `TrainingCalendarView`: `MONTH`, `WEEK`, `DAY`, `LIST`
 - `TrainingCalendarCategory`: `CLASS`, `OPEN_MAT`, `SEMINAR`, `PRIVATE_LESSON`, `COMPETITION_PREP`, `GRADING_DAY`, `SPECIAL_TRAINING`, `WORKSHOP`, `MEETING`, `HOLIDAY_CLOSURE`, `ACADEMY_EVENT`
 - `TrainingCalendarItemType`: `CLASS_SESSION`, `ACADEMY_EVENT`, `ALL`
 
 ### Academy events
+
 - `AcademyEventType`: `SEMINAR`, `OPEN_MAT`, `GRADING_DAY`, `SPECIAL_TRAINING`, `WORKSHOP`, `MEETING`, `HOLIDAY_CLOSURE`, `OTHER`
 - `AcademyEventStatus`: `DRAFT`, `PUBLISHED`, `CANCELLED`, `ARCHIVED`
 - `AcademyEventVisibility`: `INTERNAL_STAFF`, `STUDENTS`, `MEMBERS`, `PUBLIC_LISTING`
 
 ### Promotions
+
 - `PromotionType`: `BELT`, `STRIPE`
 - `PromotionRequestStatus`: `PENDING_REVIEW`, `ELEVATED_FOR_APPROVAL`, `HQ_IN_REVIEW`, `HQ_NEEDS_MORE_INFO`, `APPROVED`, `REJECTED`
 - `PromotionRecommendation`: `DO_NOT_RECOMMEND`, `NEEDS_MORE_TIME`, `RECOMMEND`, `STRONGLY_RECOMMEND`
@@ -6071,10 +7061,12 @@ Same as list item plus:
 - `PromotionRank`: `KIDS_WHITE`, `KIDS_GREY_WHITE`, `KIDS_GREY`, `KIDS_GREY_BLACK`, `KIDS_YELLOW_WHITE`, `KIDS_YELLOW`, `KIDS_YELLOW_BLACK`, `KIDS_ORANGE_WHITE`, `KIDS_ORANGE`, `KIDS_ORANGE_BLACK`, `KIDS_GREEN_WHITE`, `KIDS_GREEN`, `KIDS_GREEN_BLACK`, `ADULT_WHITE`, `ADULT_BLUE`, `ADULT_PURPLE`, `ADULT_BROWN`, `ADULT_BLACK`
 
 ### Students
+
 - `StudentStatus`: `ACTIVE`, `PAUSED`, `DELINQUENT`, `SUSPENDED`, `INACTIVE`
 - `StudentBranchVisitStatus`: `APPROVED`, `CANCELED`
 
 ### Billing
+
 - `BillingFrequency`: `WEEKLY`, `MONTHLY`, `QUARTERLY`, `YEARLY`, `ONE_TIME`
 - `StudentMembershipStatus`: `ACTIVE`, `PAUSED`, `FROZEN`, `CANCELED`, `ENDED`
 - `DiscountType`: `PERCENTAGE`, `FIXED`
@@ -6086,6 +7078,7 @@ Same as list item plus:
 - `PaymentReversalType`: `REFUND`, `CHARGEBACK`
 
 ### Integrations
+
 - `IntegrationProvider`: `MERCADO_PAGO`, `TAKENOS`, `SMOOTHCOMP`
 - `IntegrationStatus`: `ACTIVE`, `INACTIVE`, `ERROR`, `DISCONNECTED`
 - `IntegrationScopeType`: `ORGANIZATION`, `BRANCH`
@@ -6096,6 +7089,7 @@ Same as list item plus:
 - `ExternalEntityType`: `STUDENT`, `PAYMENT`, `BILLING_CHARGE`, `COMPETITION_PROFILE`, `COMPETITION_EVENT`, `COMPETITION_MATCH`
 
 ### Notifications
+
 - `NotificationType`: `ANNOUNCEMENT_PUBLISHED`, `INVITATION_ACCEPTED`, `ACADEMY_INTAKE_REQUEST_CREATED`, `INSTITUTIONAL_REQUEST_ACTION_REQUIRED`, `INSTITUTIONAL_REQUEST_ASSIGNED`, `INSTITUTIONAL_REQUEST_CLOSED`, `INSTITUTIONAL_REQUEST_REMINDER`, `INSTITUTIONAL_REQUEST_ESCALATED`, `ATTENDANCE_FOLLOW_UP_ASSIGNED`, `TRAINING_NOTE_VISIBLE`, `TRAINING_NOTE_COACH_REVIEW`
 - `NotificationResourceType`: `ANNOUNCEMENT`, `MEMBERSHIP`, `ACADEMY_INTAKE_REQUEST`, `INSTITUTIONAL_MESSAGE`, `ATTENDANCE_FOLLOW_UP`, `TRAINING_NOTE`
 - `NotificationEventStatus`: `PENDING`, `PROCESSING`, `FANNED_OUT`, `FAILED`
@@ -6103,6 +7097,7 @@ Same as list item plus:
 - `NotificationDeliveryStatus`: `PENDING`, `PROCESSING`, `DELIVERED`, `FAILED`
 
 ### Core tenant and auth
+
 - `OrganizationStatus`: `DRAFT`, `ACTIVE`, `SUSPENDED`, `INACTIVE`, `CLOSED`
 - `BranchStatus`: `DRAFT`, `ACTIVE`, `SUSPENDED`, `INACTIVE`, `CLOSED`, `TRANSITION`
 - `UserStatus`: `ACTIVE`, `INVITED`, `SUSPENDED`, `INACTIVE`
