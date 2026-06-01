@@ -510,14 +510,17 @@ export interface ClassSessionListItem {
   endAt: string
   scheduledDate: string
   capacity?: {
-    max?: number
-    enrolled?: number
+    max: number
+    enrolled: number
   }
+  // Shape canónico confirmado por el backend (class-calendar). `displayName`
+  // es el nombre listo para mostrar; firstName/lastName quedan para fallback.
   instructor?: {
-    id?: string
     membershipId?: string
+    userId?: string
     firstName?: string
     lastName?: string
+    displayName?: string
   } | null
   cancellationReason?: string | null
 }
@@ -530,9 +533,16 @@ export interface ClassCalendarDay {
 }
 
 export interface ClassCalendarResponse {
-  view: 'DAY' | 'WEEK'
+  view: 'DAY' | 'WEEK' | 'MONTH' | 'LIST'
   startDate: string
   endDate: string
+  /**
+   * Lista plana y cronológica de todas las sesiones del rango. El backend
+   * la devuelve para todas las views (es la fuente canónica para LIST).
+   * Opcional por compatibilidad: si falta, derivar de `days[].items`.
+   */
+  items?: ClassSessionListItem[]
+  /** Agrupación por día — se mantiene para vistas DAY/WEEK/MONTH. */
   days: ClassCalendarDay[]
 }
 

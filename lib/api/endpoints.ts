@@ -325,11 +325,11 @@ export const classSessionsApi = {
     )
   },
 
-  /** GET .../class-calendar — vista DAY o WEEK agrupada por día */
+  /** GET .../class-calendar — view nativa DAY/WEEK/MONTH/LIST en 1 request */
   calendar: (
     orgId: string,
     branchId: string,
-    params: { startDate: string; view?: 'DAY' | 'WEEK' }
+    params: { startDate: string; view?: 'DAY' | 'WEEK' | 'MONTH' | 'LIST' }
   ) => {
     const p = new URLSearchParams({ startDate: params.startDate })
     if (params.view) p.set('view', params.view)
