@@ -1,6 +1,24 @@
 'use client'
 
+// ⚠️ i18n (Fase 2.1) — alcance parcial por decisión de producto.
+// Este es un componente genérico vendored. La página de calendario de KURO
+// lo usa con `hideHeader` + `hideFilters` + `onEventClick` propio, así que su
+// toolbar, sus filtros y el diálogo de crear/editar clase NO se renderizan en
+// la app. Por eso SOLO se migraron a next-intl los strings ALCANZABLES desde
+// la grilla (vistas month/week/day/list): "Hora", "+N más" y el empty de la
+// lista. El resto de los textos en español de este archivo (toolbar, selects,
+// diálogo, labels de filtro, nombres de KURO_CLASS_TYPE_COLORS) queda
+// HARDCODEADO a propósito.
+// TODO(i18n): si en el futuro se habilita el header/filtros/diálogo nativos,
+// migrar esos strings y mover el formateo de fechas/horas (DOW_*_ES,
+// formatShortDate, formatGroupedDate, formatTime, "HH:00") a useFormatter.
+//
+// KURO custom: en la vista MONTH (componente MonthView) las celdas de meses
+// adyacentes se atenúan (número en text-muted-foreground/60 y eventos en
+// opacity-60), tipo Google Calendar. Es el único cambio visual custom sobre
+// el upstream; mantenerlo al actualizar el componente vendored.
 import { useCallback, useMemo, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import {
   Calendar,
   ChevronLeft,
@@ -1313,6 +1331,7 @@ function MonthView({
   onDrop: (date: Date) => void
   getColorClasses: (color: string) => EventColor
 }) {
+  const t = useTranslations('calendar.grid')
   const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
   const startDate = new Date(firstDayOfMonth)
   startDate.setDate(startDate.getDate() - startDate.getDay())
@@ -1368,11 +1387,14 @@ function MonthView({
                 className={cn(
                   'mb-1 flex h-5 w-5 items-center justify-center rounded-full text-xs sm:h-6 sm:w-6 sm:text-sm',
                   isToday && 'bg-primary text-primary-foreground font-semibold',
+                  // KURO custom: número de días de meses vecinos atenuado.
+                  !isCurrentMonth && !isToday && 'text-muted-foreground/60',
                 )}
               >
                 {day.getDate()}
               </div>
-              <div className="space-y-1">
+              {/* KURO custom: eventos de meses vecinos atenuados (opacity-60). */}
+              <div className={cn('space-y-1', !isCurrentMonth && 'opacity-60')}>
                 {dayEvents.slice(0, 3).map((event) => (
                   <EventCard
                     key={event.id}
@@ -1386,7 +1408,7 @@ function MonthView({
                 ))}
                 {dayEvents.length > 3 && (
                   <div className="text-[10px] text-muted-foreground sm:text-xs">
-                    +{dayEvents.length - 3} más
+                    {t('moreEvents', { count: dayEvents.length - 3 })}
                   </div>
                 )}
               </div>
@@ -1416,6 +1438,7 @@ function WeekView({
   onDrop: (date: Date, hour: number) => void
   getColorClasses: (color: string) => EventColor
 }) {
+  const t = useTranslations('calendar.grid')
   const startOfWeek = new Date(currentDate)
   startOfWeek.setDate(currentDate.getDate() - currentDate.getDay())
 
@@ -1442,7 +1465,7 @@ function WeekView({
     <Card className="overflow-auto">
       <div className="grid grid-cols-8 border-b">
         <div className="border-r p-2 text-center text-xs font-medium sm:text-sm">
-          Hora
+          {t('hourColumn')}
         </div>
         {weekDays.map((day) => (
           <div
@@ -1576,6 +1599,7 @@ function ListView({
   onEventClick: (event: Event) => void
   getColorClasses: (color: string) => EventColor
 }) {
+  const tEmpty = useTranslations('empty-states.calendar')
   const sortedEvents = [...events].sort(
     (a, b) => a.startTime.getTime() - b.startTime.getTime(),
   )
@@ -1664,7 +1688,7 @@ function ListView({
         ))}
         {sortedEvents.length === 0 && (
           <div className="py-12 text-center text-sm text-muted-foreground sm:text-base">
-            No hay clases en este rango
+            {tEmpty('noClassesTitle')}
           </div>
         )}
       </div>
