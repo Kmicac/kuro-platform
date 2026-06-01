@@ -79,9 +79,19 @@ Si la respuesta no cumple las expectativas, hablar con el backend ANTES de segui
 - Definir queryKey, staleTime apropiado, retry policy
 - Si es mutation: invalidaciones de cache, optimistic update si aplica
 
+### Paso 3.5 — Textos i18n (ANTES de escribir el componente)
+- Agregar TODOS los textos visibles de la pantalla a `messages/es/{namespace}.json`
+  (común → `common`, propios del módulo → su namespace). Keys en camelCase,
+  descriptivas, agrupadas (headers → acciones → errores).
+- Plurales con ICU (`{count, plural, ...}`), variables con interpolación (`{name}`).
+- Español neutro ('tú'), NUNCA voseo. Respetar términos que no se traducen
+  (KURO, Mestre, GI/No-Gi/Open Mat/Faixa, etc. — ver CLAUDE.md §i18n).
+- Luego, en el componente: `useTranslations(ns)` (client) / `getTranslations(ns)` (server),
+  `useFormatter()` para fechas/números. CERO strings hardcoded en JSX.
+
 ### Paso 4 — Pantalla
-- `app/(platform)/.../page.tsx` server component con `metadata`
-- `_components/xxx-screen.tsx` client component que consume hooks
+- `app/(platform)/.../page.tsx` server component con `generateMetadata()` (no `metadata` literal)
+- `_components/xxx-screen.tsx` client component que consume hooks + `useTranslations`
 
 ### Paso 5 — Estados obligatorios
 Toda pantalla maneja explícitamente:
@@ -101,8 +111,9 @@ La UI nunca asume — siempre consulta capabilities. El backend 403 es el guardi
 el gating del frontend es UX, no seguridad.
 
 ### Paso 7 — Verificación de cierre
-- `pnpm tsc --noEmit` exit 0
+- `pnpm tsc --noEmit` exit 0 (el typecheck valida las keys i18n — key inexistente = error)
 - `pnpm lint` sin errores nuevos
+- CERO strings hardcoded en JSX, CERO voseo, CERO `toLocale*` (usar `useFormatter`)
 - Diff sin console.log, sin TODO, sin código comentado
 - Probar manualmente los 5 estados
 
@@ -166,7 +177,7 @@ Promotions · Certificates · Analytics · Audit Log · Settings · Public Profi
 4. Refresh mutex (single-flight) en `client.ts` — ya implementado
 5. Toda pantalla maneja los 5 estados
 6. Capabilities gating en UI + backend 403 como source of truth
-7. Toda la UI en español
+7. Toda la UI en español neutro ('tú'), CERO strings hardcoded → `messages/es/*.json` (next-intl)
 8. Componentes consumen hooks, no endpoints directamente
 9. Patrones que se repiten 2 veces → extraer a `shared/`
 10. `pnpm tsc --noEmit` debe pasar antes de cerrar cada tarea

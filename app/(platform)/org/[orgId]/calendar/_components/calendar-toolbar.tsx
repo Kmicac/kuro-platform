@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import {
   Calendar as CalendarIcon,
   ChevronLeft,
@@ -22,14 +23,19 @@ import {
   KURO_CLASS_TYPE_COLORS,
   type EventManagerView,
 } from '@/components/ui/event-manager'
+import { useClassTypeLabel } from '@/components/kuro'
 import type { ClassSessionStatus, ClassType } from '@/lib/api/types'
 import { cn } from '@/lib/utils'
 
-const VIEW_LABEL: Record<EventManagerView, string> = {
-  month: 'Mes',
-  week: 'Semana',
-  day: 'Día',
-  list: 'Lista',
+// Mapea cada view a su key en calendar.toolbar.*
+const VIEW_LABEL_KEY: Record<
+  EventManagerView,
+  'viewMonth' | 'viewWeek' | 'viewDay' | 'viewList'
+> = {
+  month: 'viewMonth',
+  week: 'viewWeek',
+  day: 'viewDay',
+  list: 'viewList',
 }
 
 const VIEW_ICON: Record<
@@ -40,12 +46,6 @@ const VIEW_ICON: Record<
   week: Grid3x3,
   day: Clock,
   list: List,
-}
-
-const STATUS_LABEL: Record<ClassSessionStatus, string> = {
-  SCHEDULED: 'Programada',
-  COMPLETED: 'Completada',
-  CANCELED: 'Cancelada',
 }
 
 const STATUS_TONE: Record<ClassSessionStatus, string> = {
@@ -82,6 +82,10 @@ export function CalendarToolbar({
   onToggleStatus,
   onClearFilters,
 }: CalendarToolbarProps) {
+  const t = useTranslations('calendar.toolbar')
+  const tStatus = useTranslations('calendar.sessionStatus')
+  const tc = useTranslations('common')
+  const classTypeLabel = useClassTypeLabel()
   // Keyboard ← / → para navegar rango. Ignora cuando el foco está en
   // un input/textarea/contenteditable para no romper la búsqueda interna.
   useEffect(() => {
@@ -125,19 +129,19 @@ export function CalendarToolbar({
               size="icon"
               onClick={onPrev}
               className="h-8 w-8"
-              aria-label="Rango anterior"
+              aria-label={t('prevRange')}
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <Button variant="outline" size="sm" onClick={onToday} className="h-8">
-              Hoy
+              {tc('today')}
             </Button>
             <Button
               variant="outline"
               size="icon"
               onClick={onNext}
               className="h-8 w-8"
-              aria-label="Rango siguiente"
+              aria-label={t('nextRange')}
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -148,7 +152,7 @@ export function CalendarToolbar({
           <div
             className="flex items-center gap-1 rounded-lg border bg-background p-1"
             role="tablist"
-            aria-label="Vista del calendario"
+            aria-label={t('viewAria')}
           >
             {(['month', 'week', 'day', 'list'] as const).map((v) => {
               const Icon = VIEW_ICON[v]
@@ -164,7 +168,7 @@ export function CalendarToolbar({
                   aria-selected={active}
                 >
                   <Icon className="h-4 w-4" />
-                  <span className="ml-1">{VIEW_LABEL[v]}</span>
+                  <span className="ml-1">{t(VIEW_LABEL_KEY[v])}</span>
                 </Button>
               )
             })}
@@ -178,14 +182,14 @@ export function CalendarToolbar({
                   size="sm"
                   disabled
                   className="h-8 opacity-60 cursor-not-allowed"
-                  aria-label="Nueva clase (próximamente)"
+                  aria-label={t('newClassSoon')}
                 >
                   <Plus className="mr-1 h-4 w-4" />
-                  Nueva clase
+                  {t('newClass')}
                 </Button>
               </span>
             </TooltipTrigger>
-            <TooltipContent>Próximamente</TooltipContent>
+            <TooltipContent>{tc('actions.comingSoon')}</TooltipContent>
           </Tooltip>
         </div>
       </div>
@@ -194,7 +198,7 @@ export function CalendarToolbar({
       <div className="space-y-2">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            Tipo de clase
+            {t('classTypeLabel')}
           </span>
           {KURO_CLASS_TYPE_COLORS.map((c) => {
             const active = selectedClassTypes.has(c.value)
@@ -212,7 +216,7 @@ export function CalendarToolbar({
                 aria-pressed={active}
               >
                 <span className={cn('h-2 w-2 rounded-full', c.bg)} />
-                {c.name}
+                {classTypeLabel(c.value)}
               </button>
             )
           })}
@@ -220,7 +224,7 @@ export function CalendarToolbar({
 
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            Estado
+            {t('statusLabel')}
           </span>
           {(['SCHEDULED', 'COMPLETED', 'CANCELED'] as const).map((s) => {
             const active = selectedStatuses.has(s)
@@ -237,7 +241,7 @@ export function CalendarToolbar({
                 )}
                 aria-pressed={active}
               >
-                {STATUS_LABEL[s]}
+                {tStatus(s)}
               </button>
             )
           })}
@@ -250,14 +254,16 @@ export function CalendarToolbar({
               className="ml-1 h-7 gap-1 text-xs"
             >
               <X className="h-3 w-3" />
-              Limpiar filtros
+              {tc('actions.clearFilters')}
             </Button>
           )}
         </div>
 
         {hasActiveFilters && (
           <div className="flex flex-wrap items-center gap-1.5 pt-1">
-            <span className="text-xs text-muted-foreground">Activos:</span>
+            <span className="text-xs text-muted-foreground">
+              {t('activeLabel')}
+            </span>
             {Array.from(selectedClassTypes).map((value) => {
               const meta =
                 KURO_CLASS_TYPE_COLORS.find((c) => c.value === value)
@@ -273,11 +279,13 @@ export function CalendarToolbar({
                       meta?.bg ?? 'bg-neutral-400',
                     )}
                   />
-                  {meta?.name ?? value}
+                  {classTypeLabel(value)}
                   <button
                     onClick={() => onToggleClassType(value)}
                     className="ml-1 hover:text-foreground"
-                    aria-label={`Quitar ${meta?.name ?? value}`}
+                    aria-label={t('removeFilter', {
+                      label: classTypeLabel(value),
+                    })}
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -286,11 +294,11 @@ export function CalendarToolbar({
             })}
             {Array.from(selectedStatuses).map((s) => (
               <Badge key={`st-${s}`} variant="secondary" className="gap-1">
-                {STATUS_LABEL[s]}
+                {tStatus(s)}
                 <button
                   onClick={() => onToggleStatus(s)}
                   className="ml-1 hover:text-foreground"
-                  aria-label={`Quitar ${STATUS_LABEL[s]}`}
+                  aria-label={t('removeFilter', { label: tStatus(s) })}
                 >
                   <X className="h-3 w-3" />
                 </button>

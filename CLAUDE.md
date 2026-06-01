@@ -248,6 +248,57 @@ Locations Map (requiere Leaflet) · Network Graph (requiere React Flow)
 6. NUNCA exponer orgId/branchId de otro tenant en errores
 7. Billing + Competitions: siempre marcar dependencia externa
 8. Toda la UI en **español**
+9. **CERO strings hardcoded en JSX** — todo texto visible viene de `messages/es/*.json` vía next-intl (ver sección i18n)
+
+---
+
+## i18n (next-intl) — Fase 2.1
+
+La app usa **next-intl** con **español neutro ('tú' estándar)** como único idioma base.
+`locales` está preparado para sumar `en` y `pt` (ver `i18n/routing.ts`), pero hoy
+corre con un solo idioma y SIN prefijo `/es/` en la URL (no hay middleware todavía).
+
+### Reglas
+- **NUNCA hardcodear strings visibles en JSX.** Todo texto (labels, placeholders,
+  errores, empty states, aria-labels, títulos, toasts) vive en `messages/es/*.json`.
+- **Client components**: `const t = useTranslations('namespace')` → `{t('key')}`.
+- **Server components / metadata**: `const t = await getTranslations('namespace')`;
+  los `page.tsx` usan `generateMetadata()` (no `export const metadata` con literales).
+- **Fechas/números**: `useFormatter()` (`format.dateTime`, `format.number`) en client,
+  `getFormatter()` en server. NUNCA `toLocaleDateString`/`toLocaleString` hardcodeados.
+  Para tiempos relativos estables usar `useNow()` (no `Date.now()` en render).
+- **Plurales**: ICU MessageFormat (`{count, plural, =1 {...} other {# ...}}`), nunca concatenar.
+- **Interpolación**: `t('key', { name, count })`.
+- **Sin fallbacks hardcodeados**: usar solo `t('key')` (next-intl tira error si falta la key).
+  El typecheck es type-safe (ver `i18n/messages.d.ts`): una key inexistente es error de TS.
+- **Voseo NO permitido** → siempre 'tú' estándar (Iniciá→Inicia, Seleccioná→Selecciona, etc.).
+
+### Términos que NO se traducen
+- Marca/producto: **KURO**, Mercado Pago, Smoothcomp.
+- Roles: **Mestre**, **Manager** (ACADEMY_MANAGER), **Head Coach** (HEAD_COACH) y
+  **Staff** (STAFF) se mantienen — son universales en BJJ y en operaciones de academia.
+  Sí se traducen: Org admin→Administrador, Student→Alumno. INSTRUCTOR queda "Instructor".
+- Términos BJJ: **GI, No-Gi, Open Mat, Tatami, Faixa** (graduaciones en portugués),
+  **grado/grados** (stripes). Las graduaciones por nombre vienen del backend (`rank.label`).
+- Términos producto EN ya traducidos a español neutro: Branch→Filial, Org→Organización,
+  Dashboard→Panel, Academy Intake→Captación, Roster→Padrón, Pipeline→Embudo.
+
+### Estructura
+```
+i18n/
+  config.ts      ← locales, defaultLocale, timeZone
+  routing.ts     ← routing por locale (preparado, sin middleware aún)
+  request.ts     ← carga + merge de los 10 namespaces server-side
+  messages.d.ts  ← augmentación type-safe de next-intl (Messages)
+messages/es/
+  common · auth · navigation · dashboard · calendar ·
+  students · intake · claims · errors · empty-states .json
+```
+Ver `messages/README.md` para convenciones de keys, plurales y cómo sumar idiomas.
+
+> ⚠️ `components/ui/event-manager.tsx` es vendored y su UI de toolbar/filtros/diálogo
+> está deshabilitada (`hideHeader`/`hideFilters`): solo se migró lo alcanzable desde la
+> grilla. El resto queda hardcodeado con un TODO(i18n) al tope del archivo.
 
 ---
 

@@ -24,13 +24,6 @@ const KNOWN_CLASS_TYPES = new Set(
   KURO_CLASS_TYPE_COLORS.map((c) => c.value),
 )
 
-function classTypeLabel(classType: string): string {
-  return (
-    KURO_CLASS_TYPE_COLORS.find((c) => c.value === classType)?.name ??
-    classType
-  )
-}
-
 function resolveColor(classType: string): string {
   return KNOWN_CLASS_TYPES.has(classType) ? classType : 'PRIVATE'
 }
@@ -46,15 +39,21 @@ export interface AdaptResult {
  * metadata canónica (sessionId, status, capacity, branch, instructor)
  * para que la pantalla pueda filtrar por status y abrir el detalle
  * sin volver a parsear strings.
+ *
+ * `labelFor` resuelve el label traducido del classType (típicamente el
+ * resolver de `useClassTypeLabel()`); se usa como título de fallback
+ * cuando la sesión no trae `title`. Se inyecta porque el adapter es una
+ * función pura y no puede usar hooks.
  */
 export function adaptSessionsToEvents(
   sessions: ClassSessionListItem[],
+  labelFor: (classType: string) => string,
 ): AdaptResult {
   const events: Event[] = []
   const extras = new Map<string, EventExtras>()
 
   for (const session of sessions) {
-    const fallbackTitle = classTypeLabel(String(session.classType))
+    const fallbackTitle = labelFor(String(session.classType))
     const title = session.title?.trim() ? session.title : fallbackTitle
 
     events.push({

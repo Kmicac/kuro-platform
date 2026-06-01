@@ -1,5 +1,6 @@
 'use client'
 
+import { useFormatter } from 'next-intl'
 import { Clock, Users } from 'lucide-react'
 import {
   ClassTypeChip,
@@ -33,8 +34,20 @@ export function SessionCard({
   onClick,
   className,
 }: SessionCardProps) {
+  const format = useFormatter()
   const v = normalize(session)
   const isClickable = Boolean(onClick)
+
+  const formatTime = (iso: string): string => {
+    try {
+      return format.dateTime(new Date(iso), {
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    } catch {
+      return '—'
+    }
+  }
 
   const handleClick = () => onClick?.(v.id)
   const handleKey = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -157,7 +170,7 @@ function normalize(
     status: item.status,
     capacity: item.capacity,
     instructorName: inst
-      ? joinName(inst.firstName, inst.lastName)
+      ? inst.displayName ?? joinName(inst.firstName, inst.lastName)
       : undefined,
   }
 }
@@ -165,15 +178,4 @@ function normalize(
 function joinName(first?: string, last?: string): string | undefined {
   const full = [first, last].filter(Boolean).join(' ').trim()
   return full || undefined
-}
-
-function formatTime(iso: string): string {
-  try {
-    return new Date(iso).toLocaleTimeString('es-AR', {
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  } catch {
-    return '—'
-  }
 }

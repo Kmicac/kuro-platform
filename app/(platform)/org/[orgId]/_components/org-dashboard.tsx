@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useFormatter, useTranslations } from 'next-intl'
 import {
   AlertCircle,
   AlertTriangle,
@@ -27,6 +28,7 @@ interface OrgDashboardProps {
 }
 
 export function OrgDashboard({ orgId }: OrgDashboardProps) {
+  const t = useTranslations('dashboard.org')
   const orgQuery = useOrganization(orgId)
   const treeQuery = useTreeSummary(orgId)
 
@@ -63,38 +65,38 @@ export function OrgDashboard({ orgId }: OrgDashboardProps) {
       />
 
       <section
-        aria-label="Indicadores principales"
+        aria-label={t('kpisAria')}
         className="grid grid-cols-2 lg:grid-cols-4 gap-4"
       >
         <KpiCard
-          label="Total filiales"
+          label={t('kpis.branches')}
           value={totalBranches}
           icon={Building2}
-          hint="Filiales activas en la organización"
+          hint={t('kpis.branchesHint')}
           isLoading={treeQuery.isLoading}
           error={treeQuery.error}
         />
         <KpiCard
-          label="Alumnos activos"
+          label={t('kpis.activeStudents')}
           value={activeStudents}
           icon={Users}
-          hint="Membresías al día"
+          hint={t('kpis.activeStudentsHint')}
           isLoading={treeQuery.isLoading}
           error={treeQuery.error}
         />
         <KpiCard
-          label="Clases hoy"
+          label={t('kpis.classesToday')}
           value={classesToday}
           icon={Calendar}
-          hint="Sesiones programadas para hoy"
+          hint={t('kpis.classesTodayHint')}
           isLoading={treeQuery.isLoading}
           error={treeQuery.error}
         />
         <KpiCard
-          label="Intake pendiente"
+          label={t('kpis.pendingIntake')}
           value={pendingIntake}
           icon={Inbox}
-          hint="Solicitudes esperando revisión"
+          hint={t('kpis.pendingIntakeHint')}
           isLoading={treeQuery.isLoading}
           error={treeQuery.error}
         />
@@ -123,6 +125,9 @@ function HeaderSection({
   isLoading: boolean
   error: unknown
 }) {
+  const t = useTranslations('dashboard.org')
+  const te = useTranslations('errors')
+
   if (isLoading) {
     return (
       <header className="space-y-2">
@@ -135,20 +140,20 @@ function HeaderSection({
   if (error instanceof ApiError && error.status === 403) {
     return (
       <PageHeader
-        title="Sin acceso a esta organización"
-        subtitle="No tenés permisos para ver este panel."
+        title={te('org.forbiddenTitle')}
+        subtitle={te('org.forbiddenDescription')}
       />
     )
   }
 
   return (
     <PageHeader
-      eyebrow="Organización"
-      title={orgName ?? 'Dashboard'}
+      eyebrow={t('eyebrow')}
+      title={orgName ?? t('title')}
       subtitle={
         orgSlug
-          ? `Vista completa de todas las filiales · ${orgSlug}`
-          : 'Vista completa de todas las filiales'
+          ? t('subtitleWithSlug', { slug: orgSlug })
+          : t('subtitle')
       }
     />
   )
@@ -167,12 +172,18 @@ function BranchListSection({
   isLoading: boolean
   error: unknown
 }) {
+  const t = useTranslations('dashboard.org')
+  const te = useTranslations('errors')
+  const tEmpty = useTranslations('empty-states')
+
   return (
-    <section aria-label="Filiales" className="space-y-3">
+    <section aria-label={t('branchesAria')} className="space-y-3">
       <div>
-        <h2 className="text-sm font-semibold text-foreground">Filiales</h2>
+        <h2 className="text-sm font-semibold text-foreground">
+          {t('branchesHeading')}
+        </h2>
         <p className="text-xs text-muted-foreground mt-0.5">
-          Seleccioná una filial para abrir su tablero operativo.
+          {t('branchesHint')}
         </p>
       </div>
 
@@ -190,8 +201,8 @@ function BranchListSection({
       {error instanceof ApiError && error.status === 403 && (
         <EmptyState
           icon={Lock}
-          title="Sin permisos sobre filiales"
-          description="Tu rol no permite listar filiales de esta organización."
+          title={te('org.branchesForbiddenTitle')}
+          description={te('org.branchesForbiddenDescription')}
         />
       )}
 
@@ -199,16 +210,16 @@ function BranchListSection({
         !(error instanceof ApiError && error.status === 403) && (
           <EmptyState
             icon={AlertCircle}
-            title="No se pudo cargar el listado"
-            description="Revisá la conexión e intentá nuevamente."
+            title={te('org.branchesLoadErrorTitle')}
+            description={te('generic.description')}
           />
         )}
 
       {!isLoading && !error && branches.length === 0 && (
         <EmptyState
           icon={Building2}
-          title="Sin filiales todavía"
-          description="No hay filiales registradas en esta organización."
+          title={tEmpty('org.branchesTitle')}
+          description={tEmpty('org.branchesDescription')}
         />
       )}
 
@@ -230,10 +241,16 @@ function BranchCard({
   orgId: string
   branch: TreeSummaryBranchNode
 }) {
+  const t = useTranslations('dashboard.org')
+  const tc = useTranslations('common')
+  const format = useFormatter()
   const stats = [
-    { label: 'Activos', value: branch.population?.activeStudentsTotal },
-    { label: 'Clases hoy', value: branch.classes?.todayCount },
-    { label: 'Intake', value: branch.requests?.pendingIntake },
+    {
+      label: t('card.active'),
+      value: branch.population?.activeStudentsTotal,
+    },
+    { label: t('card.classesToday'), value: branch.classes?.todayCount },
+    { label: t('card.intake'), value: branch.requests?.pendingIntake },
   ]
   const needsReview = Boolean(branch.attention?.needsReview)
 
@@ -249,7 +266,7 @@ function BranchCard({
                 </p>
                 {branch.isHeadquarter && (
                   <Badge variant="outline" className="text-[10px]">
-                    HQ
+                    {tc('branchBadge.hq')}
                   </Badge>
                 )}
               </div>
@@ -267,7 +284,7 @@ function BranchCard({
                   {s.label}
                 </p>
                 <p className="text-sm font-semibold text-foreground tabular-nums">
-                  {s.value != null ? s.value.toLocaleString('es-AR') : '—'}
+                  {s.value != null ? format.number(s.value) : '—'}
                 </p>
               </div>
             ))}
@@ -277,15 +294,15 @@ function BranchCard({
             {needsReview ? (
               <span className="flex items-center gap-1.5 text-[11px] text-amber-600 dark:text-amber-400">
                 <AlertTriangle className="h-3 w-3" />
-                Requiere revisión
+                {t('card.needsReview')}
               </span>
             ) : (
               <span className="text-[11px] text-muted-foreground">
-                Sin alertas
+                {t('card.noAlerts')}
               </span>
             )}
             <span className="flex items-center gap-0.5 text-[11px] font-medium text-primary group-hover:gap-1 transition-all">
-              Abrir
+              {tc('actions.open')}
               <ChevronRight className="h-3 w-3" />
             </span>
           </div>
@@ -296,6 +313,7 @@ function BranchCard({
 }
 
 function BranchStatusDot({ status }: { status?: string }) {
+  const t = useTranslations('dashboard.org')
   const normalized = (status ?? 'ACTIVE').toUpperCase()
   const tone =
     normalized === 'SUSPENDED'
@@ -306,7 +324,7 @@ function BranchStatusDot({ status }: { status?: string }) {
   return (
     <span
       title={normalized}
-      aria-label={`Estado ${normalized}`}
+      aria-label={t('card.statusAria', { status: normalized })}
       className={cn('h-2 w-2 rounded-full flex-shrink-0 mt-1.5', tone)}
     />
   )

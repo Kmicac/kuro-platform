@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { AlertCircle, RefreshCw } from 'lucide-react'
 import { ApiError } from '@/lib/api/client'
 import { Button } from '@/components/ui/button'
@@ -19,11 +20,13 @@ export interface ErrorStateProps {
 export function ErrorState({
   error,
   onRetry,
-  title = 'No se pudo cargar',
-  description = 'Revisá la conexión e intentá nuevamente.',
+  title,
+  description,
   dense = false,
   className,
 }: ErrorStateProps) {
+  const t = useTranslations('errors')
+  const tc = useTranslations('common')
   const requestId = error instanceof ApiError ? error.requestId : undefined
 
   return (
@@ -42,11 +45,15 @@ export function ErrorState({
         )}
         aria-hidden
       />
-      <p className="text-sm font-medium text-foreground mt-2">{title}</p>
-      <p className="text-xs text-muted-foreground mt-1">{description}</p>
+      <p className="text-sm font-medium text-foreground mt-2">
+        {title ?? t('generic.title')}
+      </p>
+      <p className="text-xs text-muted-foreground mt-1">
+        {description ?? t('generic.description')}
+      </p>
       {requestId && (
         <p className="text-[10px] text-muted-foreground/70 mt-2 font-mono">
-          request-id: {requestId}
+          {t('generic.requestId')} {requestId}
         </p>
       )}
       {onRetry && (
@@ -57,7 +64,7 @@ export function ErrorState({
           onClick={onRetry}
         >
           <RefreshCw className="h-3.5 w-3.5" />
-          Reintentar
+          {tc('actions.retry')}
         </Button>
       )}
     </div>

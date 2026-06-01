@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import {
   AlertCircle,
   Building2,
@@ -44,6 +45,9 @@ type InviteState =
   | { kind: 'error'; message: string }
 
 export function ClaimsManager({ orgId }: ClaimsManagerProps) {
+  const t = useTranslations('claims')
+  const tNav = useTranslations('navigation.labels')
+
   const [branchId, setBranchId] = useState<string | null>(null)
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
@@ -56,11 +60,11 @@ export function ClaimsManager({ orgId }: ClaimsManagerProps) {
     <div className="p-6 space-y-6">
       <PageHeader
         breadcrumbs={[
-          { label: 'Organización', href: `/org/${orgId}` },
-          { label: 'Invitaciones de cuenta' },
+          { label: tNav('organization'), href: `/org/${orgId}` },
+          { label: t('title') },
         ]}
-        title="Invitaciones de cuenta"
-        subtitle="Enviá invitaciones para que tus alumnos reclamen su acceso a KURO."
+        title={t('title')}
+        subtitle={t('subtitle')}
       />
 
       <InfoBanner />
@@ -93,14 +97,11 @@ export function ClaimsManager({ orgId }: ClaimsManagerProps) {
 }
 
 function InfoBanner() {
+  const t = useTranslations('claims')
   return (
     <div className="flex items-start gap-2.5 rounded-lg border border-border bg-muted/30 px-3.5 py-3 text-xs text-muted-foreground">
       <Info className="h-3.5 w-3.5 text-primary mt-0.5 flex-shrink-0" />
-      <p>
-        El backend no expone aún un listado dedicado de alumnos sin cuenta —
-        seleccioná una filial y enviá la invitación a quien corresponda. Si el
-        alumno ya tiene cuenta activa, el backend rechazará el envío.
-      </p>
+      <p>{t('infoBanner')}</p>
     </div>
   )
 }
@@ -122,6 +123,12 @@ function BranchPicker({
   onSelect: (id: string) => void
   onRetry: () => void
 }) {
+  const t = useTranslations('claims')
+  const tErrors = useTranslations('errors.claims')
+  const tEmpty = useTranslations('empty-states.claims')
+  const tCommon = useTranslations('common')
+  const tBranchStatus = useTranslations('dashboard.branch.status')
+
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -138,8 +145,8 @@ function BranchPicker({
   if (error instanceof ApiError && error.status === 403) {
     return (
       <ForbiddenState
-        title="Sin acceso a filiales"
-        description="Tu rol no permite listar filiales de esta organización."
+        title={tErrors('branchesForbiddenTitle')}
+        description={tErrors('branchesForbiddenDescription')}
       />
     )
   }
@@ -149,7 +156,7 @@ function BranchPicker({
       <ErrorState
         error={error}
         onRetry={onRetry}
-        title="No se pudieron cargar las filiales"
+        title={tErrors('branchesLoadErrorTitle')}
       />
     )
   }
@@ -158,16 +165,16 @@ function BranchPicker({
     return (
       <EmptyState
         icon={Building2}
-        title="Sin filiales registradas"
-        description="No hay filiales en esta organización todavía."
+        title={tEmpty('branchesTitle')}
+        description={tEmpty('branchesDescription')}
       />
     )
   }
 
   return (
-    <section aria-label="Elegí filial">
+    <section aria-label={t('selectBranchAria')}>
       <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium mb-2">
-        Elegí una filial
+        {t('selectBranchLabel')}
       </p>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         {branches.map((b) => {
@@ -201,7 +208,7 @@ function BranchPicker({
                         </p>
                         {b.isHeadquarter && (
                           <Badge variant="outline" className="text-[9px]">
-                            HQ
+                            {tCommon('branchBadge.hq')}
                           </Badge>
                         )}
                       </div>
@@ -214,7 +221,7 @@ function BranchPicker({
                     )}
                   </div>
                   <p className="text-[11px] text-muted-foreground mt-2">
-                    {humanizeBranchStatus(b.status)}
+                    {humanizeBranchStatus(b.status, tBranchStatus)}
                   </p>
                 </TextureCardContent>
               </TextureCard>
@@ -243,6 +250,10 @@ function BranchRoster({
   onPage: (page: number) => void
   onSearch: (q: string) => void
 }) {
+  const t = useTranslations('claims')
+  const tCommon = useTranslations('common')
+  const tPagination = useTranslations('common.pagination')
+
   const listQuery = useBranchStudents(orgId, branch.id, {
     page,
     limit: PAGE_SIZE,
@@ -265,11 +276,11 @@ function BranchRoster({
   const totalPages = meta ? Math.max(1, Math.ceil(meta.total / meta.limit)) : 1
 
   return (
-    <section aria-label="Roster de filial" className="space-y-3">
+    <section aria-label={t('rosterAria')} className="space-y-3">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div>
           <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">
-            Alumnos de
+            {t('studentsOf')}
           </p>
           <p className="text-sm font-semibold text-foreground">{branch.name}</p>
         </div>
@@ -283,13 +294,13 @@ function BranchRoster({
             type="search"
             value={search}
             onChange={(e) => onSearch(e.target.value)}
-            placeholder="Buscar alumno por nombre o email"
+            placeholder={t('searchPlaceholder')}
             className="w-full pl-8 pr-8 py-1.5 text-xs rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-ring"
           />
           {search && (
             <button
               onClick={() => onSearch('')}
-              aria-label="Limpiar búsqueda"
+              aria-label={tCommon('actions.clearSearch')}
               className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             >
               <X className="h-3.5 w-3.5" />
@@ -311,12 +322,11 @@ function BranchRoster({
       {meta && meta.total > PAGE_SIZE && !listQuery.error && (
         <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
           <span>
-            Página {page} de {totalPages}
+            {tPagination('pageOf', { page, totalPages })}
             {' · '}
             <span className="tabular-nums">
-              {meta.total.toLocaleString('es-AR')}
-            </span>{' '}
-            alumnos
+              {t('count', { count: meta.total })}
+            </span>
           </span>
           <div className="flex items-center gap-1">
             <Button
@@ -325,7 +335,7 @@ function BranchRoster({
               disabled={page <= 1 || listQuery.isFetching}
               onClick={() => onPage(Math.max(1, page - 1))}
             >
-              Anterior
+              {tPagination('previous')}
             </Button>
             <Button
               variant="outline"
@@ -333,7 +343,7 @@ function BranchRoster({
               disabled={page >= totalPages || listQuery.isFetching}
               onClick={() => onPage(Math.min(totalPages, page + 1))}
             >
-              Siguiente
+              {tPagination('next')}
             </Button>
           </div>
         </div>
@@ -359,6 +369,10 @@ function RosterBody({
   onRetry: () => void
   orgId: string
 }) {
+  const tErrors = useTranslations('errors.claims')
+  const tEmpty = useTranslations('empty-states')
+  const tEmptyClaims = useTranslations('empty-states.claims')
+
   if (isLoading) {
     return (
       <TextureCard>
@@ -377,8 +391,8 @@ function RosterBody({
   if (error instanceof ApiError && error.status === 403) {
     return (
       <ForbiddenState
-        title="Sin acceso al roster"
-        description="No tenés permisos para ver los alumnos de esta filial."
+        title={tErrors('rosterForbiddenTitle')}
+        description={tErrors('rosterForbiddenDescription')}
       />
     )
   }
@@ -388,7 +402,7 @@ function RosterBody({
       <ErrorState
         error={error}
         onRetry={onRetry}
-        title="No se pudo cargar el roster"
+        title={tErrors('rosterLoadErrorTitle')}
       />
     )
   }
@@ -398,16 +412,16 @@ function RosterBody({
       return (
         <EmptyState
           icon={Search}
-          title={`Sin resultados para "${search}"`}
-          description="Ajustá la búsqueda."
+          title={tEmpty('searchNoResults', { search })}
+          description={tEmptyClaims('filteredDescription')}
         />
       )
     }
     return (
       <EmptyState
         icon={UserPlus}
-        title="Sin alumnos en esta filial"
-        description="Cuando haya alumnos registrados aparecerán acá."
+        title={tEmptyClaims('emptyTitle')}
+        description={tEmptyClaims('emptyDescription')}
       />
     )
   }
@@ -432,6 +446,9 @@ function InviteRow({
   student: StudentListItem
   orgId: string
 }) {
+  const t = useTranslations('claims')
+  const tErrors = useTranslations('errors.claims')
+
   const [state, setState] = useState<InviteState>({ kind: 'idle' })
   const mutation = useInviteStudent(orgId)
 
@@ -447,8 +464,8 @@ function InviteRow({
         onError: (err) => {
           const msg =
             err instanceof ApiError
-              ? interpretInviteError(err)
-              : 'No se pudo enviar la invitación.'
+              ? interpretInviteError(err, tErrors)
+              : tErrors('sendError')
           setState({ kind: 'error', message: msg })
         },
       }
@@ -482,17 +499,17 @@ function InviteRow({
         {state.kind === 'sending' ? (
           <>
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            Enviando
+            {t('sending')}
           </>
         ) : state.kind === 'sent' ? (
           <>
             <Check className="h-3.5 w-3.5" />
-            Enviada
+            {t('sent')}
           </>
         ) : (
           <>
             <Send className="h-3.5 w-3.5" />
-            Invitar
+            {t('invite')}
           </>
         )}
       </Button>
@@ -501,6 +518,8 @@ function InviteRow({
 }
 
 function InviteFeedback({ state }: { state: InviteState }) {
+  const t = useTranslations('claims')
+
   if (state.kind === 'error') {
     return (
       <span className="hidden sm:flex items-center gap-1 text-[11px] text-destructive max-w-[200px] truncate">
@@ -515,7 +534,7 @@ function InviteFeedback({ state }: { state: InviteState }) {
     return (
       <span className="hidden sm:flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400">
         <Check className="h-3 w-3" />
-        Invitación enviada
+        {t('invitationSent')}
       </span>
     )
   }
@@ -539,18 +558,23 @@ function Avatar({ initials }: { initials: string }) {
 
 // ── Helpers ────────────────────────────────────────────────
 
-function humanizeBranchStatus(status: string): string {
-  if (status === 'ACTIVE') return 'Activa'
-  if (status === 'SUSPENDED') return 'Suspendida'
-  if (status === 'INACTIVE') return 'Inactiva'
+type Translator = ReturnType<typeof useTranslations>
+
+function humanizeBranchStatus(
+  status: string,
+  tBranchStatus: Translator
+): string {
+  if (status === 'ACTIVE') return tBranchStatus('active')
+  if (status === 'SUSPENDED') return tBranchStatus('suspended')
+  if (status === 'INACTIVE') return tBranchStatus('inactive')
   return status
 }
 
-function interpretInviteError(err: ApiError): string {
-  if (err.status === 409) return 'El alumno ya tiene una cuenta activa.'
-  if (err.status === 403) return 'Sin permisos para invitar.'
-  if (err.status === 404) return 'Alumno no encontrado.'
-  if (err.status === 429) return 'Demasiados envíos — esperá un momento.'
+function interpretInviteError(err: ApiError, tErrors: Translator): string {
+  if (err.status === 409) return tErrors('alreadyActive')
+  if (err.status === 403) return tErrors('noPermission')
+  if (err.status === 404) return tErrors('studentNotFound')
+  if (err.status === 429) return tErrors('tooMany')
   const body = err.body as { message?: string } | null
-  return body?.message ?? 'No se pudo enviar la invitación.'
+  return body?.message ?? tErrors('sendError')
 }

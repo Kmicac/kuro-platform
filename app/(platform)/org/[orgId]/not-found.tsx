@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { FileQuestion } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth.store'
 import { EmptyState } from '@/components/shared/empty-state'
@@ -16,22 +17,24 @@ import { Button } from '@/components/ui/button'
  * del store (poblado por el bootstrap/login).
  */
 export default function OrgNotFound() {
+  const te = useTranslations('errors')
+  const tc = useTranslations('common')
   const orgId = useAuthStore((s) => s.organizationId ?? s.currentOrg?.id ?? null)
 
   return (
     <div className="p-6">
       <EmptyState
         icon={FileQuestion}
-        title="Esta sección aún no existe"
-        description="La pantalla que buscás todavía no fue construida o la dirección no es válida."
+        title={te('orgNotFound.title')}
+        description={te('orgNotFound.description')}
         action={
           orgId ? (
             <Button asChild variant="outline" size="sm">
-              <Link href={`/org/${orgId}`}>Volver al inicio</Link>
+              <Link href={`/org/${orgId}`}>{tc('nav.backToHome')}</Link>
             </Button>
           ) : (
             <Button asChild variant="outline" size="sm">
-              <Link href="/login">Volver al login</Link>
+              <Link href="/login">{tc('nav.backToLogin')}</Link>
             </Button>
           )
         }

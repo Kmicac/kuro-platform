@@ -1,8 +1,12 @@
 import type { Metadata } from 'next'
+import { getTranslations } from 'next-intl/server'
 import { StudentsList } from './_components/students-list'
 
-export const metadata: Metadata = {
-  title: 'Alumnos',
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('students')
+  return {
+    title: t('meta.listTitle'),
+  }
 }
 
 interface PageProps {

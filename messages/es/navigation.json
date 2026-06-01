@@ -1,0 +1,38 @@
+{
+  "sidebar": {
+    "dashboard": "Panel",
+    "calendar": "Calendario",
+    "invitations": "Invitaciones",
+    "branchSection": "Filial",
+    "branchPanel": "Panel de filial",
+    "students": "Alumnos",
+    "intake": "Captación",
+    "selectBranchHint": "Selecciona una filial para ver esta sección",
+    "disabledItem": "{label} — {hint}",
+    "logout": "Cerrar sesión",
+    "collapse": "Colapsar"
+  },
+  "topbar": {
+    "orgLabel": "Organización",
+    "orgFallback": "Organización",
+    "search": "Buscar alumnos, clases...",
+    "create": "Crear",
+    "notifications": "Notificaciones",
+    "themeLight": "Cambiar a modo claro",
+    "themeDark": "Cambiar a modo oscuro",
+    "branchLabel": "Filial",
+    "branchLoading": "Cargando...",
+    "branchSelect": "Seleccionar",
+    "changeBranch": "Cambiar de filial",
+    "branchesLoading": "Cargando filiales..."
+  },
+  "breadcrumb": {
+    "aria": "Migas de navegación"
+  },
+  "labels": {
+    "organization": "Organización",
+    "students": "Alumnos",
+    "calendar": "Calendario",
+    "branch": "Filial"
+  }
+}

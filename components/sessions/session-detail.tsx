@@ -1,5 +1,6 @@
 'use client'
 
+import { useFormatter, useTranslations } from 'next-intl'
 import {
   AlertCircle,
   Ban,
@@ -23,7 +24,7 @@ import {
   ClassTypeChip,
   RoleBadge,
   SessionStatusBadge,
-  classTypeLabel,
+  useClassTypeLabel,
 } from '@/components/kuro'
 import {
   EmptyState,
@@ -45,6 +46,8 @@ export interface SessionDetailProps {
 }
 
 export function SessionDetail({ sessionId }: SessionDetailProps) {
+  const te = useTranslations('errors.session')
+  const tEmpty = useTranslations('empty-states.session')
   const query = useSession(sessionId)
 
   if (query.isLoading) return <DetailSkeleton />
@@ -53,8 +56,8 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
     return (
       <div className="p-6 max-w-md mx-auto">
         <ForbiddenState
-          title="Sin acceso a la sesión"
-          description="No tenés permisos para ver esta clase."
+          title={te('forbiddenTitle')}
+          description={te('forbiddenDescription')}
         />
       </div>
     )
@@ -65,8 +68,8 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
       <div className="p-6 max-w-md mx-auto">
         <EmptyState
           icon={CalendarDays}
-          title="Sesión no encontrada"
-          description="La clase no existe o pertenece a otra filial."
+          title={tEmpty('notFoundTitle')}
+          description={tEmpty('notFoundDescription')}
         />
       </div>
     )
@@ -86,8 +89,8 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
       <div className="p-6 max-w-md mx-auto">
         <EmptyState
           icon={AlertCircle}
-          title="Sin datos"
-          description="Esta sesión no tiene información disponible."
+          title={tEmpty('noDataTitle')}
+          description={tEmpty('noDataDescription')}
         />
       </div>
     )
@@ -118,6 +121,8 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
 // ── Header ─────────────────────────────────────────────────
 
 function Header({ session }: { session: ClassSessionDetailType }) {
+  const format = useFormatter()
+  const classTypeLabel = useClassTypeLabel()
   return (
     <PageHeader
       eyebrow={classTypeLabel(session.classType).toUpperCase()}
@@ -126,11 +131,12 @@ function Header({ session }: { session: ClassSessionDetailType }) {
         <span className="inline-flex items-center gap-3 flex-wrap">
           <span className="inline-flex items-center gap-1.5">
             <CalendarDays className="h-3.5 w-3.5" />
-            {formatLongDate(session.startAt)}
+            {formatLongDate(format, session.startAt)}
           </span>
           <span className="inline-flex items-center gap-1.5">
             <Clock className="h-3.5 w-3.5" />
-            {formatTime(session.startAt)} – {formatTime(session.endAt)}
+            {formatTime(format, session.startAt)} –{' '}
+            {formatTime(format, session.endAt)}
           </span>
         </span>
       }
@@ -145,6 +151,8 @@ function Header({ session }: { session: ClassSessionDetailType }) {
 }
 
 function CancellationCard({ session }: { session: ClassSessionDetailType }) {
+  const t = useTranslations('calendar.session')
+  const format = useFormatter()
   return (
     <div
       role="alert"
@@ -153,15 +161,17 @@ function CancellationCard({ session }: { session: ClassSessionDetailType }) {
       <Ban className="h-4 w-4 text-destructive flex-shrink-0 mt-0.5" />
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold text-foreground">
-          Clase cancelada
+          {t('cancelled')}
         </p>
         <p className="text-xs text-muted-foreground mt-1">
-          {session.cancellationReason ?? 'Sin motivo registrado.'}
+          {session.cancellationReason ?? t('noReason')}
         </p>
         {session.cancelledAt && (
           <p className="text-[11px] text-muted-foreground/80 mt-1 tabular-nums">
-            Cancelada el {formatLongDate(session.cancelledAt)} ·{' '}
-            {formatTime(session.cancelledAt)}
+            {t('cancelledOn', {
+              date: formatLongDate(format, session.cancelledAt),
+              time: formatTime(format, session.cancelledAt),
+            })}
           </p>
         )}
       </div>
@@ -176,8 +186,9 @@ function InstructorCard({
 }: {
   instructor: ClassSessionInstructor | null
 }) {
+  const t = useTranslations('calendar.session')
   return (
-    <SectionCard title="Instructor" icon={GraduationCap}>
+    <SectionCard title={t('instructor')} icon={GraduationCap}>
       {instructor ? (
         <div className="flex items-start gap-3">
           <Avatar initials={initialsFor(instructor)} />
@@ -194,7 +205,7 @@ function InstructorCard({
       ) : (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <UserRound className="h-4 w-4" />
-          Sin instructor asignado
+          {t('noInstructor')}
         </div>
       )}
     </SectionCard>
@@ -220,6 +231,7 @@ function Avatar({ initials }: { initials: string }) {
 // ── Capacidad ──────────────────────────────────────────────
 
 function CapacityCard({ capacity }: { capacity: ClassSessionCapacity }) {
+  const t = useTranslations('calendar.session')
   const ratio = capacity.max > 0 ? capacity.enrolled / capacity.max : 0
   const pct = Math.min(100, Math.round(ratio * 100))
 
@@ -238,7 +250,7 @@ function CapacityCard({ capacity }: { capacity: ClassSessionCapacity }) {
         : 'text-foreground'
 
   return (
-    <SectionCard title="Capacidad" icon={Users}>
+    <SectionCard title={t('capacity')} icon={Users}>
       <div className="space-y-3">
         <div className="flex items-baseline gap-2">
           <span
@@ -273,7 +285,7 @@ function CapacityCard({ capacity }: { capacity: ClassSessionCapacity }) {
         {/* waitlist: oculta cuando es 0 (siempre 0 hoy — no hay dominio) */}
         {capacity.waitlist > 0 && (
           <p className="text-xs text-muted-foreground">
-            +{capacity.waitlist} en lista de espera
+            {t('waitlist', { count: capacity.waitlist })}
           </p>
         )}
       </div>
@@ -290,6 +302,7 @@ function AttendanceCard({
   attendance: ClassSessionAttendanceCounts
   status: ClassSessionStatus
 }) {
+  const t = useTranslations('calendar.session.attendance')
   const notRecorded = status === 'SCHEDULED' && attendance.present === 0
 
   const cells: {
@@ -297,15 +310,15 @@ function AttendanceCard({
     value: number
     tone: 'neutral' | 'success' | 'warning' | 'destructive' | 'muted'
   }[] = [
-    { label: 'Esperados',    value: attendance.expected, tone: 'neutral' },
-    { label: 'Presentes',    value: attendance.present,  tone: 'success' },
-    { label: 'Ausentes',     value: attendance.absent,   tone: 'destructive' },
-    { label: 'Justificados', value: attendance.excused,  tone: 'muted' },
-    { label: 'Tarde',        value: attendance.late,     tone: 'warning' },
+    { label: t('expected'), value: attendance.expected, tone: 'neutral' },
+    { label: t('present'),  value: attendance.present,  tone: 'success' },
+    { label: t('absent'),   value: attendance.absent,   tone: 'destructive' },
+    { label: t('excused'),  value: attendance.excused,  tone: 'muted' },
+    { label: t('late'),     value: attendance.late,     tone: 'warning' },
   ]
 
   return (
-    <SectionCard title="Asistencia" icon={ClipboardCheck}>
+    <SectionCard title={t('title')} icon={ClipboardCheck}>
       <div className="grid grid-cols-5 gap-2">
         {cells.map((c) => (
           <div
@@ -328,7 +341,7 @@ function AttendanceCard({
       </div>
       {notRecorded && (
         <p className="text-xs text-muted-foreground italic">
-          Asistencia aún no registrada.
+          {t('notRecorded')}
         </p>
       )}
     </SectionCard>
@@ -353,42 +366,44 @@ function toneColor(tone: 'neutral' | 'success' | 'warning' | 'destructive' | 'mu
 // ── Acciones ───────────────────────────────────────────────
 
 function ActionsBar({ session }: { session: ClassSessionDetailType }) {
+  const t = useTranslations('calendar.session.actions')
+  const tc = useTranslations('common.actions')
   const canCancel = session.status === 'SCHEDULED'
 
   return (
     <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/60">
       <span className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium mr-2">
-        Acciones
+        {t('title')}
       </span>
       <Button
         variant="outline"
         size="sm"
         disabled
-        title="Próximamente"
-        aria-label="Editar clase (próximamente)"
+        title={tc('comingSoon')}
+        aria-label={t('editSoon')}
       >
         <Pencil className="h-3.5 w-3.5" />
-        Editar
+        {t('edit')}
       </Button>
       <Button
         variant="outline"
         size="sm"
         disabled
-        title={canCancel ? 'Próximamente' : 'No disponible para este estado'}
-        aria-label="Cancelar clase (próximamente)"
+        title={canCancel ? tc('comingSoon') : t('notAvailableForStatus')}
+        aria-label={t('cancelSoon')}
       >
         <Ban className="h-3.5 w-3.5" />
-        Cancelar clase
+        {t('cancel')}
       </Button>
       <Button
         variant="default"
         size="sm"
         disabled
-        title="Próximamente"
-        aria-label="Marcar asistencia (próximamente)"
+        title={tc('comingSoon')}
+        aria-label={t('markAttendanceSoon')}
       >
         <ClipboardCheck className="h-3.5 w-3.5" />
-        Marcar asistencia
+        {t('markAttendance')}
       </Button>
     </div>
   )
@@ -451,9 +466,11 @@ function initialsFor(instructor: ClassSessionInstructor): string {
   return `${a}${b}`.toUpperCase()
 }
 
-function formatLongDate(iso: string): string {
+type Formatter = ReturnType<typeof useFormatter>
+
+function formatLongDate(format: Formatter, iso: string): string {
   try {
-    return new Date(iso).toLocaleDateString('es-AR', {
+    return format.dateTime(new Date(iso), {
       weekday: 'long',
       day: '2-digit',
       month: 'long',
@@ -464,9 +481,9 @@ function formatLongDate(iso: string): string {
   }
 }
 
-function formatTime(iso: string): string {
+function formatTime(format: Formatter, iso: string): string {
   try {
-    return new Date(iso).toLocaleTimeString('es-AR', {
+    return format.dateTime(new Date(iso), {
       hour: '2-digit',
       minute: '2-digit',
     })

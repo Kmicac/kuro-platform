@@ -1,0 +1,106 @@
+{
+  "org": {
+    "kpisAria": "Indicadores principales",
+    "kpis": {
+      "branches": "Total filiales",
+      "branchesHint": "Filiales activas en la organización",
+      "activeStudents": "Alumnos activos",
+      "activeStudentsHint": "Membresías al día",
+      "classesToday": "Clases hoy",
+      "classesTodayHint": "Sesiones programadas para hoy",
+      "pendingIntake": "Captación pendiente",
+      "pendingIntakeHint": "Solicitudes esperando revisión"
+    },
+    "eyebrow": "Organización",
+    "title": "Panel",
+    "subtitleWithSlug": "Vista completa de todas las filiales · {slug}",
+    "subtitle": "Vista completa de todas las filiales",
+    "branchesAria": "Filiales",
+    "branchesHeading": "Filiales",
+    "branchesHint": "Selecciona una filial para abrir su tablero operativo.",
+    "card": {
+      "active": "Activos",
+      "classesToday": "Clases hoy",
+      "intake": "Captación",
+      "needsReview": "Requiere revisión",
+      "noAlerts": "Sin alertas",
+      "statusAria": "Estado {status}"
+    }
+  },
+  "branch": {
+    "kpisAria": "Indicadores operativos",
+    "kpis": {
+      "classesToday": "Clases hoy",
+      "classesTodayHint": "Sesiones programadas para hoy",
+      "instructors": "Instructores programados",
+      "instructorsHint": "Entrenadores asignados a las sesiones de hoy",
+      "expectedAttendance": "Asistencia esperada",
+      "expectedAttendanceHint": "Alumnos esperados según capacidad reservada",
+      "pendingIntake": "Captación pendiente",
+      "pendingIntakeHint": "Solicitudes esperando revisión",
+      "studentsNoAccount": "Alumnos sin cuenta",
+      "studentsNoAccountHint": "Esperando invitación de cuenta",
+      "operationalAlerts": "Alertas operativas",
+      "operationalAlertsHint": "Requieren atención del gerente",
+      "noAlerts": "Sin alertas en este momento"
+    },
+    "title": "Filial",
+    "metaTitle": "Filial · Dashboard",
+    "subtitle": "Operación diaria de la filial",
+    "status": {
+      "active": "Activa",
+      "suspended": "Suspendida",
+      "inactive": "Inactiva"
+    },
+    "needsReview": "Requiere revisión",
+    "agenda": {
+      "title": "Agenda de hoy",
+      "subtitle": "Sesiones activas y próximas en la filial",
+      "instructorUnassigned": "Instructor por asignar",
+      "sessionStatus": {
+        "scheduled": "Programada",
+        "inProgress": "En curso",
+        "completed": "Finalizada",
+        "canceled": "Cancelada"
+      }
+    },
+    "intakeStage": {
+      "new": "Nuevo",
+      "reviewing": "En revisión",
+      "contacted": "Contactado",
+      "visitProposed": "Visita propuesta",
+      "visit": "Visita",
+      "visitDone": "Visita hecha",
+      "ready": "Listo",
+      "converted": "Convertido"
+    },
+    "pipeline": {
+      "title": "Embudo de captación",
+      "subtitle": "Conteo por etapa del embudo de captación",
+      "open": "Abrir captación →"
+    },
+    "risk": {
+      "title": "Alumnos en riesgo",
+      "subtitle": "Inasistencias prolongadas o caída de frecuencia",
+      "level": {
+        "high": "Alto",
+        "medium": "Medio",
+        "low": "Bajo"
+      },
+      "table": {
+        "student": "Alumno",
+        "level": "Nivel",
+        "consistency": "Consistencia",
+        "lastAttendance": "Último check-in"
+      }
+    },
+    "quickActions": {
+      "title": "Acciones rápidas",
+      "subtitle": "Operaciones frecuentes del gerente",
+      "validateAttendance": "Validar asistencia",
+      "openIntake": "Abrir captación",
+      "inviteStudents": "Invitar alumnos",
+      "viewCalendar": "Ver calendario"
+    }
+  }
+}

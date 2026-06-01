@@ -1,0 +1,77 @@
+{
+  "meta": {
+    "title": "Calendario"
+  },
+  "title": "Calendario de entrenamiento",
+  "subtitleWithBranch": "Vista operativa de {branch}.",
+  "subtitle": "Vista operativa por filial.",
+  "weekRange": "Semana del {left} al {right} {year}",
+  "loadingAria": "Cargando calendario",
+  "backToBranch": "Volver a la filial",
+  "classType": {
+    "GI": "Gi",
+    "NO_GI": "No-Gi",
+    "FUNDAMENTALS": "Fundamentos",
+    "ADVANCED": "Avanzados",
+    "KIDS": "Kids",
+    "COMPETITION": "Competición",
+    "OPEN_MAT": "Open Mat",
+    "SEMINAR": "Seminario",
+    "PRIVATE": "Privada"
+  },
+  "sessionStatus": {
+    "SCHEDULED": "Programada",
+    "COMPLETED": "Completada",
+    "CANCELED": "Cancelada"
+  },
+  "toolbar": {
+    "viewMonth": "Mes",
+    "viewWeek": "Semana",
+    "viewDay": "Día",
+    "viewList": "Lista",
+    "prevRange": "Rango anterior",
+    "nextRange": "Rango siguiente",
+    "viewAria": "Vista del calendario",
+    "newClassSoon": "Nueva clase (próximamente)",
+    "newClass": "Nueva clase",
+    "classTypeLabel": "Tipo de clase",
+    "statusLabel": "Estado",
+    "activeLabel": "Activos:",
+    "removeFilter": "Quitar {label}"
+  },
+  "grid": {
+    "allClasses": "Todas las clases",
+    "weekOf": "Semana del {date}",
+    "hourColumn": "Hora",
+    "moreEvents": "+{count} más"
+  },
+  "session": {
+    "detailTitle": "Detalle de la clase",
+    "cancelled": "Clase cancelada",
+    "noReason": "Sin motivo registrado.",
+    "cancelledOn": "Cancelada el {date} · {time}",
+    "instructor": "Instructor",
+    "noInstructor": "Sin instructor asignado",
+    "capacity": "Capacidad",
+    "waitlist": "+{count} en lista de espera",
+    "attendance": {
+      "title": "Asistencia",
+      "expected": "Esperados",
+      "present": "Presentes",
+      "absent": "Ausentes",
+      "excused": "Justificados",
+      "late": "Tarde",
+      "notRecorded": "Asistencia aún no registrada."
+    },
+    "actions": {
+      "title": "Acciones",
+      "edit": "Editar",
+      "editSoon": "Editar clase (próximamente)",
+      "cancel": "Cancelar clase",
+      "cancelSoon": "Cancelar clase (próximamente)",
+      "markAttendance": "Marcar asistencia",
+      "markAttendanceSoon": "Marcar asistencia (próximamente)",
+      "notAvailableForStatus": "No disponible para este estado"
+    }
+  }
+}

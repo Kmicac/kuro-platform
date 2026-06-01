@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import type {
   PromotionRank,
   PromotionRankCatalogEntry,
@@ -80,12 +81,13 @@ export function BeltBadge({
   showLabel = true,
   className,
 }: BeltBadgeProps) {
+  const t = useTranslations('students.belt')
   const spec = SIZE_SPEC[size]
   const renderLabel = showLabel && size !== 'sm'
 
   // Estado "Sin rango" — neutral con tokens del theme.
   if (!rank) {
-    const ariaLabel = 'Sin rango asignado'
+    const ariaLabel = t('noRankAria')
     return (
       <span
         role="img"
@@ -108,7 +110,7 @@ export function BeltBadge({
               'font-medium text-muted-foreground'
             )}
           >
-            Sin rango
+            {t('noRank')}
           </span>
         )}
       </span>
@@ -131,7 +133,7 @@ export function BeltBadge({
 
   const ariaLabel =
     cappedStripes > 0
-      ? `${rank.label} con ${cappedStripes} grado${cappedStripes > 1 ? 's' : ''}`
+      ? t('rankWithStripes', { rank: rank.label, count: cappedStripes })
       : rank.label
 
   return (

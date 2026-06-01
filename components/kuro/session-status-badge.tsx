@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { Ban, Calendar, Check } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import type { ClassSessionStatus } from '@/lib/api/types'
@@ -16,25 +17,22 @@ import { cn } from '@/lib/utils'
  * NO confundir con StatusBadge (alumnos/filiales: ACTIVE/INACTIVE/SUSPENDED).
  */
 interface SessionStatusMeta {
-  label: string
   className: string
   icon: React.ComponentType<{ className?: string }>
 }
 
+// Solo el estilo visual vive acá; los labels vienen de calendar.sessionStatus.*
 const SESSION_STATUS_META: Record<ClassSessionStatus, SessionStatusMeta> = {
   SCHEDULED: {
-    label: 'Programada',
     className: 'border-border bg-muted/30 text-foreground',
     icon: Calendar,
   },
   COMPLETED: {
-    label: 'Completada',
     className:
       'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
     icon: Check,
   },
   CANCELED: {
-    label: 'Cancelada',
     className: 'border-destructive/40 bg-destructive/10 text-destructive',
     icon: Ban,
   },
@@ -52,14 +50,16 @@ export function SessionStatusBadge({
   hideIcon = false,
   className,
 }: SessionStatusBadgeProps) {
-  const meta =
-    SESSION_STATUS_META[status as ClassSessionStatus] ??
-    SESSION_STATUS_META.SCHEDULED
+  const t = useTranslations('calendar.sessionStatus')
+  const key = (
+    status in SESSION_STATUS_META ? status : 'SCHEDULED'
+  ) as ClassSessionStatus
+  const meta = SESSION_STATUS_META[key]
   const Icon = meta.icon
   return (
     <Badge variant="outline" className={cn(meta.className, className)}>
       {!hideIcon && <Icon className="h-3 w-3" />}
-      {meta.label}
+      {t(key)}
     </Badge>
   )
 }

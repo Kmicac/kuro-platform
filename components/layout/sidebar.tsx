@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { useTheme } from 'next-themes'
 import {
   LayoutDashboard, Network, Users, UserPlus, ClipboardList, Calendar,
@@ -47,31 +48,31 @@ const MILITAR = {
 // existan — NO se renderizan como "próximamente".
 type NavItem = {
   id: string
-  label: string
+  labelKey: string
   icon: LucideIcon
   scope: 'org' | 'branch'
   path: string
 }
 
 type NavSection = {
-  label?: string
+  labelKey?: string
   items: NavItem[]
 }
 
 const NAV: NavSection[] = [
   {
     items: [
-      { id: 'overview', label: 'Dashboard',   icon: LayoutDashboard, scope: 'org', path: '' },
-      { id: 'calendar', label: 'Calendario',  icon: Calendar,        scope: 'org', path: '/calendar' },
-      { id: 'claims',   label: 'Invitaciones', icon: UserPlus,       scope: 'org', path: '/claims' },
+      { id: 'overview', labelKey: 'dashboard',   icon: LayoutDashboard, scope: 'org', path: '' },
+      { id: 'calendar', labelKey: 'calendar',    icon: Calendar,        scope: 'org', path: '/calendar' },
+      { id: 'claims',   labelKey: 'invitations', icon: UserPlus,        scope: 'org', path: '/claims' },
     ],
   },
   {
-    label: 'Filial',
+    labelKey: 'branchSection',
     items: [
-      { id: 'branch',   label: 'Panel de filial', icon: Network,       scope: 'branch', path: '' },
-      { id: 'students', label: 'Alumnos',         icon: Users,         scope: 'branch', path: '/students' },
-      { id: 'intake',   label: 'Academy Intake',  icon: ClipboardList, scope: 'branch', path: '/intake' },
+      { id: 'branch',   labelKey: 'branchPanel', icon: Network,       scope: 'branch', path: '' },
+      { id: 'students', labelKey: 'students',    icon: Users,         scope: 'branch', path: '/students' },
+      { id: 'intake',   labelKey: 'intake',      icon: ClipboardList, scope: 'branch', path: '/intake' },
     ],
   },
 ]
@@ -83,6 +84,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ orgId }: SidebarProps) {
+  const t = useTranslations('navigation.sidebar')
   const pathname = usePathname()
   const router = useRouter()
   const { resolvedTheme } = useTheme()
@@ -158,7 +160,7 @@ export function Sidebar({ orgId }: SidebarProps) {
       <nav className="flex-1 overflow-y-auto py-1 scrollbar-none">
         {NAV.map((section, si) => (
           <div key={si} className="mb-0.5">
-            {section.label &&
+            {section.labelKey &&
               (sidebarCollapsed ? (
                 <div
                   className="mx-3 my-1 h-px"
@@ -169,7 +171,7 @@ export function Sidebar({ orgId }: SidebarProps) {
                   className="px-4 pt-2 pb-0.5 text-[9px] font-semibold uppercase tracking-[.12em]"
                   style={{ color: c.label }}
                 >
-                  {section.label}
+                  {t(section.labelKey as Parameters<typeof t>[0])}
                 </div>
               ))}
 
@@ -177,10 +179,10 @@ export function Sidebar({ orgId }: SidebarProps) {
               const active = isActive(item)
               const Icon = item.icon
               const href = hrefFor(item)
+              const label = t(item.labelKey as Parameters<typeof t>[0])
               // branch-scoped sin filial seleccionada → deshabilitado.
               const disabled = href === null
-              const disabledTitle =
-                'Seleccioná una filial para ver esta sección'
+              const disabledTitle = t('selectBranchHint')
 
               if (disabled) {
                 return (
@@ -189,7 +191,7 @@ export function Sidebar({ orgId }: SidebarProps) {
                     aria-disabled
                     title={
                       sidebarCollapsed
-                        ? `${item.label} — ${disabledTitle}`
+                        ? t('disabledItem', { label, hint: disabledTitle })
                         : disabledTitle
                     }
                     className={cn(
@@ -207,7 +209,7 @@ export function Sidebar({ orgId }: SidebarProps) {
                     />
                     {!sidebarCollapsed && (
                       <span className="ml-2.5 flex-1 truncate">
-                        {item.label}
+                        {label}
                       </span>
                     )}
                   </div>
@@ -218,7 +220,7 @@ export function Sidebar({ orgId }: SidebarProps) {
                 <Link
                   key={item.id}
                   href={href}
-                  title={sidebarCollapsed ? item.label : undefined}
+                  title={sidebarCollapsed ? label : undefined}
                   className={cn(
                     'flex items-center text-[11.5px] transition-colors duration-100',
                     sidebarCollapsed
@@ -248,7 +250,7 @@ export function Sidebar({ orgId }: SidebarProps) {
                   />
 
                   {!sidebarCollapsed && (
-                    <span className="ml-2.5 flex-1 truncate">{item.label}</span>
+                    <span className="ml-2.5 flex-1 truncate">{label}</span>
                   )}
                 </Link>
               )
@@ -291,7 +293,7 @@ export function Sidebar({ orgId }: SidebarProps) {
             </div>
             <button
               onClick={handleLogout}
-              title="Cerrar sesión"
+              title={t('logout')}
               className="flex-shrink-0 transition-colors duration-100"
               style={{ color: c.label, background: 'none', border: 'none', cursor: 'pointer' }}
               onMouseEnter={(e) =>
@@ -328,7 +330,7 @@ export function Sidebar({ orgId }: SidebarProps) {
           ) : (
             <>
               <ChevronLeft size={13} aria-hidden />
-              <span>Colapsar</span>
+              <span>{t('collapse')}</span>
             </>
           )}
         </button>

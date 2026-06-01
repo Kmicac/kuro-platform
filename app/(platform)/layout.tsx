@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { useAuthStore } from '@/stores/auth.store'
 import { authApi } from '@/lib/api/client'
 import { KuroLogo } from '@/components/kuro/logo'
@@ -13,6 +14,8 @@ export default function PlatformLayout({
   children: React.ReactNode
 }) {
   const router = useRouter()
+  const t = useTranslations('errors.restoreSession')
+  const tc = useTranslations('common')
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const [refreshAttempted, setRefreshAttempted] = useState(false)
   const [bootstrapError, setBootstrapError] = useState<unknown>(null)
@@ -52,11 +55,10 @@ export default function PlatformLayout({
           <KuroLogo forceDark size="md" />
           <div className="space-y-1">
             <p className="text-sm font-medium text-foreground">
-              No se pudo restaurar la sesión
+              {t('title')}
             </p>
             <p className="text-xs text-muted-foreground">
-              Hubo un problema de conexión o de permisos. Reintentá; si el
-              problema persiste, volvé a iniciar sesión.
+              {t('description')}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -65,14 +67,14 @@ export default function PlatformLayout({
               size="sm"
               onClick={() => window.location.reload()}
             >
-              Reintentar
+              {tc('actions.retry')}
             </Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => router.replace('/login')}
             >
-              Ir a login
+              {tc('nav.goToLogin')}
             </Button>
           </div>
         </div>
@@ -90,7 +92,7 @@ export default function PlatformLayout({
             <KuroLogo forceDark size="md" />
           </div>
           <span className="text-xs text-muted-foreground tracking-widest uppercase">
-            Restaurando sesión
+            {tc('loading.restoringSession')}
           </span>
         </div>
       </div>

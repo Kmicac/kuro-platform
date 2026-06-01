@@ -1,5 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter, Space_Grotesk, JetBrains_Mono } from 'next/font/google'
+import { NextIntlClientProvider } from 'next-intl'
+import { getLocale, getMessages, getTranslations } from 'next-intl/server'
 import { Providers } from '@/providers'
 import './globals.css'
 
@@ -23,28 +25,36 @@ const jetbrainsMono = JetBrains_Mono({
   display: 'swap',
 })
 
-export const metadata: Metadata = {
-  title: {
-    default: 'KURO',
-    template: '%s · KURO',
-  },
-  description: 'Plataforma integral para academias y redes de Brazilian Jiu-Jitsu.',
-  metadataBase: new URL('https://kuro.app'),
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('common')
+  return {
+    title: {
+      default: t('meta.appName'),
+      template: t('meta.titleTemplate'),
+    },
+    description: t('meta.appDescription'),
+    metadataBase: new URL('https://kuro.app'),
+  }
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const locale = await getLocale()
+  const messages = await getMessages()
+
   return (
     <html
-      lang="es"
+      lang={locale}
       suppressHydrationWarning
       className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}
     >
       <body className="min-h-screen">
-        <Providers>{children}</Providers>
+        <NextIntlClientProvider messages={messages}>
+          <Providers>{children}</Providers>
+        </NextIntlClientProvider>
       </body>
     </html>
   )

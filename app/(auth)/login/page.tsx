@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import {
   Eye, EyeOff, Loader2, Shield, Monitor,
   LayoutGrid, ShieldCheck, Award,
@@ -16,21 +17,25 @@ type FormState =
   | 'error:orgRequired' | 'error:forbidden'
   | 'error:network' | 'success'
 
-const ERROR_COPY: Record<string, string> = {
-  'error:credentials':  'Email o contraseña incorrectos. Verificá los datos ingresados.',
-  'error:orgRequired':  'Esta cuenta requiere un slug de organización. Completá el campo opcional.',
-  'error:forbidden':    'No tenés permisos para acceder. Contactá al administrador.',
-  'error:network':      'No se pudo conectar con el servidor. Intentá de nuevo.',
+const ERROR_KEY: Record<
+  string,
+  'invalidCredentials' | 'organizationRequired' | 'forbidden' | 'network'
+> = {
+  'error:credentials':  'invalidCredentials',
+  'error:orgRequired':  'organizationRequired',
+  'error:forbidden':    'forbidden',
+  'error:network':      'network',
 }
 
 const FEATURES = [
-  { Icon: LayoutGrid,  title: 'Claridad operacional',     desc: 'Cada rol con la visibilidad exacta y los permisos que le corresponden.' },
-  { Icon: ShieldCheck, title: 'Gobernanza segura',         desc: 'Jerarquía real de la organización, auditada y completamente trazable.' },
-  { Icon: Award,       title: 'Legado técnico protegido',  desc: 'El historial técnico de cada alumno, preservado con trazabilidad de grado.' },
-]
+  { Icon: LayoutGrid,  key: 'clarity' },
+  { Icon: ShieldCheck, key: 'governance' },
+  { Icon: Award,       key: 'legacy' },
+] as const
 
 export default function LoginPage() {
   const router = useRouter()
+  const t = useTranslations('auth')
   const hydrateSession = useAuthStore((s) => s.hydrateSession)
 
   const [email,     setEmail]     = useState('')
@@ -42,7 +47,7 @@ export default function LoginPage() {
 
   const isLoading = formState === 'loading'
   const canSubmit = Boolean(email && password && !isLoading)
-  const errorMsg  = formState.startsWith('error:') ? ERROR_COPY[formState] : null
+  const errorMsg  = formState.startsWith('error:') ? t(`errors.${ERROR_KEY[formState]}`) : null
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -163,36 +168,36 @@ export default function LoginPage() {
         <div style={{ position:'relative', zIndex:1, animation:'kup .5s ease both' }}>
           <KuroLogo forceDark size="lg" />
           <p style={{ fontSize:'10px', letterSpacing:'.2em', textTransform:'uppercase', color:'#2a3828', fontWeight:500, marginTop:'8px', marginBottom:'28px' }}>
-            Academy Operations
+            {t('showcase.tagline')}
           </p>
           <div style={{ width:'34px', height:'1px', background:'linear-gradient(to right,#475c38,#899878)', marginBottom:'28px', opacity:.7 }} />
           <h1 className="font-display" style={{ fontSize:'38px', fontWeight:700, color:'#dde8d8', lineHeight:1.18, marginBottom:'16px', letterSpacing:'-.01em' }}>
-            Domina la estructura<br />de tu academia.
+            {t('showcase.headlineLine1')}<br />{t('showcase.headlineLine2')}
           </h1>
           <p style={{ fontSize:'14px', color:'#4a5848', lineHeight:1.7, maxWidth:'360px' }}>
-            Conducción, comunidad, gestión y legado<br />en un solo centro digital.
+            {t('showcase.subheadLine1')}<br />{t('showcase.subheadLine2')}
           </p>
         </div>
 
         {/* Feature cards */}
         <div style={{ position:'relative', zIndex:1, display:'flex', flexDirection:'column', gap:'10px' }}>
-          {FEATURES.map(({ Icon, title, desc }, i) => (
-            <div key={title} style={{
+          {FEATURES.map(({ Icon, key }, i) => (
+            <div key={key} style={{
               background:'rgba(137,152,120,0.04)', border:'.5px solid rgba(137,152,120,0.12)',
               borderRadius:'9px', padding:'13px 16px', display:'flex', alignItems:'flex-start', gap:'12px',
               backdropFilter:'blur(4px)', animation:'kup .55s ease both', animationDelay:`${.15 + i * .1}s`,
             }}>
               <Icon size={15} aria-hidden style={{ color:'#899878', flexShrink:0, marginTop:'2px' }} />
               <div>
-                <p style={{ fontSize:'13px', fontWeight:500, color:'#b0c0a8', marginBottom:'3px' }}>{title}</p>
-                <p style={{ fontSize:'12px', color:'#465040', lineHeight:1.6 }}>{desc}</p>
+                <p style={{ fontSize:'13px', fontWeight:500, color:'#b0c0a8', marginBottom:'3px' }}>{t(`features.${key}.title`)}</p>
+                <p style={{ fontSize:'12px', color:'#465040', lineHeight:1.6 }}>{t(`features.${key}.description`)}</p>
               </div>
             </div>
           ))}
         </div>
 
         <p style={{ position:'relative', zIndex:1, fontSize:'11px', color:'#222e22', letterSpacing:'.08em' }}>
-          Tecnología con raíces en el tatami.
+          {t('showcase.roots')}
         </p>
       </div>
 
@@ -212,27 +217,27 @@ export default function LoginPage() {
           }}>
             <div style={{ marginBottom:'26px' }}>
               <h2 style={{ fontSize:'20px', fontWeight:600, color:'#dde8d8', marginBottom:'5px', letterSpacing:'-.01em' }}>
-                Bienvenido a KURO
+                {t('form.welcome')}
               </h2>
               <p style={{ fontSize:'13px', color:'#485040', lineHeight:1.5 }}>
-                Operá tu red de academias con claridad.
+                {t('form.subtitle')}
               </p>
             </div>
 
             <form onSubmit={handleSubmit} style={{ display:'flex', flexDirection:'column', gap:'15px' }}>
 
               <div>
-                <label htmlFor="k-email" style={{ display:'block', fontSize:'10.5px', fontWeight:500, textTransform:'uppercase', letterSpacing:'.09em', color:'#485040', marginBottom:'7px' }}>Email</label>
+                <label htmlFor="k-email" style={{ display:'block', fontSize:'10.5px', fontWeight:500, textTransform:'uppercase', letterSpacing:'.09em', color:'#485040', marginBottom:'7px' }}>{t('form.emailLabel')}</label>
                 <input id="k-email" type="email" required autoComplete="email"
                   value={email} onChange={(e) => setEmail(e.target.value)}
                   onFocus={() => setFocused('email')} onBlur={() => setFocused(null)}
-                  placeholder="instructor@academia.com"
+                  placeholder={t('form.emailPlaceholder')}
                   style={{ width:'100%', background:'#0a0d0a', border:`.5px solid ${borderFor('email')}`, borderRadius:'8px', padding:'11px 13px', fontSize:'13px', color:'#dde8d8', outline:'none', transition:'border-color .15s' }}
                 />
               </div>
 
               <div>
-                <label htmlFor="k-pwd" style={{ display:'block', fontSize:'10.5px', fontWeight:500, textTransform:'uppercase', letterSpacing:'.09em', color:'#485040', marginBottom:'7px' }}>Contraseña</label>
+                <label htmlFor="k-pwd" style={{ display:'block', fontSize:'10.5px', fontWeight:500, textTransform:'uppercase', letterSpacing:'.09em', color:'#485040', marginBottom:'7px' }}>{t('form.passwordLabel')}</label>
                 <div style={{ position:'relative' }}>
                   <input id="k-pwd" type={showPwd ? 'text' : 'password'} required autoComplete="current-password"
                     value={password} onChange={(e) => setPassword(e.target.value)}
@@ -240,7 +245,7 @@ export default function LoginPage() {
                     placeholder="••••••••"
                     style={{ width:'100%', background:'#0a0d0a', border:`.5px solid ${borderFor('pwd')}`, borderRadius:'8px', padding:'11px 42px 11px 13px', fontSize:'13px', color:'#dde8d8', outline:'none', transition:'border-color .15s' }}
                   />
-                  <button type="button" aria-label={showPwd ? 'Ocultar' : 'Mostrar'} onClick={() => setShowPwd(v => !v)}
+                  <button type="button" aria-label={showPwd ? t('form.passwordHide') : t('form.passwordShow')} onClick={() => setShowPwd(v => !v)}
                     style={{ position:'absolute', right:'12px', top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', color:'#384036', padding:0 }}>
                     {showPwd ? <EyeOff size={15} aria-hidden /> : <Eye size={15} aria-hidden />}
                   </button>
@@ -249,16 +254,16 @@ export default function LoginPage() {
 
               <div>
                 <label htmlFor="k-org" style={{ display:'block', fontSize:'10.5px', fontWeight:500, textTransform:'uppercase', letterSpacing:'.09em', color:'#485040', marginBottom:'7px' }}>
-                  Organización <span style={{ textTransform:'none', letterSpacing:0, fontWeight:400, color:'#2e3830' }}>(opcional)</span>
+                  {t('form.orgLabel')} <span style={{ textTransform:'none', letterSpacing:0, fontWeight:400, color:'#2e3830' }}>{t('form.orgOptional')}</span>
                 </label>
                 <input id="k-org" type="text"
                   value={orgSlug} onChange={(e) => setOrgSlug(e.target.value.toLowerCase().replace(/\s+/g, '-'))}
                   onFocus={() => setFocused('org')} onBlur={() => setFocused(null)}
-                  placeholder="gracie-academy"
+                  placeholder={t('form.orgPlaceholder')}
                   style={{ width:'100%', background:'#0a0d0a', border:`.5px solid ${borderFor('org', formState === 'error:orgRequired')}`, borderRadius:'8px', padding:'11px 13px', fontSize:'13px', color:'#dde8d8', outline:'none', transition:'border-color .15s', fontFamily:'var(--font-jetbrains), monospace' }}
                 />
                 <p style={{ fontSize:'11px', color:'#2e3830', marginTop:'5px', lineHeight:1.5 }}>
-                  Requerido solo si tu organización usa un workspace personalizado.
+                  {t('form.orgHint')}
                 </p>
               </div>
 
@@ -269,9 +274,9 @@ export default function LoginPage() {
               )}
 
               <div style={{ textAlign:'right', marginTop:'-5px' }}>
-                <button type="button" onClick={() => alert('Recuperación de contraseña próximamente. Contactá a tu administrador.')}
+                <button type="button" onClick={() => alert(t('errors.forgotPasswordUnavailable'))}
                   style={{ background:'none', border:'none', cursor:'pointer', fontSize:'12px', color:'#485040', padding:0 }}>
-                  Olvidé mi contraseña
+                  {t('form.forgotPassword')}
                 </button>
               </div>
 
@@ -279,22 +284,22 @@ export default function LoginPage() {
                 className={cn(!canSubmit && 'opacity-40 cursor-not-allowed')}
                 style={{ width:'100%', background:'#2d4a20', color:'#F7F7F2', border:'none', borderRadius:'8px', padding:'12px', fontSize:'14px', fontWeight:600, display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', transition:'opacity .15s', cursor: canSubmit ? 'pointer' : 'not-allowed' }}>
                 {isLoading
-                  ? <><Loader2 size={15} className="animate-spin" aria-hidden />Ingresando...</>
-                  : formState === 'success' ? 'Redirigiendo...' : 'Ingresar'
+                  ? <><Loader2 size={15} className="animate-spin" aria-hidden />{t('form.submitting')}</>
+                  : formState === 'success' ? t('form.redirecting') : t('form.submit')
                 }
               </button>
             </form>
           </div>
 
           <div style={{ display:'flex', gap:'8px', flexWrap:'wrap', justifyContent:'center', marginTop:'16px' }}>
-            {[{ Icon: Shield, text: 'Acceso seguro de operadores' }, { Icon: Monitor, text: 'Plataforma web operativa' }].map(({ Icon, text }) => (
+            {[{ Icon: Shield, text: t('badge.secureAccess') }, { Icon: Monitor, text: t('badge.platform') }].map(({ Icon, text }) => (
               <span key={text} style={{ background:'rgba(137,152,120,0.06)', border:'.5px solid rgba(137,152,120,0.12)', borderRadius:'20px', padding:'4px 11px', fontSize:'10px', color:'#485040', display:'flex', alignItems:'center', gap:'5px' }}>
                 <Icon size={11} aria-hidden /> {text}
               </span>
             ))}
           </div>
           <p style={{ textAlign:'center', marginTop:'10px', fontSize:'10px', color:'#222e22', lineHeight:1.6 }}>
-            Restringido al personal autorizado y operadores de la organización.
+            {t('footer.restricted')}
           </p>
         </div>
       </div>

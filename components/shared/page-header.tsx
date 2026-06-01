@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -28,11 +29,12 @@ export function PageHeader({
   meta,
   className,
 }: PageHeaderProps) {
+  const t = useTranslations('navigation.breadcrumb')
   return (
     <header className={cn('space-y-2', className)}>
       {breadcrumbs && breadcrumbs.length > 0 && (
         <nav
-          aria-label="Breadcrumb"
+          aria-label={t('aria')}
           className="flex items-center gap-1.5 text-xs text-muted-foreground"
         >
           {breadcrumbs.map((b, i) => {

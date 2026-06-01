@@ -1,0 +1,53 @@
+{
+  "meta": {
+    "title": "Captación"
+  },
+  "title": "Captación",
+  "subtitle": "Solicitudes de ingreso de prospectos a esta filial.",
+  "count": "{count, plural, =1 {1 solicitud} other {# solicitudes}}",
+  "statusFilter": {
+    "ALL": "Todas",
+    "NEW": "Nuevas",
+    "REVIEWING": "En revisión",
+    "CONTACTED": "Contactadas",
+    "VISIT": "Con visita",
+    "READY": "Listas",
+    "CONVERTED": "Convertidas"
+  },
+  "table": {
+    "applicant": "Solicitante",
+    "contact": "Contacto",
+    "typeLevel": "Tipo / Nivel",
+    "status": "Estado",
+    "received": "Recibida",
+    "action": "Acción"
+  },
+  "viewStudent": "Ver alumno →",
+  "manage": "Gestionar",
+  "requestType": {
+    "TRIAL_CLASS": "Clase de prueba",
+    "MEMBERSHIP": "Membresía",
+    "PRIVATE_LESSON": "Clase privada",
+    "INFORMATION": "Información general"
+  },
+  "experience": {
+    "BEGINNER": "Principiante",
+    "INTERMEDIATE": "Intermedio",
+    "ADVANCED": "Avanzado",
+    "NONE": "Sin experiencia"
+  },
+  "status": {
+    "NEW": "Nueva",
+    "REVIEWING": "En revisión",
+    "CONTACTED": "Contactada",
+    "VISIT_PROPOSED": "Visita propuesta",
+    "VISIT_SCHEDULED": "Visita agendada",
+    "VISIT_COMPLETED": "Visita hecha",
+    "NO_SHOW": "No vino",
+    "DECLINED_BY_PROSPECT": "Declinada",
+    "REJECTED_BY_ACADEMY": "Rechazada",
+    "READY_TO_CONVERT": "Lista para convertir",
+    "CONVERTED": "Convertida",
+    "CANCELLED": "Cancelada"
+  }
+}

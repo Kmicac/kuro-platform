@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useFormatter, useTranslations } from 'next-intl'
 import {
   Award,
   Calendar,
@@ -31,6 +32,7 @@ interface StudentDetailProps {
 }
 
 export function StudentDetail({ orgId, studentId }: StudentDetailProps) {
+  const te = useTranslations('errors')
   const query = useStudent(orgId, studentId)
   const resolveBelt = usePromotionRankResolver()
 
@@ -42,8 +44,8 @@ export function StudentDetail({ orgId, studentId }: StudentDetailProps) {
     return (
       <CenteredState
         icon={Lock}
-        title="Sin acceso a esta ficha"
-        description="No tenés permisos para ver los datos de este alumno."
+        title={te('students.detailForbiddenTitle')}
+        description={te('students.detailForbiddenDescription')}
         backHref={`/org/${orgId}`}
       />
     )
@@ -53,8 +55,8 @@ export function StudentDetail({ orgId, studentId }: StudentDetailProps) {
     return (
       <CenteredState
         icon={User}
-        title="Alumno no encontrado"
-        description="La ficha no existe o pertenece a otra organización."
+        title={te('students.notFoundTitle')}
+        description={te('students.notFoundDescription')}
         backHref={`/org/${orgId}`}
       />
     )
@@ -112,16 +114,18 @@ function Header({
   orgId: string
   beltEntry: import('@/lib/api/types').PromotionRankCatalogEntry | null
 }) {
+  const tn = useTranslations('navigation')
+  const tTrack = useTranslations('students.track')
   const fullName = `${student.firstName} ${student.lastName}`.trim()
   const initials = `${student.firstName[0] ?? ''}${student.lastName[0] ?? ''}`
   const branchName = primaryBranchName(student)
 
   const breadcrumbs = [
-    { label: 'Organización', href: `/org/${orgId}` },
+    { label: tn('labels.organization'), href: `/org/${orgId}` },
     ...(student.primaryBranchId
       ? [
           {
-            label: 'Alumnos',
+            label: tn('labels.students'),
             href: `/org/${orgId}/branches/${student.primaryBranchId}/students`,
           },
         ]
@@ -143,7 +147,7 @@ function Header({
           )}
           <span className="inline-flex items-center gap-1.5">
             <ClipboardCheck className="h-3.5 w-3.5" />
-            {humanizeTrack(student.promotionTrack)}
+            {humanizeTrack(tTrack, student.promotionTrack)}
           </span>
         </span>
       }
@@ -182,19 +186,21 @@ function BigAvatar({ initials }: { initials: string }) {
 // ── Cards ──────────────────────────────────────────────────
 
 function BjjJourneyCard({ student }: { student: StudentDetailType }) {
+  const t = useTranslations('students')
+  const format = useFormatter()
   const items = [
-    { label: 'Inicio en BJJ', value: formatDate(student.startedBjjAt) ?? '—' },
+    { label: t('detail.bjjStart'), value: formatDate(format, student.startedBjjAt) ?? '—' },
     {
-      label: 'Ingreso a la organización',
-      value: formatDate(student.joinedOrganizationAt) ?? '—',
+      label: t('detail.orgJoined'),
+      value: formatDate(format, student.joinedOrganizationAt) ?? '—',
     },
     {
-      label: 'Última actualización',
-      value: formatDate(student.updatedAt) ?? '—',
+      label: t('detail.lastUpdate'),
+      value: formatDate(format, student.updatedAt) ?? '—',
     },
   ]
   return (
-    <SectionCard title="Trayectoria BJJ" icon={Award}>
+    <SectionCard title={t('detail.bjjJourney')} icon={Award}>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {items.map((it) => (
           <div key={it.label}>
@@ -212,15 +218,17 @@ function BjjJourneyCard({ student }: { student: StudentDetailType }) {
 }
 
 function TechnicalNotesCard({ notes }: { notes: string | null }) {
+  const t = useTranslations('students')
+  const tEmpty = useTranslations('empty-states')
   return (
-    <SectionCard title="Notas técnicas" icon={ClipboardCheck}>
+    <SectionCard title={t('detail.technicalNotes')} icon={ClipboardCheck}>
       {notes ? (
         <p className="text-sm text-foreground whitespace-pre-line leading-relaxed">
           {notes}
         </p>
       ) : (
         <p className="text-sm text-muted-foreground italic">
-          Sin notas técnicas registradas todavía.
+          {tEmpty('studentDetail.noNotes')}
         </p>
       )}
     </SectionCard>
@@ -228,18 +236,17 @@ function TechnicalNotesCard({ notes }: { notes: string | null }) {
 }
 
 function CertificatesCard({ count }: { count: number }) {
+  const t = useTranslations('students')
+  const tEmpty = useTranslations('empty-states')
   return (
-    <SectionCard title="Certificados de promoción" icon={Award}>
+    <SectionCard title={t('detail.certificates')} icon={Award}>
       {count > 0 ? (
         <p className="text-sm text-foreground">
-          <span className="text-2xl font-semibold tabular-nums">{count}</span>{' '}
-          <span className="text-muted-foreground">
-            {count === 1 ? 'certificado emitido' : 'certificados emitidos'}
-          </span>
+          {t('detail.certificatesCount', { count })}
         </p>
       ) : (
         <p className="text-sm text-muted-foreground">
-          Aún no hay certificados emitidos para este alumno.
+          {tEmpty('studentDetail.noCertificates')}
         </p>
       )}
     </SectionCard>
@@ -247,13 +254,15 @@ function CertificatesCard({ count }: { count: number }) {
 }
 
 function IdentityCard({ student }: { student: StudentDetailType }) {
+  const t = useTranslations('students')
+  const format = useFormatter()
   const items: {
     label: string
     value: React.ReactNode
     icon: React.ComponentType<{ className?: string }>
   }[] = [
     {
-      label: 'Email',
+      label: t('detail.email'),
       icon: Mail,
       value: (
         <a
@@ -264,20 +273,20 @@ function IdentityCard({ student }: { student: StudentDetailType }) {
         </a>
       ),
     },
-    { label: 'Teléfono', icon: Phone, value: student.phone ?? '—' },
+    { label: t('detail.phone'), icon: Phone, value: student.phone ?? '—' },
     {
-      label: 'Fecha de nacimiento',
+      label: t('detail.birthDate'),
       icon: Calendar,
-      value: formatDate(student.dateOfBirth) ?? '—',
+      value: formatDate(format, student.dateOfBirth) ?? '—',
     },
     {
-      label: 'ID interno',
+      label: t('detail.internalId'),
       icon: Hash,
       value: <code className="font-mono text-xs">{student.id}</code>,
     },
   ]
   return (
-    <SectionCard title="Identidad" icon={UserCircle2}>
+    <SectionCard title={t('detail.identity')} icon={UserCircle2}>
       <ul className="space-y-3">
         {items.map(({ label, value, icon: Icon }) => (
           <li key={label} className="flex items-start gap-2.5">
@@ -296,18 +305,20 @@ function IdentityCard({ student }: { student: StudentDetailType }) {
 }
 
 function GuardianCard({ student }: { student: StudentDetailType }) {
+  const t = useTranslations('students')
+  const tEmpty = useTranslations('empty-states')
   const hasGuardian =
     student.parentTutorName ||
     student.parentTutorPhone ||
     student.parentTutorRelation
   return (
-    <SectionCard title="Tutor responsable" icon={Users}>
+    <SectionCard title={t('detail.guardian')} icon={Users}>
       {hasGuardian ? (
         <ul className="space-y-2.5 text-sm">
           {student.parentTutorName && (
             <li>
               <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                Nombre
+                {t('detail.guardianName')}
               </p>
               <p className="text-foreground mt-0.5">
                 {student.parentTutorName}
@@ -317,7 +328,7 @@ function GuardianCard({ student }: { student: StudentDetailType }) {
           {student.parentTutorRelation && (
             <li>
               <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                Relación
+                {t('detail.guardianRelation')}
               </p>
               <p className="text-foreground mt-0.5">
                 {student.parentTutorRelation}
@@ -327,7 +338,7 @@ function GuardianCard({ student }: { student: StudentDetailType }) {
           {student.parentTutorPhone && (
             <li>
               <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                Teléfono
+                {t('detail.guardianPhone')}
               </p>
               <p className="text-foreground mt-0.5 flex items-center gap-1.5">
                 <Phone className="h-3 w-3 text-muted-foreground" />
@@ -338,7 +349,7 @@ function GuardianCard({ student }: { student: StudentDetailType }) {
         </ul>
       ) : (
         <p className="text-sm text-muted-foreground italic">
-          Sin tutor responsable registrado.
+          {tEmpty('studentDetail.noGuardian')}
         </p>
       )}
     </SectionCard>
@@ -354,14 +365,15 @@ function BranchAssignmentCard({
   primaryBranchName: string | null
   orgId: string
 }) {
+  const t = useTranslations('students')
   const assignments = student.branchAssignments?.length ?? 0
   const visits = student.branchVisits?.length ?? 0
   return (
-    <SectionCard title="Asignación de filial" icon={MapPin}>
+    <SectionCard title={t('detail.branchAssignment')} icon={MapPin}>
       <div className="space-y-3 text-sm">
         <div>
           <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-            Filial principal
+            {t('detail.primaryBranch')}
           </p>
           {primaryBranchName ? (
             <Link
@@ -377,7 +389,7 @@ function BranchAssignmentCard({
         <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border/60">
           <div>
             <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-              Asignaciones activas
+              {t('detail.activeAssignments')}
             </p>
             <p className="text-lg font-semibold tabular-nums mt-0.5">
               {assignments}
@@ -385,7 +397,7 @@ function BranchAssignmentCard({
           </div>
           <div>
             <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-              Visitas registradas
+              {t('detail.registeredVisits')}
             </p>
             <p className="text-lg font-semibold tabular-nums mt-0.5">
               {visits}
@@ -466,6 +478,7 @@ function CenteredState({
   backHref?: string
   action?: React.ReactNode
 }) {
+  const tc = useTranslations('common')
   return (
     <div className="p-6">
       <div className="rounded-lg border border-dashed border-border bg-muted/20 p-10 text-center max-w-md mx-auto">
@@ -479,7 +492,7 @@ function CenteredState({
               href={backHref}
               className="text-xs text-primary hover:underline"
             >
-              ← Volver
+              ← {tc('nav.back')}
             </Link>
           )}
         </div>
@@ -490,19 +503,20 @@ function CenteredState({
 
 // ── Helpers ────────────────────────────────────────────────
 
-function humanizeTrack(t: string) {
-  const map: Record<string, string> = {
-    ADULT: 'Adultos',
-    KIDS: 'Niños',
-    MASTER: 'Máster',
-  }
-  return map[t] ?? t
+type Translator = ReturnType<typeof useTranslations>
+
+function humanizeTrack(tTrack: Translator, track: string) {
+  // `as never`: key dinámica validada en runtime con `.has()`.
+  return tTrack.has(track as never) ? tTrack(track as never) : track
 }
 
-function formatDate(iso?: string | null) {
+function formatDate(
+  format: ReturnType<typeof useFormatter>,
+  iso?: string | null
+) {
   if (!iso) return null
   try {
-    return new Date(iso).toLocaleDateString('es-AR', {
+    return format.dateTime(new Date(iso), {
       day: '2-digit',
       month: 'short',
       year: 'numeric',

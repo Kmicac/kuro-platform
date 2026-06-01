@@ -1,8 +1,12 @@
 import type { Metadata } from 'next'
+import { getTranslations } from 'next-intl/server'
 import { ClaimsManager } from './_components/claims-manager'
 
-export const metadata: Metadata = {
-  title: 'Invitaciones de cuenta',
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('claims')
+  return {
+    title: t('meta.title'),
+  }
 }
 
 interface PageProps {

@@ -1,8 +1,12 @@
 import type { Metadata } from 'next'
+import { getTranslations } from 'next-intl/server'
 import { BranchDashboard } from './_components/branch-dashboard'
 
-export const metadata: Metadata = {
-  title: 'Filial · Dashboard',
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('dashboard')
+  return {
+    title: t('branch.metaTitle'),
+  }
 }
 
 interface PageProps {

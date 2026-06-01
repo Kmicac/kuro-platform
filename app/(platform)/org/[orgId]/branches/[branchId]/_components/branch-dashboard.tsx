@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useMemo } from 'react'
+import { useFormatter, useNow, useTranslations } from 'next-intl'
 import {
   AlertTriangle,
   CalendarDays,
@@ -46,6 +47,7 @@ interface BranchDashboardProps {
 }
 
 export function BranchDashboard({ orgId, branchId }: BranchDashboardProps) {
+  const t = useTranslations('dashboard.branch')
   const today = useMemo(() => new Date().toISOString().slice(0, 10), [])
 
   const branchQuery = useBranch(orgId, branchId)
@@ -101,60 +103,60 @@ export function BranchDashboard({ orgId, branchId }: BranchDashboardProps) {
       />
 
       <section
-        aria-label="Indicadores operativos"
+        aria-label={t('kpisAria')}
         className="grid grid-cols-2 lg:grid-cols-3 gap-4"
       >
         <KpiCard
-          label="Clases hoy"
+          label={t('kpis.classesToday')}
           value={classesToday}
           icon={CalendarDays}
-          hint="Sesiones programadas para hoy"
+          hint={t('kpis.classesTodayHint')}
           href={`/org/${orgId}/calendar`}
           isLoading={summaryQuery.isLoading}
           error={summaryQuery.error}
         />
         <KpiCard
-          label="Instructores programados"
+          label={t('kpis.instructors')}
           value={scheduledInstructors}
           icon={GraduationCap}
-          hint="Coaches asignados a las sesiones de hoy"
+          hint={t('kpis.instructorsHint')}
           isLoading={summaryQuery.isLoading}
           error={summaryQuery.error}
         />
         <KpiCard
-          label="Asistencia esperada"
+          label={t('kpis.expectedAttendance')}
           value={expectedAttendance}
           icon={Users}
-          hint="Alumnos esperados según capacidad reservada"
+          hint={t('kpis.expectedAttendanceHint')}
           isLoading={summaryQuery.isLoading}
           error={summaryQuery.error}
         />
         <KpiCard
-          label="Intake pendiente"
+          label={t('kpis.pendingIntake')}
           value={pendingIntake}
           icon={ClipboardList}
-          hint="Solicitudes esperando revisión"
+          hint={t('kpis.pendingIntakeHint')}
           isLoading={summaryQuery.isLoading}
           error={summaryQuery.error}
           href={`/org/${orgId}/branches/${branchId}/intake`}
         />
         <KpiCard
-          label="Alumnos sin cuenta"
+          label={t('kpis.studentsNoAccount')}
           value={pendingClaims}
           icon={UserPlus}
-          hint="Esperando invitación de claim"
+          hint={t('kpis.studentsNoAccountHint')}
           isLoading={summaryQuery.isLoading}
           error={summaryQuery.error}
           href={`/org/${orgId}/claims`}
         />
         <KpiCard
-          label="Alertas operativas"
+          label={t('kpis.operationalAlerts')}
           value={operationalAlerts}
           icon={AlertTriangle}
           hint={
             (operationalAlerts ?? 0) > 0
-              ? 'Requieren atención del manager'
-              : 'Sin alertas en este momento'
+              ? t('kpis.operationalAlertsHint')
+              : t('kpis.noAlerts')
           }
           isLoading={summaryQuery.isLoading || branchQuery.isLoading}
           error={summaryQuery.error ?? branchQuery.error}
@@ -206,6 +208,11 @@ function Header({
   isLoading: boolean
   error: unknown
 }) {
+  const t = useTranslations('dashboard.branch')
+  const te = useTranslations('errors')
+  const tn = useTranslations('navigation')
+  const tc = useTranslations('common')
+
   if (isLoading) {
     return (
       <header className="space-y-2">
@@ -219,8 +226,8 @@ function Header({
   if (error instanceof ApiError && error.status === 403) {
     return (
       <PageHeader
-        title="Sin acceso a esta filial"
-        subtitle="No tenés permisos para ver este panel."
+        title={te('branch.forbiddenTitle')}
+        subtitle={te('branch.forbiddenDescription')}
       />
     )
   }
@@ -228,8 +235,8 @@ function Header({
   if (error) {
     return (
       <PageHeader
-        title="No se pudo cargar la filial"
-        subtitle="Revisá la conexión e intentá nuevamente."
+        title={te('branch.loadErrorTitle')}
+        subtitle={te('generic.description')}
       />
     )
   }
@@ -243,28 +250,28 @@ function Header({
   return (
     <PageHeader
       breadcrumbs={[
-        { label: 'Organización', href: `/org/${orgId}` },
-        { label: branch?.name ?? 'Filial' },
+        { label: tn('labels.organization'), href: `/org/${orgId}` },
+        { label: branch?.name ?? tn('labels.branch') },
       ]}
-      title={branch?.name ?? 'Filial'}
-      subtitle={location || 'Operación diaria de la filial'}
+      title={branch?.name ?? tn('labels.branch')}
+      subtitle={location || t('subtitle')}
       meta={
         <div className="flex items-center gap-2 flex-wrap">
           <StatusBadge
             status={status}
             label={
               status === 'ACTIVE'
-                ? 'Activa'
+                ? t('status.active')
                 : status === 'SUSPENDED'
-                  ? 'Suspendida'
+                  ? t('status.suspended')
                   : status === 'INACTIVE'
-                    ? 'Inactiva'
+                    ? t('status.inactive')
                     : undefined
             }
           />
           {branch?.isHeadquarter && (
             <Badge variant="outline" className="text-[10px]">
-              HQ
+              {tc('branchBadge.hq')}
             </Badge>
           )}
           {needsReview && (
@@ -273,7 +280,7 @@ function Header({
               className="border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400"
             >
               <AlertTriangle className="h-3 w-3" />
-              Requiere revisión
+              {t('needsReview')}
             </Badge>
           )}
         </div>
@@ -295,10 +302,26 @@ function AgendaCard({
   error: unknown
   onRetry: () => void
 }) {
+  const t = useTranslations('dashboard.branch')
+  const tEmpty = useTranslations('empty-states')
+  const format = useFormatter()
+
+  const formatTime = (iso?: string) => {
+    if (!iso) return '—'
+    try {
+      return format.dateTime(new Date(iso), {
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    } catch {
+      return '—'
+    }
+  }
+
   return (
     <SectionCard
-      title="Agenda de hoy"
-      subtitle="Sesiones activas y próximas en la filial"
+      title={t('agenda.title')}
+      subtitle={t('agenda.subtitle')}
       icon={Clock}
     >
       <SectionStateWrapper
@@ -306,8 +329,8 @@ function AgendaCard({
         error={error}
         onRetry={onRetry}
         isEmpty={items.length === 0}
-        emptyTitle="Sin sesiones programadas"
-        emptyDescription="No hay clases registradas para hoy en esta filial."
+        emptyTitle={tEmpty('branch.agendaTitle')}
+        emptyDescription={tEmpty('branch.agendaDescription')}
         skeleton={
           <div className="space-y-2">
             {[0, 1, 2].map((i) => (
@@ -340,7 +363,7 @@ function AgendaCard({
                   {it.title}
                 </p>
                 <p className="text-xs text-muted-foreground truncate">
-                  {instructorName(it) ?? 'Instructor por asignar'}
+                  {instructorName(it) ?? t('agenda.instructorUnassigned')}
                 </p>
               </div>
               <SessionStatusBadge status={it.status} />
@@ -353,22 +376,23 @@ function AgendaCard({
 }
 
 function SessionStatusBadge({ status }: { status?: string }) {
+  const t = useTranslations('dashboard.branch')
   const normalized = (status ?? 'SCHEDULED').toUpperCase()
   const map: Record<string, { label: string; className: string }> = {
     SCHEDULED: {
-      label: 'Programada',
+      label: t('agenda.sessionStatus.scheduled'),
       className: 'border-border text-muted-foreground',
     },
     IN_PROGRESS: {
-      label: 'En curso',
+      label: t('agenda.sessionStatus.inProgress'),
       className: 'border-primary/40 bg-primary/10 text-primary',
     },
     COMPLETED: {
-      label: 'Finalizada',
+      label: t('agenda.sessionStatus.completed'),
       className: 'border-border text-muted-foreground',
     },
     CANCELLED: {
-      label: 'Cancelada',
+      label: t('agenda.sessionStatus.canceled'),
       className: 'border-destructive/40 bg-destructive/10 text-destructive',
     },
   }
@@ -382,15 +406,15 @@ function SessionStatusBadge({ status }: { status?: string }) {
 
 // ── Intake pipeline ────────────────────────────────────────
 
-const STAGE_LABELS: Record<string, string> = {
-  NEW: 'Nuevo',
-  REVIEWING: 'En revisión',
-  CONTACTED: 'Contactado',
-  VISIT_PROPOSED: 'Visita propuesta',
-  VISIT_SCHEDULED: 'Visita',
-  VISIT_COMPLETED: 'Visita hecha',
-  READY_TO_CONVERT: 'Listo',
-  CONVERTED: 'Convertido',
+const STAGE_LABEL_KEYS: Record<string, string> = {
+  NEW: 'new',
+  REVIEWING: 'reviewing',
+  CONTACTED: 'contacted',
+  VISIT_PROPOSED: 'visitProposed',
+  VISIT_SCHEDULED: 'visit',
+  VISIT_COMPLETED: 'visitDone',
+  READY_TO_CONVERT: 'ready',
+  CONVERTED: 'converted',
 }
 
 const STAGE_ORDER = [
@@ -414,10 +438,15 @@ function IntakePipelineCard({
   orgId: string
   branchId: string
 }) {
+  const t = useTranslations('dashboard.branch')
+  const tEmpty = useTranslations('empty-states')
+  const format = useFormatter()
   const pipeline = summary?.requests?.pipeline
   const normalized = STAGE_ORDER.map((stage) => ({
     stage,
-    label: STAGE_LABELS[stage] ?? stage,
+    label: STAGE_LABEL_KEYS[stage]
+      ? t(`intakeStage.${STAGE_LABEL_KEYS[stage]}` as Parameters<typeof t>[0])
+      : stage,
     count:
       pipeline?.find((s) => String(s.stage).toUpperCase() === stage)?.count ??
       0,
@@ -428,15 +457,15 @@ function IntakePipelineCard({
 
   return (
     <SectionCard
-      title="Pipeline de intake"
-      subtitle="Conteo por etapa del embudo de captación"
+      title={t('pipeline.title')}
+      subtitle={t('pipeline.subtitle')}
       icon={Inbox}
       action={
         <Link
           href={`/org/${orgId}/branches/${branchId}/intake`}
           className="text-xs text-primary hover:underline"
         >
-          Abrir intake →
+          {t('pipeline.open')}
         </Link>
       }
     >
@@ -446,11 +475,11 @@ function IntakePipelineCard({
         onRetry={() => undefined}
         hideRetry
         isEmpty={!hasData || total === 0}
-        emptyTitle="Sin solicitudes activas"
+        emptyTitle={tEmpty('branch.pipelineTitle')}
         emptyDescription={
           hasData
-            ? 'No hay solicitudes en el embudo de intake.'
-            : 'El backend aún no expone el pipeline para esta filial.'
+            ? tEmpty('branch.pipelineDescription')
+            : tEmpty('branch.pipelineUnavailable')
         }
         skeleton={
           <div className="grid grid-cols-5 gap-2">
@@ -473,7 +502,7 @@ function IntakePipelineCard({
                 {idx + 1}. {s.label}
               </p>
               <p className="text-2xl font-semibold text-foreground tabular-nums mt-1">
-                {s.count.toLocaleString('es-AR')}
+                {format.number(s.count)}
               </p>
             </div>
           ))}
@@ -498,10 +527,32 @@ function RiskRosterCard({
   onRetry: () => void
   orgId: string
 }) {
+  const t = useTranslations('dashboard.branch')
+  const tc = useTranslations('common')
+  const tEmpty = useTranslations('empty-states')
+  // `now` estable provisto por next-intl (request config) — evita Date.now()
+  // impuro durante el render.
+  const now = useNow()
+
+  const formatRelativeDate = (iso?: string | null) => {
+    if (!iso) return '—'
+    try {
+      const date = new Date(iso)
+      const diffMs = now.getTime() - date.getTime()
+      const days = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+      if (days <= 0) return tc('relativeTime.today')
+      if (days < 30) return tc('relativeTime.daysAgo', { count: days })
+      const months = Math.floor(days / 30)
+      return tc('relativeTime.monthsAgo', { count: months })
+    } catch {
+      return '—'
+    }
+  }
+
   return (
     <SectionCard
-      title="Alumnos en riesgo"
-      subtitle="Inasistencias prolongadas o caída de frecuencia"
+      title={t('risk.title')}
+      subtitle={t('risk.subtitle')}
       icon={AlertTriangle}
     >
       <SectionStateWrapper
@@ -509,8 +560,8 @@ function RiskRosterCard({
         error={error}
         onRetry={onRetry}
         isEmpty={!items || items.length === 0}
-        emptyTitle="Sin alumnos en riesgo"
-        emptyDescription="Todos los alumnos mantienen su frecuencia esperada."
+        emptyTitle={tEmpty('branch.riskTitle')}
+        emptyDescription={tEmpty('branch.riskDescription')}
         skeleton={
           <div className="space-y-2">
             {[0, 1, 2, 3].map((i) => (
@@ -526,10 +577,14 @@ function RiskRosterCard({
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-wide text-muted-foreground">
-                <th className="font-medium pb-2">Alumno</th>
-                <th className="font-medium pb-2">Nivel</th>
-                <th className="font-medium pb-2">Consistencia</th>
-                <th className="font-medium pb-2">Último check-in</th>
+                <th className="font-medium pb-2">{t('risk.table.student')}</th>
+                <th className="font-medium pb-2">{t('risk.table.level')}</th>
+                <th className="font-medium pb-2">
+                  {t('risk.table.consistency')}
+                </th>
+                <th className="font-medium pb-2">
+                  {t('risk.table.lastAttendance')}
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -565,19 +620,20 @@ function RiskRosterCard({
 }
 
 function RiskLevelBadge({ level }: { level?: string }) {
+  const t = useTranslations('dashboard.branch')
   const normalized = (level ?? 'LOW').toUpperCase()
   const map: Record<string, { label: string; className: string }> = {
     HIGH: {
-      label: 'Alto',
+      label: t('risk.level.high'),
       className: 'border-destructive/40 bg-destructive/10 text-destructive',
     },
     MEDIUM: {
-      label: 'Medio',
+      label: t('risk.level.medium'),
       className:
         'border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400',
     },
     LOW: {
-      label: 'Bajo',
+      label: t('risk.level.low'),
       className: 'border-border text-muted-foreground',
     },
   }
@@ -598,24 +654,25 @@ function QuickActionsCard({
   orgId: string
   branchId: string
 }) {
+  const t = useTranslations('dashboard.branch')
   const actions = [
     {
-      label: 'Validar asistencia',
+      label: t('quickActions.validateAttendance'),
       icon: ClipboardCheck,
       href: `/org/${orgId}/branches/${branchId}/attendance`,
     },
     {
-      label: 'Abrir intake',
+      label: t('quickActions.openIntake'),
       icon: Inbox,
       href: `/org/${orgId}/branches/${branchId}/intake`,
     },
     {
-      label: 'Invitar alumnos',
+      label: t('quickActions.inviteStudents'),
       icon: Mail,
       href: `/org/${orgId}/claims`,
     },
     {
-      label: 'Ver calendario',
+      label: t('quickActions.viewCalendar'),
       icon: CalendarDays,
       href: `/org/${orgId}/calendar`,
     },
@@ -623,8 +680,8 @@ function QuickActionsCard({
 
   return (
     <SectionCard
-      title="Acciones rápidas"
-      subtitle="Operaciones frecuentes del manager"
+      title={t('quickActions.title')}
+      subtitle={t('quickActions.subtitle')}
     >
       <div className="grid grid-cols-2 gap-2">
         {actions.map(({ label, icon: Icon, href }) => (
@@ -705,14 +762,16 @@ function SectionStateWrapper({
   skeleton: React.ReactNode
   children: React.ReactNode
 }) {
+  const te = useTranslations('errors')
+
   if (isLoading) return <>{skeleton}</>
 
   if (error instanceof ApiError && error.status === 403) {
     return (
       <ForbiddenState
         dense
-        title="Sección restringida"
-        description="No tenés permisos para ver este contenido."
+        title={te('branch.sectionRestrictedTitle')}
+        description={te('branch.sectionRestrictedDescription')}
       />
     )
   }
@@ -762,30 +821,3 @@ function instructorId(item: CalendarItem): string | undefined {
   return inst?.id ?? inst?.membershipId
 }
 
-function formatTime(iso?: string) {
-  if (!iso) return '—'
-  try {
-    return new Date(iso).toLocaleTimeString('es-AR', {
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  } catch {
-    return '—'
-  }
-}
-
-function formatRelativeDate(iso?: string | null) {
-  if (!iso) return '—'
-  try {
-    const date = new Date(iso)
-    const diffMs = Date.now() - date.getTime()
-    const days = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-    if (days <= 0) return 'Hoy'
-    if (days === 1) return 'Hace 1 día'
-    if (days < 30) return `Hace ${days} días`
-    const months = Math.floor(days / 30)
-    return months === 1 ? 'Hace 1 mes' : `Hace ${months} meses`
-  } catch {
-    return '—'
-  }
-}

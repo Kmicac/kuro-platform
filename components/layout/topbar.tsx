@@ -14,6 +14,7 @@ import {
   Sun,
 } from 'lucide-react'
 import { useTheme } from 'next-themes'
+import { useTranslations } from 'next-intl'
 import { useAuthStore } from '@/stores/auth.store'
 import { useBranches, useCurrentContext } from '@/lib/hooks'
 import type { Branch } from '@/lib/api/types'
@@ -25,12 +26,13 @@ interface TopbarProps {
 }
 
 function ThemeToggle() {
+  const t = useTranslations('navigation.topbar')
   const { resolvedTheme, setTheme } = useTheme()
   const isDark = resolvedTheme === 'dark'
   return (
     <button
       onClick={() => setTheme(isDark ? 'light' : 'dark')}
-      title={isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+      title={isDark ? t('themeLight') : t('themeDark')}
       className="w-8 h-8 flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
     >
       {isDark ? <Sun size={15} aria-hidden /> : <Moon size={15} aria-hidden />}
@@ -39,6 +41,7 @@ function ThemeToggle() {
 }
 
 export function Topbar({ orgId, branchId }: TopbarProps) {
+  const t = useTranslations('navigation.topbar')
   const ctx = useCurrentContext()
   const { user, currentOrg, currentBranch } = useAuthStore()
 
@@ -54,10 +57,10 @@ export function Topbar({ orgId, branchId }: TopbarProps) {
       <div className="flex items-center gap-1">
         <button className="flex items-center gap-1.5 pl-2 pr-2.5 py-1.5 rounded-md hover:bg-muted transition-colors max-w-[160px]">
           <span className="text-xs text-muted-foreground whitespace-nowrap">
-            Org
+            {t('orgLabel')}
           </span>
           <span className="text-xs font-medium text-foreground truncate">
-            {currentOrg?.name ?? 'Organización'}
+            {currentOrg?.name ?? t('orgFallback')}
           </span>
           <ChevronDown
             size={11}
@@ -75,7 +78,7 @@ export function Topbar({ orgId, branchId }: TopbarProps) {
       <div className="flex-1 max-w-xs">
         <button className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted border border-border text-xs text-muted-foreground hover:border-muted-foreground/30 transition-colors">
           <Search size={12} aria-hidden />
-          <span className="flex-1 text-left">Buscar alumnos, clases...</span>
+          <span className="flex-1 text-left">{t('search')}</span>
           <kbd className="hidden sm:inline-flex items-center gap-0.5 bg-background border border-border rounded px-1 text-[10px] py-0.5 leading-none">
             ⌘K
           </kbd>
@@ -89,11 +92,11 @@ export function Topbar({ orgId, branchId }: TopbarProps) {
           style={{ background: '#2d4a20', color: '#F7F7F2' }}
         >
           <Plus size={13} aria-hidden />
-          <span className="hidden sm:inline">Crear</span>
+          <span className="hidden sm:inline">{t('create')}</span>
         </button>
 
         <button
-          title="Notificaciones"
+          title={t('notifications')}
           className="relative w-8 h-8 flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
         >
           <Bell size={15} aria-hidden />
@@ -177,6 +180,9 @@ interface BranchSelectorProps {
 }
 
 function BranchSelector({ orgId, activeBranchId }: BranchSelectorProps) {
+  const t = useTranslations('navigation.topbar')
+  const tErrors = useTranslations('errors.topbar')
+  const tEmpty = useTranslations('empty-states.topbar')
   const router = useRouter()
   const pathname = usePathname()
   const { setCurrentBranch } = useAuthStore()
@@ -228,11 +234,13 @@ function BranchSelector({ orgId, activeBranchId }: BranchSelectorProps) {
         className="flex items-center gap-1.5 pl-2 pr-2.5 py-1.5 rounded-md hover:bg-muted transition-colors max-w-[200px]"
       >
         <span className="text-xs text-muted-foreground whitespace-nowrap">
-          Branch
+          {t('branchLabel')}
         </span>
         <span className="text-xs font-medium text-foreground truncate">
           {activeBranch?.name ??
-            (branchesQuery.isLoading ? 'Cargando...' : 'Seleccionar')}
+            (branchesQuery.isLoading
+              ? t('branchLoading')
+              : t('branchSelect'))}
         </span>
         <ChevronDown
           size={11}
@@ -251,7 +259,7 @@ function BranchSelector({ orgId, activeBranchId }: BranchSelectorProps) {
         >
           <div className="px-3 py-2 border-b border-border">
             <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
-              Cambiar de filial
+              {t('changeBranch')}
             </p>
           </div>
 
@@ -259,13 +267,13 @@ function BranchSelector({ orgId, activeBranchId }: BranchSelectorProps) {
             {branchesQuery.isLoading && (
               <div className="flex items-center gap-2 px-3 py-4 text-xs text-muted-foreground">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                Cargando filiales...
+                {t('branchesLoading')}
               </div>
             )}
 
             {Boolean(branchesQuery.error) && (
               <div className="px-3 py-4 text-xs text-destructive">
-                No se pudieron cargar las filiales.
+                {tErrors('branchesLoadError')}
               </div>
             )}
 
@@ -273,7 +281,7 @@ function BranchSelector({ orgId, activeBranchId }: BranchSelectorProps) {
               !branchesQuery.error &&
               branches.length === 0 && (
                 <div className="px-3 py-4 text-xs text-muted-foreground">
-                  No hay filiales registradas.
+                  {tEmpty('noBranches')}
                 </div>
               )}
 

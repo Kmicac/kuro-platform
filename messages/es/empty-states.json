@@ -1,0 +1,55 @@
+{
+  "searchNoResults": "Sin resultados para \"{search}\"",
+  "org": {
+    "branchesTitle": "Sin filiales todavía",
+    "branchesDescription": "No hay filiales registradas en esta organización."
+  },
+  "branch": {
+    "agendaTitle": "Sin sesiones programadas",
+    "agendaDescription": "No hay clases registradas para hoy en esta filial.",
+    "pipelineTitle": "Sin solicitudes activas",
+    "pipelineDescription": "No hay solicitudes en el embudo de captación.",
+    "pipelineUnavailable": "El backend aún no expone el embudo para esta filial.",
+    "riskTitle": "Sin alumnos en riesgo",
+    "riskDescription": "Todos los alumnos mantienen su frecuencia esperada."
+  },
+  "calendar": {
+    "selectBranchTitle": "Selecciona una filial",
+    "selectBranchDescription": "El calendario se carga por filial. Elige una desde el selector del topbar para ver las clases programadas.",
+    "noClassesTitle": "No hay clases en este rango",
+    "noClassesFiltered": "Tus filtros no devolvieron resultados. Prueba limpiarlos.",
+    "noClassesEmpty": "Aún no hay sesiones programadas para este período."
+  },
+  "students": {
+    "filteredTitle": "Sin resultados con esos filtros",
+    "filteredDescription": "Ajusta el estado o la búsqueda para ver más alumnos.",
+    "emptyTitle": "Sin alumnos en esta filial",
+    "emptyDescription": "Cuando se den de alta nuevos alumnos aparecerán aquí."
+  },
+  "intake": {
+    "filteredDescription": "Ajusta la búsqueda o el filtro de estado.",
+    "emptyTitle": "Sin solicitudes en este estado",
+    "emptyDescription": "Cuando ingresen nuevas solicitudes aparecerán aquí."
+  },
+  "claims": {
+    "branchesTitle": "Sin filiales registradas",
+    "branchesDescription": "No hay filiales en esta organización todavía.",
+    "filteredDescription": "Ajusta la búsqueda.",
+    "emptyTitle": "Sin alumnos en esta filial",
+    "emptyDescription": "Cuando haya alumnos registrados aparecerán aquí."
+  },
+  "session": {
+    "notFoundTitle": "Sesión no encontrada",
+    "notFoundDescription": "La clase no existe o pertenece a otra filial.",
+    "noDataTitle": "Sin datos",
+    "noDataDescription": "Esta sesión no tiene información disponible."
+  },
+  "studentDetail": {
+    "noNotes": "Sin notas técnicas registradas todavía.",
+    "noCertificates": "Aún no hay certificados emitidos para este alumno.",
+    "noGuardian": "Sin tutor responsable registrado."
+  },
+  "topbar": {
+    "noBranches": "No hay filiales registradas."
+  }
+}

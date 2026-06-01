@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useFormatter, useTranslations } from 'next-intl'
 import { Calendar as CalendarIcon, Layers } from 'lucide-react'
 import { PageHeader } from '@/components/shared/page-header'
 import { EmptyState } from '@/components/shared/empty-state'
@@ -18,6 +19,7 @@ import { ApiError } from '@/lib/api/client'
 import { useCalendarRange, useCurrentContext } from '@/lib/hooks'
 import { useAuthStore } from '@/stores/auth.store'
 import type { ClassSessionStatus, ClassType } from '@/lib/api/types'
+import { useClassTypeLabel } from '@/components/kuro'
 import { CalendarToolbar } from './calendar-toolbar'
 import { SessionPopover } from './session-popover'
 import { adaptSessionsToEvents } from './calendar-event-adapter'
@@ -77,14 +79,22 @@ function rangeForView(view: EventManagerView, anchor: Date) {
   }
 }
 
-function formatRangeLabel(view: EventManagerView, anchor: Date) {
-  const opts: Intl.DateTimeFormatOptions = {
+type Formatter = ReturnType<typeof useFormatter>
+type CalendarTranslator = ReturnType<typeof useTranslations<'calendar'>>
+
+function formatRangeLabel(
+  format: Formatter,
+  t: CalendarTranslator,
+  view: EventManagerView,
+  anchor: Date,
+) {
+  const opts = {
     month: 'long',
     day: 'numeric',
-  }
+  } as const
   switch (view) {
     case 'day':
-      return anchor.toLocaleDateString('es-AR', {
+      return format.dateTime(anchor, {
         weekday: 'long',
         month: 'long',
         day: 'numeric',
@@ -95,16 +105,14 @@ function formatRangeLabel(view: EventManagerView, anchor: Date) {
       const e = endOfWeek(anchor)
       const sameMonth = s.getMonth() === e.getMonth()
       const sameYear = s.getFullYear() === e.getFullYear()
-      const left = s.toLocaleDateString('es-AR', opts)
-      const right = sameMonth
-        ? String(e.getDate())
-        : e.toLocaleDateString('es-AR', opts)
-      const year = sameYear ? s.getFullYear() : ''
-      return `Semana del ${left} al ${right} ${year}`.trim()
+      const left = format.dateTime(s, opts)
+      const right = sameMonth ? String(e.getDate()) : format.dateTime(e, opts)
+      const year = sameYear ? String(s.getFullYear()) : ''
+      return t('weekRange', { left, right, year }).trim()
     }
     case 'month':
     case 'list':
-      return anchor.toLocaleDateString('es-AR', {
+      return format.dateTime(anchor, {
         month: 'long',
         year: 'numeric',
       })
@@ -122,6 +130,13 @@ export function TrainingCalendar({ orgId }: TrainingCalendarProps) {
   const searchParams = useSearchParams()
   const { branchId } = useCurrentContext()
   const currentBranch = useAuthStore((s) => s.currentBranch)
+
+  const format = useFormatter()
+  const t = useTranslations('calendar')
+  const tn = useTranslations('navigation.labels')
+  const tErr = useTranslations('errors.calendar')
+  const tEmpty = useTranslations('empty-states.calendar')
+  const tc = useTranslations('common')
 
   // ── Estado local de UI ──
   const [view, setView] = useState<EventManagerView>('week')
@@ -142,9 +157,10 @@ export function TrainingCalendar({ orgId }: TrainingCalendarProps) {
   })
 
   // ── Mapeo crudo → events + extras ──
+  const classTypeLabel = useClassTypeLabel()
   const { events, extras } = useMemo(
-    () => adaptSessionsToEvents(sessionsQuery.items),
-    [sessionsQuery.items],
+    () => adaptSessionsToEvents(sessionsQuery.items, classTypeLabel),
+    [sessionsQuery.items, classTypeLabel],
   )
 
   // ── Filtrado client-side por classType + status ──
@@ -242,14 +258,14 @@ export function TrainingCalendar({ orgId }: TrainingCalendarProps) {
   const header = (
     <PageHeader
       breadcrumbs={[
-        { label: 'Organización', href: `/org/${orgId}` },
-        { label: 'Calendario' },
+        { label: tn('organization'), href: `/org/${orgId}` },
+        { label: tn('calendar') },
       ]}
-      title="Calendario de entrenamiento"
+      title={t('title')}
       subtitle={
         currentBranch
-          ? `Vista operativa de ${currentBranch.name}.`
-          : 'Vista operativa por filial.'
+          ? t('subtitleWithBranch', { branch: currentBranch.name })
+          : t('subtitle')
       }
     />
   )
@@ -261,8 +277,8 @@ export function TrainingCalendar({ orgId }: TrainingCalendarProps) {
         {header}
         <EmptyState
           icon={Layers}
-          title="Seleccioná una filial"
-          description="El calendario se carga por filial. Elegí una desde el selector del topbar para ver las clases programadas."
+          title={tEmpty('selectBranchTitle')}
+          description={tEmpty('selectBranchDescription')}
         />
       </div>
     )
@@ -277,7 +293,7 @@ export function TrainingCalendar({ orgId }: TrainingCalendarProps) {
     return 'ready'
   })()
 
-  const rangeLabel = formatRangeLabel(view, anchorDate)
+  const rangeLabel = formatRangeLabel(format, t, view, anchorDate)
 
   return (
     <div className="p-6 space-y-6">
@@ -302,8 +318,8 @@ export function TrainingCalendar({ orgId }: TrainingCalendarProps) {
 
       {status === 'forbidden' && (
         <ForbiddenState
-          title="Sin acceso"
-          description="No tenés permisos para ver el calendario de esta filial."
+          title={tErr('forbiddenTitle')}
+          description={tErr('forbiddenDescription')}
         />
       )}
 
@@ -311,29 +327,29 @@ export function TrainingCalendar({ orgId }: TrainingCalendarProps) {
         <ErrorState
           error={sessionsQuery.error}
           onRetry={() => sessionsQuery.refetch()}
-          title="No se pudo cargar el calendario"
-          description="Reintentá; si persiste, revisá la conexión o cambiá de filial."
+          title={tErr('loadErrorTitle')}
+          description={tErr('loadErrorDescription')}
         />
       )}
 
       {status === 'empty' && (
         <EmptyState
           icon={CalendarIcon}
-          title="No hay clases en este rango"
+          title={tEmpty('noClassesTitle')}
           description={
             selectedClassTypes.size > 0 || selectedStatuses.size > 0
-              ? 'Tus filtros no devolvieron resultados. Probá limpiarlos.'
-              : 'Aún no hay sesiones programadas para este período.'
+              ? tEmpty('noClassesFiltered')
+              : tEmpty('noClassesEmpty')
           }
           action={
             selectedClassTypes.size > 0 || selectedStatuses.size > 0 ? (
               <Button variant="outline" size="sm" onClick={clearFilters}>
-                Limpiar filtros
+                {tc('actions.clearFilters')}
               </Button>
             ) : (
               <Button asChild variant="outline" size="sm">
                 <Link href={`/org/${orgId}/branches/${branchId}`}>
-                  Volver a la filial
+                  {t('backToBranch')}
                 </Link>
               </Button>
             )
@@ -365,6 +381,7 @@ export function TrainingCalendar({ orgId }: TrainingCalendarProps) {
 // ── Skeleton ──────────────────────────────────────────────────────────────
 
 function CalendarSkeleton({ view }: { view: EventManagerView }) {
+  const t = useTranslations('calendar')
   // Una grilla genérica con la forma del contenido final.
   const rows = view === 'day' ? 8 : view === 'list' ? 6 : 6
   const cols = view === 'week' ? 7 : view === 'day' ? 1 : view === 'list' ? 1 : 7
@@ -372,7 +389,7 @@ function CalendarSkeleton({ view }: { view: EventManagerView }) {
   return (
     <div
       aria-busy="true"
-      aria-label="Cargando calendario"
+      aria-label={t('loadingAria')}
       className="rounded-lg border bg-card overflow-hidden"
     >
       <div

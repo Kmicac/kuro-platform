@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { AlertTriangle } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
@@ -15,23 +16,22 @@ import { cn } from '@/lib/utils'
  */
 export type KuroStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | string
 
+type KnownStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED'
+
 interface StatusMeta {
-  label: string
   className: string
   icon?: React.ComponentType<{ className?: string }>
 }
 
-const STATUS_META: Record<string, StatusMeta> = {
+// Solo el estilo visual vive acá; los labels vienen de common.status.*
+const STATUS_META: Record<KnownStatus, StatusMeta> = {
   ACTIVE: {
-    label: 'Activo',
     className: 'border-primary/40 bg-primary/10 text-primary',
   },
   INACTIVE: {
-    label: 'Inactivo',
     className: 'border-border text-muted-foreground',
   },
   SUSPENDED: {
-    label: 'Suspendido',
     className:
       'border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400',
     icon: AlertTriangle,
@@ -46,15 +46,17 @@ export interface StatusBadgeProps {
 }
 
 export function StatusBadge({ status, label, className }: StatusBadgeProps) {
-  const meta = STATUS_META[status.toUpperCase()] ?? {
-    label: status,
+  const t = useTranslations('common.status')
+  const key = status.toUpperCase() as KnownStatus
+  const meta = STATUS_META[key] ?? {
     className: 'border-border text-muted-foreground',
   }
+  const resolvedLabel = label ?? (t.has(key) ? t(key) : status)
   const Icon = meta.icon
   return (
     <Badge variant="outline" className={cn(meta.className, className)}>
       {Icon && <Icon className="h-3 w-3" />}
-      {label ?? meta.label}
+      {resolvedLabel}
     </Badge>
   )
 }

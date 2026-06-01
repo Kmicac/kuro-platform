@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useFormatter, useTranslations } from 'next-intl'
 import { AlertCircle, Lock } from 'lucide-react'
 import {
   TextureCard,
@@ -20,7 +21,7 @@ export interface KpiCardProps {
   href?: string
   /** "warning" tinta el card en ámbar cuando el value > 0 (alertas). */
   tone?: 'neutral' | 'warning'
-  /** Formato del valor — default toLocaleString('es-AR'). */
+  /** Formato del valor — default useFormatter().number(value). */
   formatValue?: (value: number) => string
 }
 
@@ -53,6 +54,7 @@ export function KpiCard({
   tone = 'neutral',
   formatValue,
 }: KpiCardProps) {
+  const t = useTranslations('errors.kpi')
   const status = resolveStatus({ isLoading, error, value })
   const isAlerted = tone === 'warning' && status === 'ready' && (value ?? 0) > 0
   const navigable = Boolean(href) && status === 'ready'
@@ -90,9 +92,9 @@ export function KpiCard({
         </div>
         <p className="text-xs text-muted-foreground mt-3">
           {status === 'error'
-            ? 'No se pudo cargar este indicador.'
+            ? t('loadError')
             : status === 'forbidden'
-              ? 'Sin permiso para ver este dato.'
+              ? t('forbidden')
               : (hint ?? '')}
         </p>
       </TextureCardContent>
@@ -120,20 +122,22 @@ function KpiValue({
   isAlerted: boolean
   formatValue?: (value: number) => string
 }) {
+  const t = useTranslations('errors.kpi')
+  const format = useFormatter()
   if (status === 'loading') {
     return <div className="h-7 w-16 rounded-md bg-muted animate-pulse mt-1" />
   }
   if (status === 'forbidden') {
     return (
       <p className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground mt-1">
-        <Lock className="h-3.5 w-3.5" /> Restringido
+        <Lock className="h-3.5 w-3.5" /> {t('restricted')}
       </p>
     )
   }
   if (status === 'error') {
     return (
       <p className="flex items-center gap-1.5 text-sm font-medium text-destructive mt-1">
-        <AlertCircle className="h-3.5 w-3.5" /> Error
+        <AlertCircle className="h-3.5 w-3.5" /> {t('error')}
       </p>
     )
   }
@@ -142,7 +146,7 @@ function KpiValue({
   }
   const formatted = formatValue
     ? formatValue(value ?? 0)
-    : (value ?? 0).toLocaleString('es-AR')
+    : format.number(value ?? 0)
   return (
     <p
       className={cn(

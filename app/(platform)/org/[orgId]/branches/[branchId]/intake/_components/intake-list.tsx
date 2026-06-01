@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import {
   ChevronLeft,
   ChevronRight,
@@ -36,17 +37,32 @@ interface IntakeListProps {
 
 const PAGE_SIZE = 20
 
-const STATUS_FILTERS: { value: IntakeStatus | 'ALL'; label: string }[] = [
-  { value: 'ALL', label: 'Todas' },
-  { value: 'NEW', label: 'Nuevas' },
-  { value: 'REVIEWING', label: 'En revisión' },
-  { value: 'CONTACTED', label: 'Contactadas' },
-  { value: 'VISIT_SCHEDULED', label: 'Con visita' },
-  { value: 'READY_TO_CONVERT', label: 'Listas' },
-  { value: 'CONVERTED', label: 'Convertidas' },
+const STATUS_FILTERS: {
+  value: IntakeStatus | 'ALL'
+  key:
+    | 'ALL'
+    | 'NEW'
+    | 'REVIEWING'
+    | 'CONTACTED'
+    | 'VISIT'
+    | 'READY'
+    | 'CONVERTED'
+}[] = [
+  { value: 'ALL', key: 'ALL' },
+  { value: 'NEW', key: 'NEW' },
+  { value: 'REVIEWING', key: 'REVIEWING' },
+  { value: 'CONTACTED', key: 'CONTACTED' },
+  { value: 'VISIT_SCHEDULED', key: 'VISIT' },
+  { value: 'READY_TO_CONVERT', key: 'READY' },
+  { value: 'CONVERTED', key: 'CONVERTED' },
 ]
 
 export function IntakeList({ orgId, branchId }: IntakeListProps) {
+  const t = useTranslations('intake')
+  const tStatusFilter = useTranslations('intake.statusFilter')
+  const tNav = useTranslations('navigation.labels')
+  const tCommon = useTranslations('common')
+
   const [status, setStatus] = useState<IntakeStatus | 'ALL'>('NEW')
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
@@ -78,19 +94,19 @@ export function IntakeList({ orgId, branchId }: IntakeListProps) {
     <div className="p-6 space-y-6">
       <PageHeader
         breadcrumbs={[
-          { label: 'Organización', href: `/org/${orgId}` },
+          { label: tNav('organization'), href: `/org/${orgId}` },
           {
             label: branchQuery.data?.name ?? '…',
             href: `/org/${orgId}/branches/${branchId}`,
           },
-          { label: 'Academy Intake' },
+          { label: t('title') },
         ]}
-        title="Academy Intake"
-        subtitle="Solicitudes de ingreso de prospectos a esta filial."
+        title={t('title')}
+        subtitle={t('subtitle')}
         meta={
           meta?.total != null && (
             <Badge variant="outline" className="text-xs">
-              {meta.total.toLocaleString('es-AR')} solicitudes
+              {t('count', { count: meta.total })}
             </Badge>
           )
         }
@@ -114,7 +130,7 @@ export function IntakeList({ orgId, branchId }: IntakeListProps) {
                     : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground'
                 )}
               >
-                {f.label}
+                {tStatusFilter(f.key)}
               </button>
             )
           })}
@@ -128,13 +144,13 @@ export function IntakeList({ orgId, branchId }: IntakeListProps) {
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por nombre, email o teléfono"
+              placeholder={tCommon('search.byNameEmailPhone')}
               className="w-full pl-8 pr-8 py-1.5 text-xs rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-ring"
             />
             {search && (
               <button
                 onClick={() => setSearch('')}
-                aria-label="Limpiar búsqueda"
+                aria-label={tCommon('actions.clearSearch')}
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
                 <X className="h-3.5 w-3.5" />
@@ -187,6 +203,11 @@ function ListBody({
   onRetry: () => void
   orgId: string
 }) {
+  const t = useTranslations('intake')
+  const tErrors = useTranslations('errors.intake')
+  const tEmpty = useTranslations('empty-states')
+  const tEmptyIntake = useTranslations('empty-states.intake')
+
   if (isLoading) {
     return (
       <TextureCard>
@@ -205,8 +226,8 @@ function ListBody({
   if (error instanceof ApiError && error.status === 403) {
     return (
       <ForbiddenState
-        title="Sin acceso a las solicitudes"
-        description="No tenés permisos para ver el intake de esta filial."
+        title={tErrors('forbiddenTitle')}
+        description={tErrors('forbiddenDescription')}
       />
     )
   }
@@ -220,16 +241,16 @@ function ListBody({
       return (
         <EmptyState
           icon={Search}
-          title={`Sin resultados para "${search}"`}
-          description="Ajustá la búsqueda o el filtro de estado."
+          title={tEmpty('searchNoResults', { search })}
+          description={tEmptyIntake('filteredDescription')}
         />
       )
     }
     return (
       <EmptyState
         icon={Inbox}
-        title="Sin solicitudes en este estado"
-        description="Cuando ingresen nuevas solicitudes aparecerán acá."
+        title={tEmptyIntake('emptyTitle')}
+        description={tEmptyIntake('emptyDescription')}
       />
     )
   }
@@ -241,18 +262,20 @@ function ListBody({
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-wide text-muted-foreground border-b border-border">
-                <th className="font-medium px-4 py-3">Solicitante</th>
+                <th className="font-medium px-4 py-3">{t('table.applicant')}</th>
                 <th className="font-medium px-4 py-3 hidden md:table-cell">
-                  Contacto
+                  {t('table.contact')}
                 </th>
                 <th className="font-medium px-4 py-3 hidden lg:table-cell">
-                  Tipo / Nivel
+                  {t('table.typeLevel')}
                 </th>
-                <th className="font-medium px-4 py-3">Estado</th>
+                <th className="font-medium px-4 py-3">{t('table.status')}</th>
                 <th className="font-medium px-4 py-3 hidden md:table-cell">
-                  Recibida
+                  {t('table.received')}
                 </th>
-                <th className="font-medium px-4 py-3 text-right">Acción</th>
+                <th className="font-medium px-4 py-3 text-right">
+                  {t('table.action')}
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -268,6 +291,11 @@ function ListBody({
 }
 
 function IntakeRow({ item, orgId }: { item: IntakeRequest; orgId: string }) {
+  const t = useTranslations('intake')
+  const tType = useTranslations('intake.requestType')
+  const tExperience = useTranslations('intake.experience')
+  const tCommon = useTranslations('common')
+
   const converted = item.status === 'CONVERTED' && item.convertedStudentId
   return (
     <tr className="hover:bg-muted/40 transition-colors">
@@ -299,10 +327,10 @@ function IntakeRow({ item, orgId }: { item: IntakeRequest; orgId: string }) {
       <td className="px-4 py-3 hidden lg:table-cell">
         <div className="flex flex-col gap-0.5 text-xs">
           <span className="text-foreground">
-            {humanizeRequestType(item.requestType)}
+            {humanizeRequestType(item.requestType, tType)}
           </span>
           <span className="text-muted-foreground">
-            {humanizeExperience(item.experienceLevel)}
+            {humanizeExperience(item.experienceLevel, tExperience)}
           </span>
         </div>
       </td>
@@ -310,7 +338,7 @@ function IntakeRow({ item, orgId }: { item: IntakeRequest; orgId: string }) {
         <IntakeStatusBadge status={item.status} />
       </td>
       <td className="px-4 py-3 hidden md:table-cell text-xs text-muted-foreground tabular-nums">
-        {formatRelativeDate(item.createdAt)}
+        {formatRelativeDate(item.createdAt, tCommon)}
       </td>
       <td className="px-4 py-3 text-right">
         {converted ? (
@@ -318,11 +346,16 @@ function IntakeRow({ item, orgId }: { item: IntakeRequest; orgId: string }) {
             href={`/org/${orgId}/students/${item.convertedStudentId}`}
             className="text-xs text-primary hover:underline"
           >
-            Ver alumno →
+            {t('viewStudent')}
           </Link>
         ) : (
-          <Button variant="outline" size="xs" disabled title="Próximamente">
-            Gestionar
+          <Button
+            variant="outline"
+            size="xs"
+            disabled
+            title={tCommon('actions.comingSoon')}
+          >
+            {t('manage')}
           </Button>
         )}
       </td>
@@ -347,13 +380,15 @@ function Pagination({
   onPrev: () => void
   onNext: () => void
 }) {
+  const t = useTranslations('intake')
+  const tPagination = useTranslations('common.pagination')
+
   return (
     <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
       <span>
-        Página {page} de {totalPages}
+        {tPagination('pageOf', { page, totalPages })}
         {' · '}
-        <span className="tabular-nums">{total.toLocaleString('es-AR')}</span>{' '}
-        solicitudes
+        <span className="tabular-nums">{t('count', { count: total })}</span>
       </span>
       <div className="flex items-center gap-1">
         <Button
@@ -363,7 +398,7 @@ function Pagination({
           onClick={onPrev}
         >
           <ChevronLeft className="h-3.5 w-3.5" />
-          Anterior
+          {tPagination('previous')}
         </Button>
         <Button
           variant="outline"
@@ -371,7 +406,7 @@ function Pagination({
           disabled={page >= totalPages || isFetching}
           onClick={onNext}
         >
-          Siguiente
+          {tPagination('next')}
           <ChevronRight className="h-3.5 w-3.5" />
         </Button>
       </div>
@@ -381,40 +416,39 @@ function Pagination({
 
 // ── Helpers ────────────────────────────────────────────────
 
-function humanizeRequestType(t: string) {
-  const map: Record<string, string> = {
-    TRIAL_CLASS: 'Clase de prueba',
-    MEMBERSHIP: 'Membresía',
-    PRIVATE_LESSON: 'Clase privada',
-    INFORMATION: 'Información general',
-  }
-  return map[t] ?? t
+type Translator = ReturnType<typeof useTranslations>
+
+// `value as never`: las keys son dinámicas (enum del backend) y el guard
+// `.has()` valida en runtime. Se castea a never para no evaluar el tipo
+// (deep/infinito) de keys del translator sin namespace.
+function humanizeRequestType(value: string, tType: Translator) {
+  return tType.has(value as never) ? tType(value as never) : value
 }
 
-function humanizeExperience(e: string) {
-  const map: Record<string, string> = {
-    BEGINNER: 'Principiante',
-    INTERMEDIATE: 'Intermedio',
-    ADVANCED: 'Avanzado',
-    NONE: 'Sin experiencia',
-  }
-  return map[e] ?? e
+function humanizeExperience(value: string, tExperience: Translator) {
+  return tExperience.has(value as never) ? tExperience(value as never) : value
 }
 
-function formatRelativeDate(iso?: string | null) {
+function formatRelativeDate(
+  iso: string | null | undefined,
+  tCommon: Translator
+) {
   if (!iso) return '—'
   try {
     const date = new Date(iso)
     const diffMs = Date.now() - date.getTime()
     const mins = Math.floor(diffMs / (1000 * 60))
-    if (mins < 1) return 'Ahora'
-    if (mins < 60) return `Hace ${mins} min`
+    if (mins < 1) return tCommon('relativeTime.now')
+    if (mins < 60) return tCommon('relativeTime.minutesAgo', { count: mins })
     const hours = Math.floor(mins / 60)
-    if (hours < 24) return `Hace ${hours} h`
+    if (hours < 24) return tCommon('relativeTime.hoursAgo', { count: hours })
     const days = Math.floor(hours / 24)
-    if (days < 30) return days === 1 ? 'Ayer' : `Hace ${days} días`
+    if (days < 30)
+      return days === 1
+        ? tCommon('relativeTime.yesterday')
+        : tCommon('relativeTime.daysAgo', { count: days })
     const months = Math.floor(days / 30)
-    return months === 1 ? 'Hace 1 mes' : `Hace ${months} meses`
+    return tCommon('relativeTime.monthsAgo', { count: months })
   } catch {
     return '—'
   }

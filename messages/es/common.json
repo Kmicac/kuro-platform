@@ -1,0 +1,65 @@
+{
+  "meta": {
+    "appName": "KURO",
+    "titleTemplate": "%s · KURO",
+    "appDescription": "Plataforma integral para academias y redes de Brazilian Jiu-Jitsu."
+  },
+  "actions": {
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "create": "Crear",
+    "open": "Abrir",
+    "retry": "Reintentar",
+    "confirm": "Confirmar",
+    "clearSearch": "Limpiar búsqueda",
+    "clearFilters": "Limpiar filtros",
+    "comingSoon": "Próximamente"
+  },
+  "nav": {
+    "goToLogin": "Ir al login",
+    "backToLogin": "Volver al login",
+    "backToHome": "Volver al inicio",
+    "back": "Volver"
+  },
+  "pagination": {
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "pageOf": "Página {page} de {totalPages}"
+  },
+  "loading": {
+    "default": "Cargando...",
+    "restoringSession": "Restaurando sesión"
+  },
+  "today": "Hoy",
+  "branchBadge": {
+    "hq": "Central"
+  },
+  "search": {
+    "byNameEmailPhone": "Buscar por nombre, email o teléfono"
+  },
+  "relativeTime": {
+    "now": "Ahora",
+    "today": "Hoy",
+    "yesterday": "Ayer",
+    "minutesAgo": "Hace {count} min",
+    "hoursAgo": "Hace {count} h",
+    "daysAgo": "{count, plural, =1 {Hace 1 día} other {Hace # días}}",
+    "monthsAgo": "{count, plural, =1 {Hace 1 mes} other {Hace # meses}}"
+  },
+  "roles": {
+    "MESTRE": "Mestre",
+    "ORG_ADMIN": "Administrador",
+    "ACADEMY_MANAGER": "Manager",
+    "HEAD_COACH": "Head Coach",
+    "INSTRUCTOR": "Instructor",
+    "STAFF": "Staff",
+    "STUDENT": "Alumno"
+  },
+  "status": {
+    "ACTIVE": "Activo",
+    "INACTIVE": "Inactivo",
+    "SUSPENDED": "Suspendido"
+  }
+}

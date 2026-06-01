@@ -1,8 +1,12 @@
 import type { Metadata } from 'next'
+import { getTranslations } from 'next-intl/server'
 import { TrainingCalendar } from './_components/training-calendar'
 
-export const metadata: Metadata = {
-  title: 'Calendario',
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('calendar')
+  return {
+    title: t('meta.title'),
+  }
 }
 
 interface PageProps {

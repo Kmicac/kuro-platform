@@ -1,0 +1,59 @@
+{
+  "meta": {
+    "listTitle": "Alumnos",
+    "detailTitle": "Ficha de alumno"
+  },
+  "list": {
+    "title": "Alumnos",
+    "subtitle": "Padrón de la filial. Click en cada alumno para abrir su ficha.",
+    "count": "{count, plural, =1 {1 alumno} other {# alumnos}}",
+    "statusFilter": {
+      "ALL": "Todos",
+      "ACTIVE": "Activos",
+      "INACTIVE": "Inactivos",
+      "SUSPENDED": "Suspendidos"
+    },
+    "table": {
+      "student": "Alumno",
+      "belt": "Faixa",
+      "program": "Programa",
+      "contact": "Contacto",
+      "status": "Estado",
+      "joined": "Alta",
+      "action": "Acción"
+    },
+    "viewProfile": "Ver ficha →"
+  },
+  "track": {
+    "ADULT": "Adultos",
+    "KIDS": "Niños",
+    "MASTER": "Máster"
+  },
+  "detail": {
+    "bjjStart": "Inicio en BJJ",
+    "orgJoined": "Ingreso a la organización",
+    "lastUpdate": "Última actualización",
+    "bjjJourney": "Trayectoria BJJ",
+    "technicalNotes": "Notas técnicas",
+    "certificates": "Certificados de promoción",
+    "certificatesCount": "{count, plural, =1 {1 certificado emitido} other {# certificados emitidos}}",
+    "email": "Email",
+    "phone": "Teléfono",
+    "birthDate": "Fecha de nacimiento",
+    "internalId": "ID interno",
+    "identity": "Identidad",
+    "guardian": "Tutor responsable",
+    "guardianName": "Nombre",
+    "guardianRelation": "Relación",
+    "guardianPhone": "Teléfono",
+    "branchAssignment": "Asignación de filial",
+    "primaryBranch": "Filial principal",
+    "activeAssignments": "Asignaciones activas",
+    "registeredVisits": "Visitas registradas"
+  },
+  "belt": {
+    "noRankAria": "Sin rango asignado",
+    "noRank": "Sin rango",
+    "rankWithStripes": "{rank} con {count, plural, =1 {1 grado} other {# grados}}"
+  }
+}

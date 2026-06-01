@@ -1,0 +1,81 @@
+{
+  "generic": {
+    "title": "No se pudo cargar",
+    "description": "Revisa la conexión e intenta nuevamente.",
+    "requestId": "request-id:"
+  },
+  "forbidden": {
+    "title": "Sin permisos",
+    "description": "Tu rol no permite ver este contenido."
+  },
+  "notFound": {
+    "title": "Página no encontrada",
+    "description": "La dirección que ingresaste no existe."
+  },
+  "orgNotFound": {
+    "title": "Esta sección aún no existe",
+    "description": "La pantalla que buscas todavía no fue construida o la dirección no es válida."
+  },
+  "restoreSession": {
+    "title": "No se pudo restaurar la sesión",
+    "description": "Hubo un problema de conexión o de permisos. Reintenta; si el problema persiste, vuelve a iniciar sesión."
+  },
+  "kpi": {
+    "loadError": "No se pudo cargar este indicador.",
+    "forbidden": "Sin permiso para ver este dato.",
+    "restricted": "Restringido",
+    "error": "Error"
+  },
+  "org": {
+    "forbiddenTitle": "Sin acceso a esta organización",
+    "forbiddenDescription": "No tienes permisos para ver este panel.",
+    "branchesForbiddenTitle": "Sin permisos sobre filiales",
+    "branchesForbiddenDescription": "Tu rol no permite listar filiales de esta organización.",
+    "branchesLoadErrorTitle": "No se pudo cargar el listado"
+  },
+  "branch": {
+    "forbiddenTitle": "Sin acceso a esta filial",
+    "forbiddenDescription": "No tienes permisos para ver este panel.",
+    "loadErrorTitle": "No se pudo cargar la filial",
+    "sectionRestrictedTitle": "Sección restringida",
+    "sectionRestrictedDescription": "No tienes permisos para ver este contenido."
+  },
+  "students": {
+    "rosterForbiddenTitle": "Sin acceso al padrón",
+    "rosterForbiddenDescription": "No tienes permisos para ver los alumnos de esta filial.",
+    "detailForbiddenTitle": "Sin acceso a esta ficha",
+    "detailForbiddenDescription": "No tienes permisos para ver los datos de este alumno.",
+    "notFoundTitle": "Alumno no encontrado",
+    "notFoundDescription": "La ficha no existe o pertenece a otra organización."
+  },
+  "calendar": {
+    "forbiddenTitle": "Sin acceso",
+    "forbiddenDescription": "No tienes permisos para ver el calendario de esta filial.",
+    "loadErrorTitle": "No se pudo cargar el calendario",
+    "loadErrorDescription": "Reintenta; si persiste, revisa la conexión o cambia de filial."
+  },
+  "session": {
+    "forbiddenTitle": "Sin acceso a la sesión",
+    "forbiddenDescription": "No tienes permisos para ver esta clase."
+  },
+  "intake": {
+    "forbiddenTitle": "Sin acceso a las solicitudes",
+    "forbiddenDescription": "No tienes permisos para ver la captación de esta filial."
+  },
+  "claims": {
+    "branchesForbiddenTitle": "Sin acceso a filiales",
+    "branchesForbiddenDescription": "Tu rol no permite listar filiales de esta organización.",
+    "branchesLoadErrorTitle": "No se pudieron cargar las filiales",
+    "rosterForbiddenTitle": "Sin acceso al padrón",
+    "rosterForbiddenDescription": "No tienes permisos para ver los alumnos de esta filial.",
+    "rosterLoadErrorTitle": "No se pudo cargar el padrón",
+    "sendError": "No se pudo enviar la invitación.",
+    "alreadyActive": "El alumno ya tiene una cuenta activa.",
+    "noPermission": "Sin permisos para invitar.",
+    "studentNotFound": "Alumno no encontrado.",
+    "tooMany": "Demasiados envíos — espera un momento."
+  },
+  "topbar": {
+    "branchesLoadError": "No se pudieron cargar las filiales."
+  }
+}

@@ -1,70 +1,41 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { Badge } from '@/components/ui/badge'
 import type { IntakeStatus } from '@/lib/api/types'
 import { cn } from '@/lib/utils'
 
-interface IntakeStatusMeta {
-  label: string
-  className: string
-}
+type KnownIntakeStatus =
+  | 'NEW'
+  | 'REVIEWING'
+  | 'CONTACTED'
+  | 'VISIT_PROPOSED'
+  | 'VISIT_SCHEDULED'
+  | 'VISIT_COMPLETED'
+  | 'NO_SHOW'
+  | 'DECLINED_BY_PROSPECT'
+  | 'REJECTED_BY_ACADEMY'
+  | 'READY_TO_CONVERT'
+  | 'CONVERTED'
+  | 'CANCELLED'
 
-const INTAKE_STATUS_META: Record<string, IntakeStatusMeta> = {
-  NEW: {
-    label: 'Nueva',
-    className: 'border-primary/40 bg-primary/10 text-primary',
-  },
-  REVIEWING: {
-    label: 'En revisión',
-    className: 'border-border text-foreground',
-  },
-  CONTACTED: {
-    label: 'Contactada',
-    className: 'border-border text-foreground',
-  },
-  VISIT_PROPOSED: {
-    label: 'Visita propuesta',
-    className: 'border-border text-foreground',
-  },
-  VISIT_SCHEDULED: {
-    label: 'Visita agendada',
-    className:
-      'border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400',
-  },
-  VISIT_COMPLETED: {
-    label: 'Visita hecha',
-    className: 'border-border text-foreground',
-  },
-  NO_SHOW: {
-    label: 'No vino',
-    className: 'border-destructive/40 bg-destructive/10 text-destructive',
-  },
-  DECLINED_BY_PROSPECT: {
-    label: 'Declinada',
-    className: 'border-border text-muted-foreground',
-  },
-  REJECTED_BY_ACADEMY: {
-    label: 'Rechazada',
-    className: 'border-destructive/40 bg-destructive/10 text-destructive',
-  },
-  READY_TO_CONVERT: {
-    label: 'Lista para convertir',
-    className:
-      'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-  },
-  CONVERTED: {
-    label: 'Convertida',
-    className:
-      'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
-  },
-  CANCELLED: {
-    label: 'Cancelada',
-    className: 'border-border text-muted-foreground',
-  },
-}
-
-export function intakeStatusLabel(status: IntakeStatus | string): string {
-  return INTAKE_STATUS_META[String(status).toUpperCase()]?.label ?? String(status)
+// Solo el estilo visual vive acá; los labels vienen de intake.status.*
+const INTAKE_STATUS_CLASS: Record<KnownIntakeStatus, string> = {
+  NEW: 'border-primary/40 bg-primary/10 text-primary',
+  REVIEWING: 'border-border text-foreground',
+  CONTACTED: 'border-border text-foreground',
+  VISIT_PROPOSED: 'border-border text-foreground',
+  VISIT_SCHEDULED:
+    'border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400',
+  VISIT_COMPLETED: 'border-border text-foreground',
+  NO_SHOW: 'border-destructive/40 bg-destructive/10 text-destructive',
+  DECLINED_BY_PROSPECT: 'border-border text-muted-foreground',
+  REJECTED_BY_ACADEMY: 'border-destructive/40 bg-destructive/10 text-destructive',
+  READY_TO_CONVERT:
+    'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+  CONVERTED:
+    'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
+  CANCELLED: 'border-border text-muted-foreground',
 }
 
 export interface IntakeStatusBadgeProps {
@@ -76,14 +47,14 @@ export function IntakeStatusBadge({
   status,
   className,
 }: IntakeStatusBadgeProps) {
-  const key = String(status).toUpperCase()
-  const meta = INTAKE_STATUS_META[key] ?? {
-    label: status,
-    className: 'border-border text-muted-foreground',
-  }
+  const t = useTranslations('intake.status')
+  const key = String(status).toUpperCase() as KnownIntakeStatus
+  const statusClass =
+    INTAKE_STATUS_CLASS[key] ?? 'border-border text-muted-foreground'
+  const label = t.has(key) ? t(key) : String(status)
   return (
-    <Badge variant="outline" className={cn(meta.className, className)}>
-      {meta.label}
+    <Badge variant="outline" className={cn(statusClass, className)}>
+      {label}
     </Badge>
   )
 }

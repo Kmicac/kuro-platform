@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 
@@ -12,44 +13,18 @@ export type KuroRole =
   | 'STAFF'
   | 'STUDENT'
 
-interface RoleMeta {
-  label: string
-  className: string
-}
-
-const ROLE_META: Record<KuroRole, RoleMeta> = {
-  MESTRE: {
-    label: 'Mestre',
-    className:
-      'border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-300',
-  },
-  ORG_ADMIN: {
-    label: 'Org admin',
-    className:
-      'border-purple-500/40 bg-purple-500/10 text-purple-700 dark:text-purple-300',
-  },
-  ACADEMY_MANAGER: {
-    label: 'Manager',
-    className:
-      'border-blue-500/40 bg-blue-500/10 text-blue-700 dark:text-blue-300',
-  },
-  HEAD_COACH: {
-    label: 'Head coach',
-    className:
-      'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300',
-  },
-  INSTRUCTOR: {
-    label: 'Instructor',
-    className: 'border-primary/40 bg-primary/10 text-primary',
-  },
-  STAFF: {
-    label: 'Staff',
-    className: 'border-border text-muted-foreground',
-  },
-  STUDENT: {
-    label: 'Alumno',
-    className: 'border-border text-foreground',
-  },
+// Solo el estilo visual vive acá; los labels vienen de common.roles.*
+const ROLE_CLASS: Record<KuroRole, string> = {
+  MESTRE: 'border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-300',
+  ORG_ADMIN:
+    'border-purple-500/40 bg-purple-500/10 text-purple-700 dark:text-purple-300',
+  ACADEMY_MANAGER:
+    'border-blue-500/40 bg-blue-500/10 text-blue-700 dark:text-blue-300',
+  HEAD_COACH:
+    'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300',
+  INSTRUCTOR: 'border-primary/40 bg-primary/10 text-primary',
+  STAFF: 'border-border text-muted-foreground',
+  STUDENT: 'border-border text-foreground',
 }
 
 export interface RoleBadgeProps {
@@ -58,18 +33,17 @@ export interface RoleBadgeProps {
 }
 
 export function RoleBadge({ role, className }: RoleBadgeProps) {
+  const t = useTranslations('common.roles')
   if (!role) return null
   const key = role.toUpperCase() as KuroRole
-  const meta = ROLE_META[key] ?? {
-    label: role,
-    className: 'border-border text-muted-foreground',
-  }
+  const roleClass = ROLE_CLASS[key] ?? 'border-border text-muted-foreground'
+  const label = t.has(key) ? t(key) : role
   return (
     <Badge
       variant="outline"
-      className={cn('uppercase tracking-wide', meta.className, className)}
+      className={cn('uppercase tracking-wide', roleClass, className)}
     >
-      {meta.label}
+      {label}
     </Badge>
   )
 }

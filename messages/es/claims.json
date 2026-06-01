@@ -1,0 +1,18 @@
+{
+  "meta": {
+    "title": "Invitaciones de cuenta"
+  },
+  "title": "Invitaciones de cuenta",
+  "subtitle": "Envía invitaciones para que tus alumnos reclamen su acceso a KURO.",
+  "infoBanner": "El backend no expone aún un listado dedicado de alumnos sin cuenta — selecciona una filial y envía la invitación a quien corresponda. Si el alumno ya tiene cuenta activa, el backend rechazará el envío.",
+  "selectBranchAria": "Elige filial",
+  "selectBranchLabel": "Elige una filial",
+  "rosterAria": "Padrón de filial",
+  "studentsOf": "Alumnos de",
+  "searchPlaceholder": "Buscar alumno por nombre o email",
+  "count": "{count, plural, =1 {1 alumno} other {# alumnos}}",
+  "sending": "Enviando",
+  "sent": "Enviada",
+  "invite": "Invitar",
+  "invitationSent": "Invitación enviada"
+}

@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { Lock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -11,11 +12,12 @@ export interface ForbiddenStateProps {
 }
 
 export function ForbiddenState({
-  title = 'Sin permisos',
-  description = 'Tu rol no permite ver este contenido.',
+  title,
+  description,
   dense = false,
   className,
 }: ForbiddenStateProps) {
+  const t = useTranslations('errors.forbidden')
   return (
     <div
       className={cn(
@@ -31,9 +33,11 @@ export function ForbiddenState({
         )}
         aria-hidden
       />
-      <p className="text-sm font-medium text-foreground mt-2">{title}</p>
+      <p className="text-sm font-medium text-foreground mt-2">
+        {title ?? t('title')}
+      </p>
       <p className="text-xs text-muted-foreground mt-1 max-w-md mx-auto">
-        {description}
+        {description ?? t('description')}
       </p>
     </div>
   )

@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
+import { useFormatter, useTranslations } from 'next-intl'
 import {
   ChevronLeft,
   ChevronRight,
@@ -44,14 +45,17 @@ interface StudentsListProps {
 
 const PAGE_SIZE = 25
 
-const STATUS_FILTERS: { value: StudentStatus | 'ALL'; label: string }[] = [
-  { value: 'ALL', label: 'Todos' },
-  { value: 'ACTIVE', label: 'Activos' },
-  { value: 'INACTIVE', label: 'Inactivos' },
-  { value: 'SUSPENDED', label: 'Suspendidos' },
+const STATUS_FILTER_VALUES: (StudentStatus | 'ALL')[] = [
+  'ALL',
+  'ACTIVE',
+  'INACTIVE',
+  'SUSPENDED',
 ]
 
 export function StudentsList({ orgId, branchId }: StudentsListProps) {
+  const t = useTranslations('students')
+  const tc = useTranslations('common')
+  const tn = useTranslations('navigation')
   const [status, setStatus] = useState<StudentStatus | 'ALL'>('ACTIVE')
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
@@ -83,19 +87,19 @@ export function StudentsList({ orgId, branchId }: StudentsListProps) {
     <div className="p-6 space-y-6">
       <PageHeader
         breadcrumbs={[
-          { label: 'Organización', href: `/org/${orgId}` },
+          { label: tn('labels.organization'), href: `/org/${orgId}` },
           {
             label: branchQuery.data?.name ?? '…',
             href: `/org/${orgId}/branches/${branchId}`,
           },
-          { label: 'Alumnos' },
+          { label: tn('labels.students') },
         ]}
-        title="Alumnos"
-        subtitle="Roster de la filial. Click en cada alumno para abrir su ficha."
+        title={t('list.title')}
+        subtitle={t('list.subtitle')}
         meta={
           meta?.total != null && (
             <Badge variant="outline" className="text-xs">
-              {meta.total.toLocaleString('es-AR')} alumnos
+              {t('list.count', { count: meta.total })}
             </Badge>
           )
         }
@@ -103,12 +107,12 @@ export function StudentsList({ orgId, branchId }: StudentsListProps) {
 
       <div className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
-          {STATUS_FILTERS.map((f) => {
-            const active = f.value === status
+          {STATUS_FILTER_VALUES.map((value) => {
+            const active = value === status
             return (
               <button
-                key={f.value}
-                onClick={() => setStatus(f.value)}
+                key={value}
+                onClick={() => setStatus(value)}
                 className={cn(
                   'px-3 py-1.5 rounded-md text-xs font-medium transition-colors border',
                   active
@@ -116,7 +120,7 @@ export function StudentsList({ orgId, branchId }: StudentsListProps) {
                     : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground'
                 )}
               >
-                {f.label}
+                {t(`list.statusFilter.${value}`)}
               </button>
             )
           })}
@@ -130,13 +134,13 @@ export function StudentsList({ orgId, branchId }: StudentsListProps) {
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por nombre, email o teléfono"
+              placeholder={tc('search.byNameEmailPhone')}
               className="w-full pl-8 pr-8 py-1.5 text-xs rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-ring"
             />
             {search && (
               <button
                 onClick={() => setSearch('')}
-                aria-label="Limpiar búsqueda"
+                aria-label={tc('actions.clearSearch')}
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
                 <X className="h-3.5 w-3.5" />
@@ -195,6 +199,9 @@ function ListBody({
   onRetry: () => void
   resolveBelt: (rank: string | null | undefined) => PromotionRankCatalogEntry | null
 }) {
+  const t = useTranslations('students')
+  const te = useTranslations('errors')
+  const tEmpty = useTranslations('empty-states')
   if (isLoading) {
     return (
       <TextureCard>
@@ -213,8 +220,8 @@ function ListBody({
   if (error instanceof ApiError && error.status === 403) {
     return (
       <ForbiddenState
-        title="Sin acceso al roster"
-        description="No tenés permisos para ver los alumnos de esta filial."
+        title={te('students.rosterForbiddenTitle')}
+        description={te('students.rosterForbiddenDescription')}
       />
     )
   }
@@ -228,16 +235,16 @@ function ListBody({
       return (
         <EmptyState
           icon={Search}
-          title="Sin resultados con esos filtros"
-          description="Ajustá el estado o la búsqueda para ver más alumnos."
+          title={tEmpty('students.filteredTitle')}
+          description={tEmpty('students.filteredDescription')}
         />
       )
     }
     return (
       <EmptyState
         icon={Users}
-        title="Sin alumnos en esta filial"
-        description="Cuando se den de alta nuevos alumnos aparecerán acá."
+        title={tEmpty('students.emptyTitle')}
+        description={tEmpty('students.emptyDescription')}
       />
     )
   }
@@ -249,19 +256,21 @@ function ListBody({
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-wide text-muted-foreground border-b border-border">
-                <th className="font-medium px-4 py-3">Alumno</th>
-                <th className="font-medium px-4 py-3">Faja</th>
+                <th className="font-medium px-4 py-3">{t('list.table.student')}</th>
+                <th className="font-medium px-4 py-3">{t('list.table.belt')}</th>
                 <th className="font-medium px-4 py-3 hidden lg:table-cell">
-                  Programa
+                  {t('list.table.program')}
                 </th>
                 <th className="font-medium px-4 py-3 hidden md:table-cell">
-                  Contacto
+                  {t('list.table.contact')}
                 </th>
-                <th className="font-medium px-4 py-3">Estado</th>
+                <th className="font-medium px-4 py-3">{t('list.table.status')}</th>
                 <th className="font-medium px-4 py-3 hidden lg:table-cell">
-                  Alta
+                  {t('list.table.joined')}
                 </th>
-                <th className="font-medium px-4 py-3 text-right">Acción</th>
+                <th className="font-medium px-4 py-3 text-right">
+                  {t('list.table.action')}
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -290,6 +299,9 @@ function StudentRow({
   orgId: string
   resolveBelt: (rank: string | null | undefined) => PromotionRankCatalogEntry | null
 }) {
+  const t = useTranslations('students')
+  const tTrack = useTranslations('students.track')
+  const format = useFormatter()
   const fullName = `${student.firstName} ${student.lastName}`.trim()
   const initials = `${student.firstName[0] ?? ''}${student.lastName[0] ?? ''}`
   return (
@@ -318,7 +330,7 @@ function StudentRow({
         />
       </td>
       <td className="px-4 py-3 hidden lg:table-cell text-xs text-muted-foreground">
-        {humanizeTrack(student.promotionTrack)}
+        {humanizeTrack(tTrack, student.promotionTrack)}
       </td>
       <td className="px-4 py-3 hidden md:table-cell">
         <div className="flex flex-col gap-0.5 text-xs">
@@ -341,14 +353,14 @@ function StudentRow({
         <StatusBadge status={student.status} />
       </td>
       <td className="px-4 py-3 hidden lg:table-cell text-xs text-muted-foreground tabular-nums">
-        {formatDate(student.createdAt)}
+        {formatDate(format, student.createdAt)}
       </td>
       <td className="px-4 py-3 text-right">
         <Link
           href={`/org/${orgId}/students/${student.id}`}
           className="text-xs text-primary hover:underline"
         >
-          Ver ficha →
+          {t('list.viewProfile')}
         </Link>
       </td>
     </tr>
@@ -387,13 +399,14 @@ function Pagination({
   onPrev: () => void
   onNext: () => void
 }) {
+  const t = useTranslations('students')
+  const tc = useTranslations('common')
   return (
     <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
       <span>
-        Página {page} de {totalPages}
+        {tc('pagination.pageOf', { page, totalPages })}
         {' · '}
-        <span className="tabular-nums">{total.toLocaleString('es-AR')}</span>{' '}
-        alumnos
+        <span className="tabular-nums">{t('list.count', { count: total })}</span>
       </span>
       <div className="flex items-center gap-1">
         <Button
@@ -403,7 +416,7 @@ function Pagination({
           onClick={onPrev}
         >
           <ChevronLeft className="h-3.5 w-3.5" />
-          Anterior
+          {tc('pagination.previous')}
         </Button>
         <Button
           variant="outline"
@@ -411,7 +424,7 @@ function Pagination({
           disabled={page >= totalPages || isFetching}
           onClick={onNext}
         >
-          Siguiente
+          {tc('pagination.next')}
           <ChevronRight className="h-3.5 w-3.5" />
         </Button>
       </div>
@@ -421,19 +434,20 @@ function Pagination({
 
 // ── Helpers ────────────────────────────────────────────────
 
-function humanizeTrack(t: string) {
-  const map: Record<string, string> = {
-    ADULT: 'Adultos',
-    KIDS: 'Niños',
-    MASTER: 'Máster',
-  }
-  return map[t] ?? t
+type Translator = ReturnType<typeof useTranslations>
+
+function humanizeTrack(tTrack: Translator, track: string) {
+  // `as never`: key dinámica validada en runtime con `.has()`.
+  return tTrack.has(track as never) ? tTrack(track as never) : track
 }
 
-function formatDate(iso?: string | null) {
+function formatDate(
+  format: ReturnType<typeof useFormatter>,
+  iso?: string | null
+) {
   if (!iso) return '—'
   try {
-    return new Date(iso).toLocaleDateString('es-AR', {
+    return format.dateTime(new Date(iso), {
       day: '2-digit',
       month: 'short',
       year: 'numeric',
