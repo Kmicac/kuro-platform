@@ -295,6 +295,7 @@ function IntakeRow({ item, orgId }: { item: IntakeRequest; orgId: string }) {
   const tType = useTranslations('intake.requestType')
   const tExperience = useTranslations('intake.experience')
   const tCommon = useTranslations('common')
+  const tRel = useTranslations('common.relativeTime')
 
   const converted = item.status === 'CONVERTED' && item.convertedStudentId
   return (
@@ -338,7 +339,7 @@ function IntakeRow({ item, orgId }: { item: IntakeRequest; orgId: string }) {
         <IntakeStatusBadge status={item.status} />
       </td>
       <td className="px-4 py-3 hidden md:table-cell text-xs text-muted-foreground tabular-nums">
-        {formatRelativeDate(item.createdAt, tCommon)}
+        {formatRelativeDate(item.createdAt, tRel as unknown as RelTranslator)}
       </td>
       <td className="px-4 py-3 text-right">
         {converted ? (
@@ -416,11 +417,15 @@ function Pagination({
 
 // ── Helpers ────────────────────────────────────────────────
 
-type Translator = ReturnType<typeof useTranslations>
+// Tipo estructural mínimo: evita instanciar `ReturnType<typeof useTranslations>`
+// (la unión de TODAS las keys, carísima y que dispara TS2589 al crecer los
+// mensajes). Las keys son dinámicas (enum del backend) y el guard `.has()`
+// valida en runtime → params `never` (el translator real es asignable).
+type Translator = {
+  (key: never): string
+  has: (key: never) => boolean
+}
 
-// `value as never`: las keys son dinámicas (enum del backend) y el guard
-// `.has()` valida en runtime. Se castea a never para no evaluar el tipo
-// (deep/infinito) de keys del translator sin namespace.
 function humanizeRequestType(value: string, tType: Translator) {
   return tType.has(value as never) ? tType(value as never) : value
 }
@@ -429,26 +434,34 @@ function humanizeExperience(value: string, tExperience: Translator) {
   return tExperience.has(value as never) ? tExperience(value as never) : value
 }
 
+// Tipo explícito y chico para el translator de `common.relativeTime`. Evita
+// instanciar el translator completo (que dispara TS2589 al crecer los mensajes).
+type RelTranslator = {
+  (key: 'now' | 'yesterday'): string
+  (
+    key: 'minutesAgo' | 'hoursAgo' | 'daysAgo' | 'monthsAgo',
+    values: { count: number },
+  ): string
+}
+
 function formatRelativeDate(
   iso: string | null | undefined,
-  tCommon: Translator
+  tRel: RelTranslator,
 ) {
   if (!iso) return '—'
   try {
     const date = new Date(iso)
     const diffMs = Date.now() - date.getTime()
     const mins = Math.floor(diffMs / (1000 * 60))
-    if (mins < 1) return tCommon('relativeTime.now')
-    if (mins < 60) return tCommon('relativeTime.minutesAgo', { count: mins })
+    if (mins < 1) return tRel('now')
+    if (mins < 60) return tRel('minutesAgo', { count: mins })
     const hours = Math.floor(mins / 60)
-    if (hours < 24) return tCommon('relativeTime.hoursAgo', { count: hours })
+    if (hours < 24) return tRel('hoursAgo', { count: hours })
     const days = Math.floor(hours / 24)
     if (days < 30)
-      return days === 1
-        ? tCommon('relativeTime.yesterday')
-        : tCommon('relativeTime.daysAgo', { count: days })
+      return days === 1 ? tRel('yesterday') : tRel('daysAgo', { count: days })
     const months = Math.floor(days / 30)
-    return tCommon('relativeTime.monthsAgo', { count: months })
+    return tRel('monthsAgo', { count: months })
   } catch {
     return '—'
   }
