@@ -2,7 +2,6 @@
 
 import { useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useTranslations } from 'next-intl'
 import {
   classSessionsApi,
   type ClassSessionCreateBody,
@@ -12,9 +11,7 @@ import type {
   ClassCalendarResponse,
   ClassSessionListItem,
 } from '@/lib/api/types'
-import { notifyError, notifySuccess } from '@/lib/utils/toast'
 import { STALE, kuroRetry } from './_shared'
-import { isClassSessionConflict } from './use-conflict-handler'
 import { useCurrentContext } from './use-current-context'
 
 /**
@@ -225,9 +222,11 @@ export function useClassSessionsByDateRange(
 // Patrón optimista: onMutate cancela + snapshotea TODAS las queries de
 // class-calendar de la filial (cualquier startDate/view), aplica el cambio
 // optimista sobre el array `items` canónico, y onError hace rollback.
-// onSettled invalida para reconciliar con el servidor. El 409
-// CLASS_SESSION_CONFLICT NO dispara toast genérico (lo maneja la UI con
-// useConflictHandler en Fase 2.2.10).
+// onSettled invalida para reconciliar con el servidor.
+//
+// Los hooks NO disparan toasts: el caller maneja success/error (incluido el
+// 409 CLASS_SESSION_CONFLICT vía useConflictHandler) con mensajes de dominio.
+// Ver components/sessions/session-dialog.tsx y COMPONENT-PATTERNS.md.
 
 /** Filtro de prefijo: matchea todas las class-calendar de la filial. */
 function calendarFilter(orgId: string | null, branchId: string | null) {
@@ -254,7 +253,6 @@ function patchCalendarItem(
 export function useCreateSession() {
   const { orgId, branchId } = useCurrentContext()
   const qc = useQueryClient()
-  const t = useTranslations('common')
 
   return useMutation({
     mutationFn: (body: ClassSessionCreateBody) =>
@@ -288,11 +286,9 @@ export function useCreateSession() {
       )
       return { snapshot }
     },
-    onError: (error, _vars, ctx) => {
+    onError: (_error, _vars, ctx) => {
       ctx?.snapshot.forEach(([key, data]) => qc.setQueryData(key, data))
-      if (!isClassSessionConflict(error)) notifyError(t('error.generic'), error)
     },
-    onSuccess: () => notifySuccess(t('success.created')),
     onSettled: () => qc.invalidateQueries(calendarFilter(orgId, branchId)),
   })
 }
@@ -301,7 +297,6 @@ export function useCreateSession() {
 export function useUpdateSession(sessionId: string) {
   const { orgId, branchId } = useCurrentContext()
   const qc = useQueryClient()
-  const t = useTranslations('common')
 
   return useMutation({
     mutationFn: (body: ClassSessionUpdateBody) =>
@@ -333,11 +328,9 @@ export function useUpdateSession(sessionId: string) {
       )
       return { snapshot }
     },
-    onError: (error, _vars, ctx) => {
+    onError: (_error, _vars, ctx) => {
       ctx?.snapshot.forEach(([key, data]) => qc.setQueryData(key, data))
-      if (!isClassSessionConflict(error)) notifyError(t('error.generic'), error)
     },
-    onSuccess: () => notifySuccess(t('success.updated')),
     onSettled: () => {
       qc.invalidateQueries(calendarFilter(orgId, branchId))
       qc.invalidateQueries({
@@ -354,7 +347,6 @@ export function useUpdateSession(sessionId: string) {
 export function useCancelSession(sessionId: string) {
   const { orgId, branchId } = useCurrentContext()
   const qc = useQueryClient()
-  const t = useTranslations('common')
 
   return useMutation({
     mutationFn: (vars: { cancellationReason: string }) =>
@@ -378,11 +370,9 @@ export function useCancelSession(sessionId: string) {
       )
       return { snapshot }
     },
-    onError: (error, _vars, ctx) => {
+    onError: (_error, _vars, ctx) => {
       ctx?.snapshot.forEach(([key, data]) => qc.setQueryData(key, data))
-      notifyError(t('error.generic'), error)
     },
-    onSuccess: () => notifySuccess(t('success.canceled')),
     onSettled: () => {
       qc.invalidateQueries(calendarFilter(orgId, branchId))
       qc.invalidateQueries({

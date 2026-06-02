@@ -35,7 +35,7 @@ export type ClassSessionFormValues = z.infer<typeof classSessionSchema>
 ```tsx
 'use client'
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import { useTranslations } from 'next-intl'
 import {
   Form, FormField, FormItem, FormLabel, FormControl, FormMessage,
@@ -47,7 +47,7 @@ import { classSessionSchema, type ClassSessionFormValues } from '@/lib/schemas/c
 export function ClassSessionForm({ onSubmit }: { onSubmit: (v: ClassSessionFormValues) => void }) {
   const t = useTranslations('calendar') // namespace de la pantalla
   const form = useForm<ClassSessionFormValues>({
-    resolver: zodResolver(classSessionSchema),
+    resolver: standardSchemaResolver(classSessionSchema),
     defaultValues: { title: '', classType: 'GI', /* ... */ },
   })
 
@@ -80,13 +80,14 @@ Para fechas usar `<Popover>` + `<Calendar>`; para horarios `<TimePicker>`.
 
 ## 2. Mutation con optimistic update + rollback
 
-Patrón canónico (ver `useCreateSession`/`useUpdateSession`/`useCancelSession`):
+Los **hooks de mutation son toast-free** (solo cache: optimistic + rollback +
+invalidate). El **caller** maneja los toasts y el 409, con mensajes de dominio.
 
 ```ts
+// Hook (lib/hooks/use-sessions.ts) — sin toasts, sin i18n:
 export function useUpdateSession(sessionId: string) {
   const { orgId, branchId } = useCurrentContext()
   const qc = useQueryClient()
-  const t = useTranslations('common')
 
   return useMutation({
     mutationFn: (body: ClassSessionUpdateBody) =>
@@ -96,26 +97,41 @@ export function useUpdateSession(sessionId: string) {
       const filter = { queryKey: ['class-calendar', orgId, branchId] }
       await qc.cancelQueries(filter)                    // 1. cancelar in-flight
       const snapshot = qc.getQueriesData(filter)        // 2. snapshot para rollback
-      qc.setQueriesData(filter, (old) => patch(old, sessionId, body)) // 3. update optimista
+      qc.setQueriesData(filter, (old) => patch(old, sessionId, body)) // 3. optimista
       return { snapshot }
     },
 
-    onError: (error, _vars, ctx) => {
+    onError: (_error, _vars, ctx) => {
       ctx?.snapshot.forEach(([key, data]) => qc.setQueryData(key, data)) // rollback
-      if (!isClassSessionConflict(error)) notifyError(t('error.generic'), error)
     },
-
-    onSuccess: () => notifySuccess(t('success.updated')),
     onSettled: () => qc.invalidateQueries({ queryKey: ['class-calendar', orgId, branchId] }),
   })
 }
 ```
 
+```tsx
+// Caller (dialog) — toasts de dominio + matriz de errores:
+const update = useUpdateSession(id)
+const conflict = useConflictHandler()
+const t = useTranslations('calendar.something')
+const tc = useTranslations('common')
+
+update.mutate(payload, {
+  onSuccess: () => { notifySuccess(t('success')); onClose() },
+  onError: (error) => {
+    if (conflict.handle(error)) return                 // 409 → ConflictDialog
+    if (error instanceof ApiError && error.status === 403)
+      return notifyError(t('errors.forbidden'))
+    notifyError(tc('error.generic'), error)            // 422/otros → genérico
+  },
+})
+```
+
 Reglas:
 - El **snapshot** se devuelve desde `onMutate` y se usa en `onError` para rollback exacto.
 - `onSettled` **siempre** invalida para reconciliar con el servidor (la fuente de verdad).
-- El **toast** sale del hook (success/error), con mensajes de i18n vía `lib/utils/toast.ts`.
-- Un **409 de conflicto NO dispara toast genérico** (lo maneja el conflict dialog).
+- El **toast sale del caller** (mensajes de dominio i18n) vía `lib/utils/toast.ts`.
+- Un **409 de conflicto NO dispara toast genérico**: `conflict.handle(error)` lo intercepta.
 
 ---
 

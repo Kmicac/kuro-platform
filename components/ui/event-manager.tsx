@@ -76,6 +76,8 @@ export interface Event {
   category?: string
   attendees?: string[]
   tags?: string[]
+  /** KURO: evento atenuado + tachado (ej. clase cancelada). */
+  dimmed?: boolean
 }
 
 export interface EventColor {
@@ -1147,6 +1149,7 @@ function EventCard({
             colorClasses.bg,
             'text-white truncate animate-in fade-in slide-in-from-top-1',
             isHovered && 'scale-105 shadow-lg z-10',
+            event.dimmed && 'opacity-50 line-through',
           )}
         >
           {event.title}
@@ -1216,6 +1219,7 @@ function EventCard({
           colorClasses.bg,
           'text-white animate-in fade-in slide-in-from-left-2',
           isHovered && 'scale-[1.03] shadow-2xl ring-2 ring-white/50',
+          event.dimmed && 'opacity-50 line-through',
         )}
       >
         <div className="font-semibold">{event.title}</div>
@@ -1262,6 +1266,7 @@ function EventCard({
           colorClasses.bg,
           'text-white animate-in fade-in slide-in-from-left-1',
           isHovered && 'scale-105 shadow-lg z-10',
+          event.dimmed && 'opacity-50 line-through',
         )}
       >
         <div className="truncate">{event.title}</div>
@@ -1629,7 +1634,10 @@ function ListView({
                   <div
                     key={event.id}
                     onClick={() => onEventClick(event)}
-                    className="group cursor-pointer rounded-lg border bg-card p-3 transition-all hover:shadow-md hover:scale-[1.01] animate-in fade-in slide-in-from-bottom-2 duration-300 sm:p-4"
+                    className={cn(
+                      'group cursor-pointer rounded-lg border bg-card p-3 transition-all hover:shadow-md hover:scale-[1.01] animate-in fade-in slide-in-from-bottom-2 duration-300 sm:p-4',
+                      event.dimmed && 'opacity-50 line-through',
+                    )}
                   >
                     <div className="flex items-start gap-2 sm:gap-3">
                       <div

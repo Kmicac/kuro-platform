@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useFormatter, useTranslations } from 'next-intl'
 import {
   AlertCircle,
@@ -19,6 +20,9 @@ import {
 import { Button } from '@/components/ui/button'
 import { ApiError } from '@/lib/api/client'
 import { useSession } from '@/lib/hooks/use-sessions'
+import { useCapabilities, useCurrentContext } from '@/lib/hooks'
+import { SessionDialog } from '@/components/sessions/session-dialog'
+import { CancelSessionDialog } from '@/components/sessions/cancel-session-dialog'
 import {
   BeltBadge,
   ClassTypeChip,
@@ -43,9 +47,11 @@ import { cn } from '@/lib/utils'
 
 export interface SessionDetailProps {
   sessionId: string
+  /** Cierra el contenedor (popover). Lo usa, p.ej., cancelar la clase. */
+  onClose?: () => void
 }
 
-export function SessionDetail({ sessionId }: SessionDetailProps) {
+export function SessionDetail({ sessionId, onClose }: SessionDetailProps) {
   const te = useTranslations('errors.session')
   const tEmpty = useTranslations('empty-states.session')
   const query = useSession(sessionId)
@@ -113,7 +119,7 @@ export function SessionDetail({ sessionId }: SessionDetailProps) {
         />
       </div>
 
-      <ActionsBar session={session} />
+      <ActionsBar session={session} onClose={onClose} />
     </div>
   )
 }
@@ -365,47 +371,87 @@ function toneColor(tone: 'neutral' | 'success' | 'warning' | 'destructive' | 'mu
 
 // ── Acciones ───────────────────────────────────────────────
 
-function ActionsBar({ session }: { session: ClassSessionDetailType }) {
+function ActionsBar({
+  session,
+  onClose,
+}: {
+  session: ClassSessionDetailType
+  onClose?: () => void
+}) {
   const t = useTranslations('calendar.session.actions')
   const tc = useTranslations('common.actions')
+  const tCancel = useTranslations('calendar.cancelDialog')
+  const { orgId } = useCurrentContext()
+  const caps = useCapabilities(orgId ?? '')
+  const canManage = Boolean(
+    caps.data?.capabilities?.classes?.canManageSchedules,
+  )
+  const isEditable =
+    session.status !== 'CANCELED' && session.status !== 'COMPLETED'
   const canCancel = session.status === 'SCHEDULED'
+  const [editOpen, setEditOpen] = useState(false)
+  const [cancelOpen, setCancelOpen] = useState(false)
 
   return (
-    <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/60">
-      <span className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium mr-2">
-        {t('title')}
-      </span>
-      <Button
-        variant="outline"
-        size="sm"
-        disabled
-        title={tc('comingSoon')}
-        aria-label={t('editSoon')}
-      >
-        <Pencil className="h-3.5 w-3.5" />
-        {t('edit')}
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        disabled
-        title={canCancel ? tc('comingSoon') : t('notAvailableForStatus')}
-        aria-label={t('cancelSoon')}
-      >
-        <Ban className="h-3.5 w-3.5" />
-        {t('cancel')}
-      </Button>
-      <Button
-        variant="default"
-        size="sm"
-        disabled
-        title={tc('comingSoon')}
-        aria-label={t('markAttendanceSoon')}
-      >
-        <ClipboardCheck className="h-3.5 w-3.5" />
-        {t('markAttendance')}
-      </Button>
-    </div>
+    <>
+      <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/60">
+        <span className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium mr-2">
+          {t('title')}
+        </span>
+        {canManage && (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!isEditable}
+            title={!isEditable ? t('notAvailableForStatus') : undefined}
+            onClick={() => setEditOpen(true)}
+          >
+            <Pencil className="h-3.5 w-3.5" />
+            {t('edit')}
+          </Button>
+        )}
+        {canManage && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-destructive hover:text-destructive"
+            disabled={!canCancel}
+            title={!canCancel ? tCancel('notAllowed') : undefined}
+            onClick={() => setCancelOpen(true)}
+          >
+            <Ban className="h-3.5 w-3.5" />
+            {t('cancel')}
+          </Button>
+        )}
+        <Button
+          variant="default"
+          size="sm"
+          disabled
+          title={tc('comingSoon')}
+          aria-label={t('markAttendanceSoon')}
+        >
+          <ClipboardCheck className="h-3.5 w-3.5" />
+          {t('markAttendance')}
+        </Button>
+      </div>
+
+      <SessionDialog
+        mode="edit"
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        sessionId={session.id}
+      />
+
+      <CancelSessionDialog
+        open={cancelOpen}
+        onOpenChange={setCancelOpen}
+        sessionId={session.id}
+        sessionTitle={session.title}
+        sessionStartAt={session.startAt}
+        sessionEndAt={session.endAt}
+        onSuccess={() => onClose?.()}
+      />
+    </>
   )
 }
 

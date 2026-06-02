@@ -63,6 +63,8 @@ export function adaptSessionsToEvents(
       endTime: new Date(session.endAt),
       color: resolveColor(String(session.classType)),
       category: String(session.classType),
+      // Las sesiones canceladas siguen visibles, pero atenuadas + tachadas.
+      dimmed: session.status === 'CANCELED',
     })
 
     extras.set(session.id, {

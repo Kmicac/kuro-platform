@@ -10,15 +10,96 @@
   "backToBranch": "Volver a la filial",
   "conflict": {
     "title": "Conflicto de horario",
-    "description": "Esta clase choca con otra ya programada en la filial.",
-    "type": {
-      "INSTRUCTOR_OVERLAP": "Conflicto de instructor",
-      "BRANCH_OVERLAP": "Conflicto de filial",
-      "SCHEDULE_OVERLAP": "Conflicto de horario"
+    "description": {
+      "INSTRUCTOR_OVERLAP": "Este instructor ya tiene una clase en ese horario.",
+      "BRANCH_OVERLAP": "La filial ya tiene una clase en ese horario.",
+      "SCHEDULE_OVERLAP": "Ya existe una clase programada para esa fecha y horario."
     },
-    "existingSession": "Clase existente",
-    "viewExisting": "Ver clase existente",
-    "dismiss": "Cancelar"
+    "existingSession": "Clase existente:",
+    "actions": {
+      "viewExisting": "Ver clase existente",
+      "cancel": "Cancelar"
+    }
+  },
+  "createDialog": {
+    "title": "Nueva clase",
+    "description": "Crea una sesión única (no recurrente).",
+    "fields": {
+      "title": "Título",
+      "titlePlaceholder": "Ej: Fundamentos AM",
+      "classType": "Tipo de clase",
+      "classTypePlaceholder": "Selecciona un tipo",
+      "instructor": "Instructor",
+      "instructorPlaceholder": "Selecciona un instructor",
+      "instructorEmpty": "No hay instructores asignables en esta filial",
+      "scheduledDate": "Fecha",
+      "scheduledDatePlaceholder": "Selecciona una fecha",
+      "startTime": "Hora de inicio",
+      "endTime": "Hora de fin",
+      "capacity": "Capacidad",
+      "capacityPlaceholder": "Cantidad máxima de alumnos",
+      "notes": "Notas",
+      "notesPlaceholder": "Notas internas (opcional)"
+    },
+    "actions": {
+      "cancel": "Cancelar",
+      "submit": "Crear clase",
+      "submitting": "Creando..."
+    },
+    "success": "Clase creada correctamente",
+    "errors": {
+      "endBeforeStart": "La hora de fin debe ser posterior al inicio",
+      "dateInPast": "No puedes crear clases en fechas pasadas",
+      "noInstructorsAvailable": "Necesitas asignar instructores a esta filial primero",
+      "titleRequired": "El título debe tener al menos 3 caracteres",
+      "instructorRequired": "Selecciona un instructor",
+      "forbidden": "No tienes permiso para crear clases"
+    }
+  },
+  "editDialog": {
+    "title": "Editar clase",
+    "description": "Modifica los datos de esta clase.",
+    "loading": "Cargando datos de la clase...",
+    "notEditable": {
+      "canceled": "Esta clase fue cancelada y no se puede editar.",
+      "completed": "Esta clase ya finalizó y no se puede editar."
+    },
+    "actions": {
+      "submit": "Guardar cambios",
+      "submitting": "Guardando...",
+      "close": "Cerrar"
+    },
+    "success": "Cambios guardados correctamente",
+    "noChanges": "No hay cambios para guardar",
+    "forbidden": "No tienes permiso para editar clases"
+  },
+  "cancelDialog": {
+    "title": "Cancelar clase",
+    "context": {
+      "class": "Vas a cancelar:",
+      "date": "Fecha:",
+      "schedule": "Horario:"
+    },
+    "warning": "Esta acción no se puede deshacer. La clase quedará marcada como cancelada permanentemente.",
+    "fields": {
+      "reason": "Motivo de cancelación",
+      "reasonPlaceholder": "Ej: Feriado, instructor enfermo, problema técnico, etc.",
+      "reasonHelp": "Mínimo 10 caracteres"
+    },
+    "errors": {
+      "reasonRequired": "El motivo es obligatorio",
+      "reasonTooShort": "El motivo debe tener al menos 10 caracteres"
+    },
+    "actions": {
+      "back": "Volver",
+      "submit": "Cancelar clase",
+      "submitting": "Cancelando..."
+    },
+    "success": "Clase cancelada",
+    "responseErrors": {
+      "forbidden": "No tienes permiso para cancelar clases"
+    },
+    "notAllowed": "Solo se pueden cancelar clases programadas"
   },
   "classType": {
     "GI": "Gi",

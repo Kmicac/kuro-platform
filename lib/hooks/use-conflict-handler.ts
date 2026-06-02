@@ -1,13 +1,15 @@
 'use client'
 
 /**
- * Manejo del 409 CLASS_SESSION_CONFLICT.
+ * Manejo del 409 CLASS_SESSION_CONFLICT (create/update de class-sessions).
  *
- * El backend rechaza create/update de class-sessions que solapan con otra
- * sesión (instructor, filial u horario). Este módulo expone:
- *  - detectores puros (`isClassSessionConflict`, `extractConflict`) usados
- *    por las mutations para NO disparar un toast genérico ante un 409.
- *  - `useConflictHandler()` — estado del dialog de conflicto (uso en 2.2.10).
+ * Detección por STATUS 409: en estos endpoints el único 409 documentado es el
+ * conflicto de sesión (API-CONTRACT.md §"Conflict 409" + tabla de errores:
+ * "409 | session already exists or overlaps branch/instructor session"). Por
+ * eso NO exigimos `body.code` — sería frágil si el shape real difiere del
+ * contrato. El `code` es confirmación opcional; el objeto `conflict` se busca
+ * en las ubicaciones plausibles. Así el caller siempre evita el toast genérico
+ * y abre el ConflictDialog ante cualquier 409.
  */
 import { useCallback, useState } from 'react'
 import { ApiError } from '@/lib/api/client'
@@ -26,32 +28,44 @@ export interface ClassSessionConflict {
   endAt: string
 }
 
-interface ConflictErrorBody {
-  code?: string
-  conflict?: ClassSessionConflict
+/**
+ * Conflicto de fallback cuando el 409 no trae un objeto `conflict` parseable.
+ * Mantiene la UX (abrir el dialog con un mensaje genérico) en vez de un toast
+ * engañoso. `classSessionId` vacío → el dialog oculta "Ver clase existente".
+ */
+const FALLBACK_CONFLICT: ClassSessionConflict = {
+  classSessionId: '',
+  type: 'SCHEDULE_OVERLAP',
+  branchId: '',
+  startAt: '',
+  endAt: '',
 }
 
-/** ¿El error es un 409 con code CLASS_SESSION_CONFLICT? */
+/** ¿El error es un 409 de class-session (⟺ conflicto en este endpoint)? */
 export function isClassSessionConflict(error: unknown): boolean {
-  return (
-    error instanceof ApiError &&
-    error.status === 409 &&
-    (error.body as ConflictErrorBody | null)?.code === 'CLASS_SESSION_CONFLICT'
-  )
+  return error instanceof ApiError && error.status === 409
 }
 
-/** Extrae el objeto `conflict` del error, o null si no es un conflict. */
+/** Extrae el objeto `conflict` del error, buscándolo en ubicaciones plausibles. */
 export function extractConflict(error: unknown): ClassSessionConflict | null {
   if (!isClassSessionConflict(error)) return null
-  return (error as ApiError).body
-    ? ((error as ApiError).body as ConflictErrorBody).conflict ?? null
-    : null
+  const body = (error as ApiError).body
+  if (!body || typeof body !== 'object') return null
+  const b = body as Record<string, unknown>
+  const nested = (key: string) =>
+    (b[key] as { conflict?: ClassSessionConflict } | undefined)?.conflict
+  return (
+    (b.conflict as ClassSessionConflict | undefined) ??
+    nested('error') ??
+    nested('details') ??
+    null
+  )
 }
 
 export interface UseConflictHandlerResult {
   conflict: ClassSessionConflict | null
   isConflict: boolean
-  /** Alimenta un error; devuelve true si era un conflict (y lo capturó). */
+  /** Alimenta un error; devuelve true si era un 409 (y lo capturó). */
   handle: (error: unknown) => boolean
   dismiss: () => void
 }
@@ -60,12 +74,9 @@ export function useConflictHandler(): UseConflictHandlerResult {
   const [conflict, setConflict] = useState<ClassSessionConflict | null>(null)
 
   const handle = useCallback((error: unknown): boolean => {
-    const parsed = extractConflict(error)
-    if (parsed) {
-      setConflict(parsed)
-      return true
-    }
-    return false
+    if (!isClassSessionConflict(error)) return false
+    setConflict(extractConflict(error) ?? FALLBACK_CONFLICT)
+    return true
   }, [])
 
   const dismiss = useCallback(() => setConflict(null), [])

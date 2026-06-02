@@ -16,22 +16,23 @@ export function Toaster(props: ToasterProps) {
   return (
     <Sonner
       theme={theme as ToasterProps['theme']}
+      richColors
       position="top-right"
       duration={4000}
       offset={16}
       className="toaster group"
       toastOptions={{
+        // Con `richColors`, sonner colorea el fondo/borde/texto por tipo
+        // (success=verde, error=rojo, info=azul, warning=ámbar). NO forzar
+        // bg/text/border acá (eso neutralizaba los colores). Solo estilo
+        // estructural + botones.
         classNames: {
           toast:
-            'group toast group-[.toaster]:bg-card group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg group-[.toaster]:rounded-lg',
-          description: 'group-[.toast]:text-muted-foreground',
+            'group toast group-[.toaster]:rounded-lg group-[.toaster]:shadow-lg',
           actionButton:
             'group-[.toast]:bg-primary group-[.toast]:text-primary-foreground',
           cancelButton:
             'group-[.toast]:bg-muted group-[.toast]:text-muted-foreground',
-          error:
-            'group-[.toaster]:border-destructive/40 group-[.toaster]:text-destructive',
-          success: 'group-[.toaster]:border-primary/40',
         },
       }}
       {...props}

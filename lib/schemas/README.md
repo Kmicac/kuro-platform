@@ -20,7 +20,9 @@ export const classSessionSchema = z.object({
 export type ClassSessionFormValues = z.infer<typeof classSessionSchema>
 ```
 
-Se conectan al form con `zodResolver(schema)` (react-hook-form). Los mensajes
-de error de los schemas deben venir de i18n cuando se muestran al usuario.
+Se conectan al form con `standardSchemaResolver(schema)` (react-hook-form) —
+zod v4 implementa Standard Schema. Los mensajes de error van a `<FormMessage>`,
+así que deben venir traducidos (pasar i18n a una fábrica de schema; ver
+`session.ts` → `makeCreateSessionSchema({ minDate, messages })`).
 
 > Carpeta sin schemas todavía — se llenan al construir cada form (Fase 2.2.1+).

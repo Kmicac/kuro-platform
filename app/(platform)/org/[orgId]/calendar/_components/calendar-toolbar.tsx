@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import {
   Calendar as CalendarIcon,
@@ -15,15 +15,12 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
-import {
   KURO_CLASS_TYPE_COLORS,
   type EventManagerView,
 } from '@/components/ui/event-manager'
 import { useClassTypeLabel } from '@/components/kuro'
+import { SessionDialog } from '@/components/sessions/session-dialog'
+import { useCapabilities, useCurrentContext } from '@/lib/hooks'
 import type { ClassSessionStatus, ClassType } from '@/lib/api/types'
 import { cn } from '@/lib/utils'
 
@@ -86,6 +83,14 @@ export function CalendarToolbar({
   const tStatus = useTranslations('calendar.sessionStatus')
   const tc = useTranslations('common')
   const classTypeLabel = useClassTypeLabel()
+
+  // Gating del botón "Nueva clase" por capability.
+  const { orgId } = useCurrentContext()
+  const caps = useCapabilities(orgId ?? '')
+  const canManage = Boolean(
+    caps.data?.capabilities?.classes?.canManageSchedules,
+  )
+  const [createOpen, setCreateOpen] = useState(false)
   // Keyboard ← / → para navegar rango. Ignora cuando el foco está en
   // un input/textarea/contenteditable para no romper la búsqueda interna.
   useEffect(() => {
@@ -174,25 +179,28 @@ export function CalendarToolbar({
             })}
           </div>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span>
-                <Button
-                  variant="default"
-                  size="sm"
-                  disabled
-                  className="h-8 opacity-60 cursor-not-allowed"
-                  aria-label={t('newClassSoon')}
-                >
-                  <Plus className="mr-1 h-4 w-4" />
-                  {t('newClass')}
-                </Button>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>{tc('actions.comingSoon')}</TooltipContent>
-          </Tooltip>
+          {canManage && (
+            <Button
+              variant="default"
+              size="sm"
+              className="h-8"
+              onClick={() => setCreateOpen(true)}
+            >
+              <Plus className="mr-1 h-4 w-4" />
+              {t('newClass')}
+            </Button>
+          )}
         </div>
       </div>
+
+      <SessionDialog
+        mode="create"
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+      />
+
+      {/* TODO(Fase 2.2.x): permitir click en celda vacía del calendario para
+          pre-llenar la fecha (defaultDate) — requiere tocar event-manager.tsx. */}
 
       {/* Filtros — chips multi-select */}
       <div className="space-y-2">

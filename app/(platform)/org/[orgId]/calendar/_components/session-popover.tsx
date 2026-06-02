@@ -28,7 +28,9 @@ export function SessionPopover({ sessionId, onClose }: SessionPopoverProps) {
         {/* a11y: el SessionDetail tiene su propio título visible.
             DialogTitle hidden satisface Radix sin duplicar UI. */}
         <DialogTitle className="sr-only">{t('detailTitle')}</DialogTitle>
-        {sessionId && <SessionDetail sessionId={sessionId} />}
+        {sessionId && (
+          <SessionDetail sessionId={sessionId} onClose={onClose} />
+        )}
       </DialogContent>
     </Dialog>
   )

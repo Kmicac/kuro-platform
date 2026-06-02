@@ -306,13 +306,17 @@ Ver `messages/README.md` para convenciones de keys, plurales y cómo sumar idiom
 
 - **Forms con react-hook-form + zod siempre.** Primitives en `components/ui/form.tsx`
   (patrón shadcn). El schema Zod vive en `lib/schemas/<dominio>.ts` y se conecta con
-  `zodResolver` al crear el form; las primitives son agnósticas del schema.
+  `standardSchemaResolver` (zod v4 implementa Standard Schema; `zodResolver` tiene
+  fricción de tipos con zod 4.4 + resolvers 5.4); las primitives son agnósticas del schema.
 - **Mutations con optimistic updates.** Patrón: `onMutate` (cancelQueries + snapshot +
-  update optimista), `onError` (rollback al snapshot + toast), `onSettled` (invalidate).
-  Ver `useCreateSession`/`useUpdateSession`/`useCancelSession` en `lib/hooks/use-sessions.ts`.
-- **409 CLASS_SESSION_CONFLICT** se maneja con `useConflictHandler()` + `<ConflictDialog />`
-  (NO con un toast genérico). Las mutations de session ya hacen `isClassSessionConflict(error)`
-  para no “tapar” el conflicto con un toast.
+  update optimista), `onError` (rollback al snapshot), `onSettled` (invalidate). Los hooks
+  de mutation **no disparan toasts**: el caller maneja success/error con mensajes de dominio
+  (i18n) en su `mutate(payload, { onSuccess, onError })`. Ver
+  `useCreateSession`/`useUpdateSession`/`useCancelSession` en `lib/hooks/use-sessions.ts`.
+- **409 CLASS_SESSION_CONFLICT** se maneja en el caller con `useConflictHandler()` +
+  `<ConflictDialog />` (NO con un toast genérico). El `onError` del caller hace
+  `conflict.handle(error)` primero; si era conflict, muestra el dialog y no toastea. Ver
+  `components/sessions/create-session-dialog.tsx`.
 - **Hooks**: seguir el patrón de `_shared.ts` (`kuroRetry`, `STALE`), queryKeys consistentes,
   tipos input+output en `lib/api/types.ts`. Nada de TODOs zombie: si algo se difiere,
   marcar `// TODO(Fase 2.2.x): <descripción>`.
