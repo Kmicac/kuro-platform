@@ -96,6 +96,7 @@ Controller-verified on 2026-05-28. This index is the parity list used to keep th
 - `GET /organizations/:organizationId/branches/:branchId/billing-summary`
 - `GET /organizations/:organizationId/branches/:branchId/class-calendar`
 - `GET /organizations/:organizationId/branches/:branchId/class-schedules`
+- `GET /organizations/:organizationId/branches/:branchId/class-schedules/:scheduleId`
 - `GET /organizations/:organizationId/branches/:branchId/class-session-gaps`
 - `GET /organizations/:organizationId/branches/:branchId/class-sessions`
 - `GET /organizations/:organizationId/branches/:branchId/class-sessions/:sessionId`
@@ -2995,6 +2996,26 @@ The full intake request view.
 #### Response
 
 `{ items: [...], meta: { page, limit, total } }`
+
+### Class schedule detail
+
+`GET /organizations/:organizationId/branches/:branchId/class-schedules/:scheduleId`
+
+**Roles permitted**: authenticated member
+**Capability requerida**: `classes.canReadClasses`
+**Step-up required**: no
+**Scope**: BRANCH_SCOPED
+
+#### Response
+
+Same schedule item shape used by create, update, and list items, without pagination wrapper.
+
+#### Errores específicos del endpoint
+
+| Status | Caso                                  | Mensaje                                |
+| ------ | ------------------------------------- | -------------------------------------- |
+| 403    | no branch class read capability       | Insufficient class schedule read capability |
+| 404    | schedule does not exist in branch/org | Class schedule not found               |
 
 ### Update class schedule
 
