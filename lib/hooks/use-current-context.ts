@@ -3,6 +3,7 @@
 import { useMemo } from 'react'
 import { useParams, usePathname } from 'next/navigation'
 import { useAuthStore } from '@/stores/auth.store'
+import { timeZone as DEFAULT_TIMEZONE } from '@/i18n/config'
 
 /**
  * Contexto compartido por toda la plataforma:
@@ -20,6 +21,12 @@ export interface CurrentContext {
   membershipId: string | null
   primaryRole: string | null
   isAuthenticated: boolean
+  /**
+   * IANA timezone de la filial activa. Cae al default de i18n/config cuando
+   * el branch del store todavía no tiene timezone (ej. antes de cargar la
+   * lista de filiales). El backend opera con timezones por filial.
+   */
+  branchTimezone: string
 }
 
 export function useCurrentContext(): CurrentContext {
@@ -29,6 +36,7 @@ export function useCurrentContext(): CurrentContext {
   const membershipId = useAuthStore((s) => s.membershipId)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const currentBranchId = useAuthStore((s) => s.currentBranchId)
+  const currentBranchTz = useAuthStore((s) => s.currentBranch?.timezone)
 
   return useMemo(() => {
     const fromParams = {
@@ -56,8 +64,17 @@ export function useCurrentContext(): CurrentContext {
       membershipId,
       primaryRole: user?.primaryRole ?? null,
       isAuthenticated,
+      branchTimezone: currentBranchTz ?? DEFAULT_TIMEZONE,
     }
-  }, [params, pathname, user, membershipId, isAuthenticated, currentBranchId])
+  }, [
+    params,
+    pathname,
+    user,
+    membershipId,
+    isAuthenticated,
+    currentBranchId,
+    currentBranchTz,
+  ])
 }
 
 function pickParam(value: string | string[] | undefined): string | null {

@@ -1,10 +1,20 @@
 'use client'
 
 import { useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { classSessionsApi } from '@/lib/api/endpoints'
-import type { ClassSessionListItem } from '@/lib/api/types'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useTranslations } from 'next-intl'
+import {
+  classSessionsApi,
+  type ClassSessionCreateBody,
+  type ClassSessionUpdateBody,
+} from '@/lib/api/endpoints'
+import type {
+  ClassCalendarResponse,
+  ClassSessionListItem,
+} from '@/lib/api/types'
+import { notifyError, notifySuccess } from '@/lib/utils/toast'
 import { STALE, kuroRetry } from './_shared'
+import { isClassSessionConflict } from './use-conflict-handler'
 import { useCurrentContext } from './use-current-context'
 
 /**
@@ -28,46 +38,7 @@ export function useSession(sessionId: string) {
   })
 }
 
-/**
- * Resumen agregado de attendance de una sesión.
- */
-export function useSessionAttendance(sessionId: string) {
-  const { orgId, branchId } = useCurrentContext()
-
-  return useQuery({
-    queryKey: ['session-attendance', orgId, branchId, sessionId],
-    queryFn: () =>
-      classSessionsApi.attendance(
-        orgId as string,
-        branchId as string,
-        sessionId
-      ),
-    staleTime: STALE.resource,
-    retry: kuroRetry,
-    enabled: Boolean(orgId && branchId && sessionId),
-  })
-}
-
-/**
- * Roster técnico: lista de alumnos esperados con su faja, status y
- * registro de asistencia individual.
- */
-export function useSessionTechnicalRoster(sessionId: string) {
-  const { orgId, branchId } = useCurrentContext()
-
-  return useQuery({
-    queryKey: ['session-roster', orgId, branchId, sessionId],
-    queryFn: () =>
-      classSessionsApi.technicalRoster(
-        orgId as string,
-        branchId as string,
-        sessionId
-      ),
-    staleTime: STALE.resource,
-    retry: kuroRetry,
-    enabled: Boolean(orgId && branchId && sessionId),
-  })
-}
+// Los hooks de attendance (read) viven ahora en use-attendance.ts.
 
 /**
  * Class calendar (vista DAY o WEEK) agrupada por día.
@@ -246,5 +217,177 @@ export function useClassSessionsByDateRange(
     staleTime: STALE.resource,
     retry: kuroRetry,
     enabled: Boolean(orgId && branchId && params.fromDate && params.toDate),
+  })
+}
+
+// ── Mutations ─────────────────────────────────────────────────
+//
+// Patrón optimista: onMutate cancela + snapshotea TODAS las queries de
+// class-calendar de la filial (cualquier startDate/view), aplica el cambio
+// optimista sobre el array `items` canónico, y onError hace rollback.
+// onSettled invalida para reconciliar con el servidor. El 409
+// CLASS_SESSION_CONFLICT NO dispara toast genérico (lo maneja la UI con
+// useConflictHandler en Fase 2.2.10).
+
+/** Filtro de prefijo: matchea todas las class-calendar de la filial. */
+function calendarFilter(orgId: string | null, branchId: string | null) {
+  return { queryKey: ['class-calendar', orgId, branchId] as const }
+}
+
+type CalendarSnapshot = [readonly unknown[], ClassCalendarResponse | undefined][]
+
+function patchCalendarItem(
+  resp: ClassCalendarResponse,
+  sessionId: string,
+  patch: Partial<ClassSessionListItem>,
+): ClassCalendarResponse {
+  const apply = (it: ClassSessionListItem) =>
+    it.id === sessionId ? { ...it, ...patch } : it
+  return {
+    ...resp,
+    items: resp.items?.map(apply),
+    days: resp.days.map((d) => ({ ...d, items: d.items.map(apply) })),
+  }
+}
+
+/** Crea una sesión única (no recurrente). Inserción optimista en el calendario. */
+export function useCreateSession() {
+  const { orgId, branchId } = useCurrentContext()
+  const qc = useQueryClient()
+  const t = useTranslations('common')
+
+  return useMutation({
+    mutationFn: (body: ClassSessionCreateBody) =>
+      classSessionsApi.create(orgId as string, branchId as string, body),
+    onMutate: async (body) => {
+      const filter = calendarFilter(orgId, branchId)
+      await qc.cancelQueries(filter)
+      const snapshot = qc.getQueriesData<ClassCalendarResponse>(
+        filter,
+      ) as CalendarSnapshot
+      const optimistic: ClassSessionListItem = {
+        id: `optimistic-${crypto.randomUUID()}`,
+        organizationId: orgId ?? '',
+        branchId: branchId ?? '',
+        classScheduleId: body.classScheduleId ?? null,
+        title: body.title,
+        classType: body.classType,
+        status: 'SCHEDULED',
+        startAt: body.startAt,
+        endAt: body.endAt,
+        scheduledDate: body.scheduledDate,
+        capacity:
+          body.capacity != null
+            ? { max: body.capacity, enrolled: 0 }
+            : undefined,
+        instructor: undefined,
+        cancellationReason: null,
+      }
+      qc.setQueriesData<ClassCalendarResponse>(filter, (old) =>
+        old ? { ...old, items: [...(old.items ?? []), optimistic] } : old,
+      )
+      return { snapshot }
+    },
+    onError: (error, _vars, ctx) => {
+      ctx?.snapshot.forEach(([key, data]) => qc.setQueryData(key, data))
+      if (!isClassSessionConflict(error)) notifyError(t('error.generic'), error)
+    },
+    onSuccess: () => notifySuccess(t('success.created')),
+    onSettled: () => qc.invalidateQueries(calendarFilter(orgId, branchId)),
+  })
+}
+
+/** Actualiza una sesión existente. Patch optimista + manejo de 409. */
+export function useUpdateSession(sessionId: string) {
+  const { orgId, branchId } = useCurrentContext()
+  const qc = useQueryClient()
+  const t = useTranslations('common')
+
+  return useMutation({
+    mutationFn: (body: ClassSessionUpdateBody) =>
+      classSessionsApi.update(
+        orgId as string,
+        branchId as string,
+        sessionId,
+        body,
+      ),
+    onMutate: async (body) => {
+      const filter = calendarFilter(orgId, branchId)
+      await qc.cancelQueries(filter)
+      const snapshot = qc.getQueriesData<ClassCalendarResponse>(
+        filter,
+      ) as CalendarSnapshot
+      // Solo se patchean optimistamente los campos que mapean limpio al
+      // list-item (capacity tiene shape distinto → se reconcilia al invalidar).
+      const patch: Partial<ClassSessionListItem> = {}
+      if (body.title != null) patch.title = body.title
+      if (body.classType != null) patch.classType = body.classType
+      if (body.status != null) patch.status = body.status
+      if (body.startAt != null) patch.startAt = body.startAt
+      if (body.endAt != null) patch.endAt = body.endAt
+      if (body.scheduledDate != null) patch.scheduledDate = body.scheduledDate
+      if (body.cancellationReason != null)
+        patch.cancellationReason = body.cancellationReason
+      qc.setQueriesData<ClassCalendarResponse>(filter, (old) =>
+        old ? patchCalendarItem(old, sessionId, patch) : old,
+      )
+      return { snapshot }
+    },
+    onError: (error, _vars, ctx) => {
+      ctx?.snapshot.forEach(([key, data]) => qc.setQueryData(key, data))
+      if (!isClassSessionConflict(error)) notifyError(t('error.generic'), error)
+    },
+    onSuccess: () => notifySuccess(t('success.updated')),
+    onSettled: () => {
+      qc.invalidateQueries(calendarFilter(orgId, branchId))
+      qc.invalidateQueries({
+        queryKey: ['session', orgId, branchId, sessionId],
+      })
+    },
+  })
+}
+
+/**
+ * Cancela una sesión con motivo. Decisión de producto: una vez cancelada NO
+ * se reactiva (la UI no expone "reactivar").
+ */
+export function useCancelSession(sessionId: string) {
+  const { orgId, branchId } = useCurrentContext()
+  const qc = useQueryClient()
+  const t = useTranslations('common')
+
+  return useMutation({
+    mutationFn: (vars: { cancellationReason: string }) =>
+      classSessionsApi.update(orgId as string, branchId as string, sessionId, {
+        status: 'CANCELED',
+        cancellationReason: vars.cancellationReason,
+      }),
+    onMutate: async (vars) => {
+      const filter = calendarFilter(orgId, branchId)
+      await qc.cancelQueries(filter)
+      const snapshot = qc.getQueriesData<ClassCalendarResponse>(
+        filter,
+      ) as CalendarSnapshot
+      qc.setQueriesData<ClassCalendarResponse>(filter, (old) =>
+        old
+          ? patchCalendarItem(old, sessionId, {
+              status: 'CANCELED',
+              cancellationReason: vars.cancellationReason,
+            })
+          : old,
+      )
+      return { snapshot }
+    },
+    onError: (error, _vars, ctx) => {
+      ctx?.snapshot.forEach(([key, data]) => qc.setQueryData(key, data))
+      notifyError(t('error.generic'), error)
+    },
+    onSuccess: () => notifySuccess(t('success.canceled')),
+    onSettled: () => {
+      qc.invalidateQueries(calendarFilter(orgId, branchId))
+      qc.invalidateQueries({
+        queryKey: ['session', orgId, branchId, sessionId],
+      })
+    },
   })
 }

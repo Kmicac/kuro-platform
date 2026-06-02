@@ -670,6 +670,71 @@ export interface SessionTechnicalRoster {
   }
 }
 
+// ── Attendance — inputs (mutations Fase 2.2.4) ─────────────────
+
+export type AttendanceReasonCode =
+  | 'INJURY'
+  | 'TRAVEL'
+  | 'SCHEDULE_CONFLICT'
+  | 'TEMPORARY_SUSPENSION'
+  | 'VALID_VISIT'
+  | 'OPERATIONAL_ERROR'
+  | 'OTHER'
+
+export type AttendanceCorrectionReasonCode =
+  | 'STATUS_CORRECTION'
+  | 'DUPLICATE_CHECKIN'
+  | 'WRONG_STUDENT'
+  | 'LATE_CONFIRMATION'
+  | 'VISIT_VERIFIED'
+  | 'MANUAL_OVERRIDE'
+  | 'OTHER'
+
+export interface AttendanceRecordInput {
+  studentId: string
+  status: AttendanceStatus
+  reasonCode?: AttendanceReasonCode
+  notes?: string
+}
+
+export interface RecordAttendanceBody {
+  records: AttendanceRecordInput[]
+}
+
+export interface UpdateAttendanceBody {
+  status?: AttendanceStatus
+  reasonCode?: AttendanceReasonCode
+  correctionReasonCode?: AttendanceCorrectionReasonCode
+  notes?: string
+  correctionNote?: string
+}
+
+// ── Instructor candidates (GET .../instructors/candidates) ─────
+
+export interface InstructorCandidate {
+  membershipId: string
+  userId: string
+  displayName: string
+  roles: string[]
+  scopeType?: string
+  branchAccess?: {
+    branchId: string
+    primaryBranchId: string | null
+    branchIds: string[]
+  }
+  isEffectiveHeadCoachForBranch?: boolean
+  canBeAssignedAsInstructor: boolean
+  upcomingAssignedSessionCount?: number
+  status?: string
+  user?: { id: string; firstName: string; lastName: string }
+  effectiveRoles?: string[]
+}
+
+export interface InstructorCandidatesResponse {
+  items: InstructorCandidate[]
+  meta: { total: number }
+}
+
 // ── Intake ────────────────────────────────────────────────────
 
 export interface IntakeRequest {

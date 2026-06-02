@@ -196,7 +196,11 @@ function BranchSelector({ orgId, activeBranchId }: BranchSelectorProps) {
 
   useEffect(() => {
     if (activeBranch) {
-      setCurrentBranch({ id: activeBranch.id, name: activeBranch.name })
+      setCurrentBranch({
+        id: activeBranch.id,
+        name: activeBranch.name,
+        timezone: activeBranch.timezone,
+      })
     }
   }, [activeBranch, setCurrentBranch])
 
@@ -219,7 +223,7 @@ function BranchSelector({ orgId, activeBranchId }: BranchSelectorProps) {
   const handleSelect = (b: Branch) => {
     setOpen(false)
     // SIEMPRE actualizar el store (dispara refetch en páginas branch-aware).
-    setCurrentBranch({ id: b.id, name: b.name })
+    setCurrentBranch({ id: b.id, name: b.name, timezone: b.timezone })
     // Navegar solo si corresponde según la ruta actual.
     const next = nextPathForBranch(pathname, orgId, b.id)
     if (next) router.push(next)

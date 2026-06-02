@@ -89,6 +89,12 @@ Si la respuesta no cumple las expectativas, hablar con el backend ANTES de segui
 - Luego, en el componente: `useTranslations(ns)` (client) / `getTranslations(ns)` (server),
   `useFormatter()` para fechas/números. CERO strings hardcoded en JSX.
 
+### Paso 3.6 — Schema de form (Zod) — si la pantalla tiene un form
+- Definir el schema Zod en `lib/schemas/<dominio>.ts` ANTES de construir el componente.
+- `export type ...FormValues = z.infer<typeof schema>` y conectar con `zodResolver`.
+- Usar las primitives de `components/ui/form.tsx` (RHF). Mutations con optimistic update.
+- 409 conflicts → `useConflictHandler` + `<ConflictDialog />`. Ver `docs/COMPONENT-PATTERNS.md`.
+
 ### Paso 4 — Pantalla
 - `app/(platform)/.../page.tsx` server component con `generateMetadata()` (no `metadata` literal)
 - `_components/xxx-screen.tsx` client component que consume hooks + `useTranslations`

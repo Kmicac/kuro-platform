@@ -15,10 +15,13 @@ import type {
   ClassSessionListItem,
   ClassSessionStatus,
   ClassType,
+  InstructorCandidatesResponse,
   PromotionRankCatalogEntry,
+  RecordAttendanceBody,
   RiskRoster,
   SessionAttendance,
   SessionTechnicalRoster,
+  UpdateAttendanceBody,
   TrainingCalendarResponse,
   CapabilitiesResponse,
   PaginatedResponse,
@@ -419,6 +422,45 @@ export const classSessionsApi = {
   technicalRoster: (orgId: string, branchId: string, sessionId: string) =>
     api.get<SessionTechnicalRoster>(
       `/organizations/${orgId}/branches/${branchId}/class-sessions/${sessionId}/attendance/technical-roster`
+    ),
+
+  /** POST .../class-sessions/:sessionId/attendance — registro bulk (STAFF_MANUAL) */
+  recordAttendance: (
+    orgId: string,
+    branchId: string,
+    sessionId: string,
+    body: RecordAttendanceBody
+  ) =>
+    api.post<SessionAttendance>(
+      `/organizations/${orgId}/branches/${branchId}/class-sessions/${sessionId}/attendance`,
+      body
+    ),
+
+  /** PATCH .../class-sessions/:sessionId/attendance/:studentId — corrección individual */
+  updateAttendance: (
+    orgId: string,
+    branchId: string,
+    sessionId: string,
+    studentId: string,
+    body: UpdateAttendanceBody
+  ) =>
+    api.patch<unknown>(
+      `/organizations/${orgId}/branches/${branchId}/class-sessions/${sessionId}/attendance/${studentId}`,
+      body
+    ),
+}
+
+// ── Instructors ───────────────────────────────────────────────
+
+export const instructorsApi = {
+  /**
+   * GET .../branches/:branchId/instructors/candidates — membresías que
+   * pueden asignarse como instructor de una clase en esta filial.
+   * Cap: classes.canAssignClassInstructor.
+   */
+  candidates: (orgId: string, branchId: string) =>
+    api.get<InstructorCandidatesResponse>(
+      `/organizations/${orgId}/branches/${branchId}/instructors/candidates`
     ),
 }
 

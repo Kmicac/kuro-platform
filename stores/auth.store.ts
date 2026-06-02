@@ -37,6 +37,8 @@ export interface KuroOrg {
 export interface KuroBranch {
   id: string
   name: string
+  /** IANA timezone de la filial (para formateo/conversión del calendario). */
+  timezone?: string
 }
 
 export interface HydrateSessionPayload {

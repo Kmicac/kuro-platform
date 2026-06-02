@@ -302,6 +302,32 @@ Ver `messages/README.md` para convenciones de keys, plurales y cómo sumar idiom
 
 ---
 
+## Forms y Mutations
+
+- **Forms con react-hook-form + zod siempre.** Primitives en `components/ui/form.tsx`
+  (patrón shadcn). El schema Zod vive en `lib/schemas/<dominio>.ts` y se conecta con
+  `zodResolver` al crear el form; las primitives son agnósticas del schema.
+- **Mutations con optimistic updates.** Patrón: `onMutate` (cancelQueries + snapshot +
+  update optimista), `onError` (rollback al snapshot + toast), `onSettled` (invalidate).
+  Ver `useCreateSession`/`useUpdateSession`/`useCancelSession` en `lib/hooks/use-sessions.ts`.
+- **409 CLASS_SESSION_CONFLICT** se maneja con `useConflictHandler()` + `<ConflictDialog />`
+  (NO con un toast genérico). Las mutations de session ya hacen `isClassSessionConflict(error)`
+  para no “tapar” el conflicto con un toast.
+- **Hooks**: seguir el patrón de `_shared.ts` (`kuroRetry`, `STALE`), queryKeys consistentes,
+  tipos input+output en `lib/api/types.ts`. Nada de TODOs zombie: si algo se difiere,
+  marcar `// TODO(Fase 2.2.x): <descripción>`.
+- Ver `docs/COMPONENT-PATTERNS.md` para ejemplos completos.
+
+## Toasts
+
+- **Usar `sonner` vía `lib/utils/toast.ts`**: `notifySuccess` / `notifyError` / `notifyInfo`.
+  Nunca `toast` de sonner directo.
+- **Mensajes desde i18n** (`common.success.*` / `common.error.*`), nunca hardcodeados.
+- `notifyError` adjunta el `request-id` cuando el error es un `ApiError` (para soporte).
+- El `<Toaster />` está montado una sola vez dentro de `Providers` (theme-aware).
+
+---
+
 ## MCP servers activos
 
 Verificar con `/mcp` dentro de Claude Code:

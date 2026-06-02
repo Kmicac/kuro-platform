@@ -8,6 +8,18 @@
   "weekRange": "Semana del {left} al {right} {year}",
   "loadingAria": "Cargando calendario",
   "backToBranch": "Volver a la filial",
+  "conflict": {
+    "title": "Conflicto de horario",
+    "description": "Esta clase choca con otra ya programada en la filial.",
+    "type": {
+      "INSTRUCTOR_OVERLAP": "Conflicto de instructor",
+      "BRANCH_OVERLAP": "Conflicto de filial",
+      "SCHEDULE_OVERLAP": "Conflicto de horario"
+    },
+    "existingSession": "Clase existente",
+    "viewExisting": "Ver clase existente",
+    "dismiss": "Cancelar"
+  },
   "classType": {
     "GI": "Gi",
     "NO_GI": "No-Gi",

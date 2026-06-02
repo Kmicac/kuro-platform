@@ -39,6 +39,16 @@
   "search": {
     "byNameEmailPhone": "Buscar por nombre, email o teléfono"
   },
+  "success": {
+    "created": "Creado correctamente",
+    "updated": "Actualizado correctamente",
+    "deleted": "Eliminado correctamente",
+    "canceled": "Cancelado correctamente"
+  },
+  "error": {
+    "generic": "Algo salió mal. Intenta de nuevo.",
+    "network": "Error de conexión. Verifica tu internet."
+  },
   "relativeTime": {
     "now": "Ahora",
     "today": "Hoy",
