@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import {
   Calendar as CalendarIcon,
@@ -9,7 +9,6 @@ import {
   Clock,
   Grid3x3,
   List,
-  Plus,
   X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -19,8 +18,6 @@ import {
   type EventManagerView,
 } from '@/components/ui/event-manager'
 import { useClassTypeLabel } from '@/components/kuro'
-import { SessionDialog } from '@/components/sessions/session-dialog'
-import { useCapabilities, useCurrentContext } from '@/lib/hooks'
 import type { ClassSessionStatus, ClassType } from '@/lib/api/types'
 import { cn } from '@/lib/utils'
 
@@ -46,9 +43,9 @@ const VIEW_ICON: Record<
 }
 
 const STATUS_TONE: Record<ClassSessionStatus, string> = {
-  SCHEDULED: 'border-blue-400/50 text-blue-700 dark:text-blue-300',
-  COMPLETED: 'border-emerald-500/50 text-emerald-700 dark:text-emerald-300',
-  CANCELED: 'border-red-500/50 text-red-700 dark:text-red-300',
+  SCHEDULED: 'tone-border-info tone-info',
+  COMPLETED: 'tone-border-success tone-success',
+  CANCELED: 'tone-border-danger tone-danger',
 }
 
 export interface CalendarToolbarProps {
@@ -84,13 +81,6 @@ export function CalendarToolbar({
   const tc = useTranslations('common')
   const classTypeLabel = useClassTypeLabel()
 
-  // Gating del botón "Nueva clase" por capability.
-  const { orgId } = useCurrentContext()
-  const caps = useCapabilities(orgId ?? '')
-  const canManage = Boolean(
-    caps.data?.capabilities?.classes?.canManageSchedules,
-  )
-  const [createOpen, setCreateOpen] = useState(false)
   // Keyboard ← / → para navegar rango. Ignora cuando el foco está en
   // un input/textarea/contenteditable para no romper la búsqueda interna.
   useEffect(() => {
@@ -179,28 +169,10 @@ export function CalendarToolbar({
             })}
           </div>
 
-          {canManage && (
-            <Button
-              variant="default"
-              size="sm"
-              className="h-8"
-              onClick={() => setCreateOpen(true)}
-            >
-              <Plus className="mr-1 h-4 w-4" />
-              {t('newClass')}
-            </Button>
-          )}
         </div>
       </div>
 
-      <SessionDialog
-        mode="create"
-        open={createOpen}
-        onOpenChange={setCreateOpen}
-      />
-
-      {/* TODO(Fase 2.2.x): permitir click en celda vacía del calendario para
-          pre-llenar la fecha (defaultDate) — requiere tocar event-manager.tsx. */}
+      {/* La creación de clases vive ahora en el Family Button del topbar. */}
 
       {/* Filtros — chips multi-select */}
       <div className="space-y-2">

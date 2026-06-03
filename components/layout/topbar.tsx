@@ -5,18 +5,24 @@ import { useRouter, usePathname } from 'next/navigation'
 import {
   Bell,
   Building2,
+  Calendar,
+  CalendarClock,
+  CalendarPlus,
   Check,
   ChevronDown,
   Loader2,
   Moon,
-  Plus,
   Search,
   Sun,
+  UserPlus,
 } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { useTranslations } from 'next-intl'
 import { useAuthStore } from '@/stores/auth.store'
-import { useBranches, useCurrentContext } from '@/lib/hooks'
+import { useBranches, useCapabilities, useCurrentContext } from '@/lib/hooks'
+import { FamilyButton, FamilyButtonItem } from '@/components/ui/family-button'
+import { SessionDialog } from '@/components/sessions/session-dialog'
+import { ScheduleDialog } from '@/app/(platform)/org/[orgId]/branches/[branchId]/schedules/_components/schedule-dialog'
 import type { Branch } from '@/lib/api/types'
 import { cn } from '@/lib/utils'
 
@@ -51,7 +57,17 @@ export function Topbar({ orgId, branchId }: TopbarProps) {
 
   const activeBranchId = branchId ?? ctx.branchId ?? currentBranch?.id
 
+  // Family Button (crear) — gating por capability + contexto de filial.
+  const caps = useCapabilities(orgId)
+  const canManage = Boolean(
+    caps.data?.capabilities?.classes?.canManageSchedules,
+  )
+  const hasBranch = Boolean(ctx.branchId)
+  const [createSessionOpen, setCreateSessionOpen] = useState(false)
+  const [createScheduleOpen, setCreateScheduleOpen] = useState(false)
+
   return (
+    <>
     <header className="h-[52px] flex items-center gap-2 px-4 border-b border-border bg-background flex-shrink-0">
       {/* Org / Branch context */}
       <div className="flex items-center gap-1">
@@ -87,23 +103,43 @@ export function Topbar({ orgId, branchId }: TopbarProps) {
 
       {/* Acciones */}
       <div className="ml-auto flex items-center gap-1">
-        <button
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-opacity hover:opacity-90"
-          style={{ background: '#2d4a20', color: '#F7F7F2' }}
-        >
-          <Plus size={13} aria-hidden />
-          <span className="hidden sm:inline">{t('create')}</span>
-        </button>
+        <FamilyButton label={t('create')}>
+          {canManage && (
+            <>
+              <FamilyButtonItem
+                icon={Calendar}
+                label={t('createClass')}
+                disabled={!hasBranch}
+                onClick={() => setCreateSessionOpen(true)}
+              />
+              <FamilyButtonItem
+                icon={CalendarClock}
+                label={t('createSchedule')}
+                disabled={!hasBranch}
+                onClick={() => setCreateScheduleOpen(true)}
+              />
+            </>
+          )}
+          <FamilyButtonItem
+            icon={UserPlus}
+            label={t('createStudent')}
+            disabled
+            hint={t('comingSoon')}
+          />
+          <FamilyButtonItem
+            icon={CalendarPlus}
+            label={t('createEvent')}
+            disabled
+            hint={t('comingSoon')}
+          />
+        </FamilyButton>
 
         <button
           title={t('notifications')}
           className="relative w-8 h-8 flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
         >
           <Bell size={15} aria-hidden />
-          <span
-            className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 flex items-center justify-center rounded-full text-[9px] font-bold px-1"
-            style={{ background: '#d45858', color: '#fff' }}
-          >
+          <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 flex items-center justify-center rounded-full text-[9px] font-bold px-1 bg-destructive text-destructive-foreground">
             3
           </span>
         </button>
@@ -140,6 +176,19 @@ export function Topbar({ orgId, branchId }: TopbarProps) {
         </button>
       </div>
     </header>
+
+      {/* Dialogs de creación alojados en el topbar (Family Button). */}
+      <SessionDialog
+        mode="create"
+        open={createSessionOpen}
+        onOpenChange={setCreateSessionOpen}
+      />
+      <ScheduleDialog
+        mode="create"
+        open={createScheduleOpen}
+        onOpenChange={setCreateScheduleOpen}
+      />
+    </>
   )
 }
 

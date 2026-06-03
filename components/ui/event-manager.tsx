@@ -151,16 +151,21 @@ export interface EventManagerProps {
 // lo que permite ir y volver entre dato y presentación sin tablas intermedias.
 // ──────────────────────────────────────────────────────────────
 
+// Paleta SOBRIA KURO (Design System 2.5.3). Espeja los hex de
+// `lib/constants/class-types.ts` (CLASS_TYPE_HEX). Acá se usan como clases
+// arbitrarias LITERALES porque el JIT de Tailwind solo detecta strings
+// literales (no se pueden derivar por template). Si cambiás un hex en el
+// constant, actualizá el literal correspondiente acá.
 export const KURO_CLASS_TYPE_COLORS: EventColor[] = [
-  { name: 'Gi',            value: 'GI',            bg: 'bg-blue-500',    text: 'text-blue-700' },
-  { name: 'No-Gi',         value: 'NO_GI',         bg: 'bg-purple-500',  text: 'text-purple-700' },
-  { name: 'Fundamentos',   value: 'FUNDAMENTALS',  bg: 'bg-teal-500',    text: 'text-teal-700' },
-  { name: 'Avanzados',     value: 'ADVANCED',      bg: 'bg-orange-400',  text: 'text-orange-700' },
-  { name: 'Kids',          value: 'KIDS',          bg: 'bg-amber-500',   text: 'text-amber-700' },
-  { name: 'Competición',   value: 'COMPETITION',   bg: 'bg-red-600',     text: 'text-red-700' },
-  { name: 'Open Mat',      value: 'OPEN_MAT',      bg: 'bg-green-600',   text: 'text-green-700' },
-  { name: 'Seminario',     value: 'SEMINAR',       bg: 'bg-pink-500',    text: 'text-pink-700' },
-  { name: 'Privada',       value: 'PRIVATE',       bg: 'bg-neutral-500', text: 'text-neutral-700' },
+  { name: 'Gi',            value: 'GI',            bg: 'bg-[#3F5C45]', text: 'text-[#3F5C45]' },
+  { name: 'No-Gi',         value: 'NO_GI',         bg: 'bg-[#5C4A3F]', text: 'text-[#5C4A3F]' },
+  { name: 'Fundamentos',   value: 'FUNDAMENTALS',  bg: 'bg-[#4A5760]', text: 'text-[#4A5760]' },
+  { name: 'Avanzados',     value: 'ADVANCED',      bg: 'bg-[#6B5840]', text: 'text-[#6B5840]' },
+  { name: 'Kids',          value: 'KIDS',          bg: 'bg-[#8A7B5F]', text: 'text-[#8A7B5F]' },
+  { name: 'Competición',   value: 'COMPETITION',   bg: 'bg-[#3F4858]', text: 'text-[#3F4858]' },
+  { name: 'Open Mat',      value: 'OPEN_MAT',      bg: 'bg-[#5F6B45]', text: 'text-[#5F6B45]' },
+  { name: 'Seminario',     value: 'SEMINAR',       bg: 'bg-[#705045]', text: 'text-[#705045]' },
+  { name: 'Privada',       value: 'PRIVATE',       bg: 'bg-[#4A4540]', text: 'text-[#4A4540]' },
 ]
 
 // ──────────────────────────────────────────────────────────────

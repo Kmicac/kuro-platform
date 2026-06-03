@@ -32,8 +32,7 @@ const STATUS_META: Record<KnownStatus, StatusMeta> = {
     className: 'border-border text-muted-foreground',
   },
   SUSPENDED: {
-    className:
-      'border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400',
+    className: 'surface-warning',
     icon: AlertTriangle,
   },
 }

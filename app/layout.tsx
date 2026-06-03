@@ -1,26 +1,22 @@
 import type { Metadata } from 'next'
-import { Inter, Space_Grotesk, JetBrains_Mono } from 'next/font/google'
+import { Geist, Geist_Mono } from 'next/font/google'
 import { NextIntlClientProvider } from 'next-intl'
 import { getLocale, getMessages, getTranslations } from 'next-intl/server'
 import { Providers } from '@/providers'
 import './globals.css'
 
-const inter = Inter({
+// KURO Design System — Geist Sans (UI + headings) + Geist Mono (IDs, labels
+// uppercase, placeholders). Weights 400/500/600 (sin 700+).
+const geist = Geist({
   subsets: ['latin'],
-  variable: '--font-inter',
+  variable: '--font-geist',
+  weight: ['400', '500', '600', '700'],
   display: 'swap',
 })
 
-const spaceGrotesk = Space_Grotesk({
+const geistMono = Geist_Mono({
   subsets: ['latin'],
-  variable: '--font-display',
-  weight: ['500', '700'],
-  display: 'swap',
-})
-
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ['latin'],
-  variable: '--font-jetbrains',
+  variable: '--font-geist-mono',
   weight: ['400', '500'],
   display: 'swap',
 })
@@ -49,7 +45,7 @@ export default async function RootLayout({
     <html
       lang={locale}
       suppressHydrationWarning
-      className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}
+      className={`${geist.variable} ${geistMono.variable}`}
     >
       <body className="min-h-screen">
         <NextIntlClientProvider messages={messages}>

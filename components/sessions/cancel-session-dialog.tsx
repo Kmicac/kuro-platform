@@ -153,7 +153,7 @@ export function CancelSessionDialog({
         {/* Warning destacado */}
         <div
           role="alert"
-          className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-300"
+          className="surface-warning flex items-start gap-2 rounded-lg border p-3 text-sm"
         >
           <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
           <p>{t('warning')}</p>

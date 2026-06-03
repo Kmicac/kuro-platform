@@ -25,16 +25,13 @@ const INTAKE_STATUS_CLASS: Record<KnownIntakeStatus, string> = {
   REVIEWING: 'border-border text-foreground',
   CONTACTED: 'border-border text-foreground',
   VISIT_PROPOSED: 'border-border text-foreground',
-  VISIT_SCHEDULED:
-    'border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400',
+  VISIT_SCHEDULED: 'surface-warning',
   VISIT_COMPLETED: 'border-border text-foreground',
   NO_SHOW: 'border-destructive/40 bg-destructive/10 text-destructive',
   DECLINED_BY_PROSPECT: 'border-border text-muted-foreground',
   REJECTED_BY_ACADEMY: 'border-destructive/40 bg-destructive/10 text-destructive',
-  READY_TO_CONVERT:
-    'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-  CONVERTED:
-    'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
+  READY_TO_CONVERT: 'surface-success',
+  CONVERTED: 'surface-success',
   CANCELLED: 'border-border text-muted-foreground',
 }
 

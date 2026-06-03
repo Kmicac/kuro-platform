@@ -4,119 +4,144 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme inline {
-  /* Fonts */
-  --font-sans:    var(--font-inter), system-ui, -apple-system, sans-serif;
-  --font-mono:    var(--font-jetbrains), ui-monospace, "Courier New", monospace;
+  /* Fonts — Geist Sans (UI) + Geist Mono (IDs/labels/placeholders) */
+  --font-sans: var(--font-geist), system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", monospace;
 
-  /* Radius */
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  /* Tracking */
+  --tracking-heading: -0.02em;
+
+  /* Radius — KURO usa esquinas discretas (6px base) */
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+  --radius-xl: calc(var(--radius) + 6px);
 
   /* Tailwind utility → CSS variable mapping */
-  --color-background:         var(--background);
-  --color-foreground:         var(--foreground);
-  --color-card:               var(--card);
-  --color-card-foreground:    var(--card-foreground);
-  --color-popover:            var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary:            var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary:          var(--secondary);
+  --color-background:           var(--background);
+  --color-foreground:           var(--foreground);
+  --color-card:                 var(--card);
+  --color-card-foreground:      var(--card-foreground);
+  --color-popover:              var(--popover);
+  --color-popover-foreground:   var(--popover-foreground);
+  --color-primary:              var(--primary);
+  --color-primary-foreground:   var(--primary-foreground);
+  --color-secondary:            var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted:              var(--muted);
-  --color-muted-foreground:   var(--muted-foreground);
-  --color-accent:             var(--accent);
-  --color-accent-foreground:  var(--accent-foreground);
-  --color-destructive:        var(--destructive);
-  --color-border:             var(--border);
-  --color-input:              var(--input);
-  --color-ring:               var(--ring);
+  --color-muted:                var(--muted);
+  --color-muted-foreground:     var(--muted-foreground);
+  --color-accent:               var(--accent);
+  --color-accent-foreground:    var(--accent-foreground);
+  --color-destructive:          var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border:               var(--border);
+  --color-input:                var(--input);
+  --color-ring:                 var(--ring);
 }
 
-/* ── KURO Light Mode ─────────────────────────────────────── */
+/* ════════════════════════════════════════════════════════════
+   KURO Design System — "academia japonesa moderna"
+   Premium · sobrio · disciplinado. Sin colores brillantes, sin
+   blanco/negro puro, sin gradientes llamativos, sin glow.
+   La jerarquía la da la TIPOGRAFÍA, no el color.
+   ════════════════════════════════════════════════════════════ */
+
+/* ── LIGHT MODE (preparado — sin switcher todavía, ver 2.5.7) ── */
 :root {
-  --radius: 0.5rem;
+  --radius: 0.375rem; /* 6px */
 
-  /* shadcn tokens */
-  --background:        #F7F7F2;
-  --foreground:        #121113;
-  --card:              #FFFFFF;
-  --card-foreground:   #121113;
-  --popover:           #FFFFFF;
-  --popover-foreground:#121113;
-  --primary:           #475c38;
-  --primary-foreground:#F7F7F2;
-  --secondary:         #E4E6C3;
-  --secondary-foreground: #121113;
-  --muted:             #ece9e0;
-  --muted-foreground:  #5c6355;
-  --accent:            #475c38;
-  --accent-foreground: #F7F7F2;
-  --destructive:       #b83030;
-  --border:            #dde0ca;
-  --input:             #dde0ca;
-  --ring:              #475c38;
+  --background:           #F5F3EC; /* cream cálido */
+  --foreground:           #1F2820; /* texto primario */
+  --card:                 #EBE8DD; /* surface elevado */
+  --card-foreground:      #1F2820;
+  --popover:              #EBE8DD;
+  --popover-foreground:   #1F2820;
+  --primary:              #3F5C45; /* verde oliva — mismo en ambos modes */
+  --primary-foreground:   #F5F3EC;
+  --secondary:            #DFD9C8; /* surface card */
+  --secondary-foreground: #1F2820;
+  --muted:                #DFD9C8;
+  --muted-foreground:     #4A5048; /* texto secundario */
+  --accent:               #DFD9C8;
+  --accent-foreground:    #1F2820;
+  --destructive:          #8B4A3F; /* terracota apagado */
+  --destructive-foreground: #F5F3EC;
+  --border:               #C9C3B0; /* border sutil */
+  --input:                #C9C3B0;
+  --ring:                 #3F5C45;
 
-  /* Sidebar verde militar (light) */
-  --sidebar-bg:          #1a2c1a;
-  --sidebar-surface:     #1e3020;
-  --sidebar-border:      #2d4230;
-  --sidebar-text:        #5a7850;
-  --sidebar-text-hover:  #8ab080;
-  --sidebar-text-active: #dff0d4;
-  --sidebar-accent:      #c8d8a8;
-  --sidebar-accent-bg:   rgba(200, 216, 168, 0.10);
-  --sidebar-label:       #3a5035;
-  --sidebar-footer:      #172518;
+  /* Extensiones KURO */
+  --primary-hover:   #4A6B52;
+  --primary-bright:  #5A7850; /* stop claro del shimmer del CTA */
+  --primary-deep:    #2D4A20; /* Deep Academy Green — CTA oscuro */
+  --primary-muted:   #DCE3D5;
+  --border-medium:   #B5AE99;
+  --text-tertiary:   #7A7768; /* placeholders, hints */
+  --text-disabled:   #A8A496;
+  --kuro-success:    #3F5C45;
+  --kuro-warning:    #8B7340;
+  --kuro-danger:     #8B4A3F;
+  --kuro-info:       #4A5760;
 
-  /* Semántico */
-  --kuro-success: #2d7a2d;
-  --kuro-warning: #b87820;
-  --kuro-danger:  #b83030;
-  --kuro-info:    #1a5c9a;
+  /* Sidebar (light) — verde militar sobrio */
+  --sidebar-bg:          #1A2520;
+  --sidebar-surface:     #20302A;
+  --sidebar-border:      #2A3530;
+  --sidebar-text:        #7A8576;
+  --sidebar-text-hover:  #A8B89F;
+  --sidebar-text-active: #E8E4D9;
+  --sidebar-accent:      #5A7850;
+  --sidebar-accent-bg:   rgba(90, 120, 80, 0.14);
+  --sidebar-label:       #4A5548;
+  --sidebar-footer:      #141C18;
 }
 
-/* ── KURO Dark Mode ──────────────────────────────────────── */
+/* ── DARK MODE (default — `defaultTheme="dark"`) ────────────── */
 .dark {
-  /* shadcn tokens */
-  --background:        #121113;
-  --foreground:        #F7F7F2;
-  --card:              #1e2420;
-  --card-foreground:   #F7F7F2;
-  --popover:           #1e2420;
-  --popover-foreground:#F7F7F2;
-  --primary:           #899878;
-  --primary-foreground:#121113;
-  --secondary:         #E4E6C3;
-  --secondary-foreground: #121113;
-  --muted:             #252c25;
-  --muted-foreground:  #8a9480;
-  --accent:            #899878;
-  --accent-foreground: #121113;
-  --destructive:       #d45858;
-  --border:            #2a2e28;
-  --input:             #2a2e28;
-  --ring:              #899878;
+  --background:           #0A0E0C; /* negro con tinte verde sutil */
+  --foreground:           #E8E4D9; /* off-white cálido, NO blanco puro */
+  --card:                 #1A2520; /* verde oliva oscuro */
+  --card-foreground:      #E8E4D9;
+  --popover:              #13181A; /* surface elevado */
+  --popover-foreground:   #E8E4D9;
+  --primary:              #3F5C45;
+  --primary-foreground:   #E8E4D9;
+  --secondary:            #1A2520;
+  --secondary-foreground: #E8E4D9;
+  --muted:                #13181A;
+  --muted-foreground:     #A8A496; /* texto secundario */
+  --accent:               #13181A;
+  --accent-foreground:    #E8E4D9;
+  --destructive:          #8B4A3F; /* rojo terracota apagado */
+  --destructive-foreground: #E8E4D9;
+  --border:               #2A3530; /* border sutil */
+  --input:                #2A3530;
+  --ring:                 #3F5C45;
 
-  /* Sidebar onyx (dark) */
-  --sidebar-bg:          #0f1210;
-  --sidebar-surface:     #141918;
-  --sidebar-border:      #252c25;
-  --sidebar-text:        #6a7868;
-  --sidebar-text-hover:  #a8b8a0;
-  --sidebar-text-active: #e8ece0;
-  --sidebar-accent:      #899878;
-  --sidebar-accent-bg:   rgba(137, 152, 120, 0.08);
-  --sidebar-label:       #384036;
-  --sidebar-footer:      #0c0f0c;
+  /* Extensiones KURO */
+  --primary-hover:   #4A6B52;
+  --primary-bright:  #5A7850; /* stop claro del shimmer del CTA */
+  --primary-deep:    #2D4A20; /* Deep Academy Green — CTA oscuro */
+  --primary-muted:   #2A3B30;
+  --border-medium:   #3A4540;
+  --text-tertiary:   #6B6B5E; /* placeholders, hints */
+  --text-disabled:   #4A4A42;
+  --kuro-success:    #4A6B52;
+  --kuro-warning:    #8B7340;
+  --kuro-danger:     #8B4A3F;
+  --kuro-info:       #4A5760;
 
-  /* Semántico */
-  --kuro-success: #6ca86c;
-  --kuro-warning: #d4923a;
-  --kuro-danger:  #d45858;
-  --kuro-info:    #5a98c0;
+  /* Sidebar (dark) */
+  --sidebar-bg:          #0A0E0C;
+  --sidebar-surface:     #13181A;
+  --sidebar-border:      #2A3530;
+  --sidebar-text:        #6B6B5E;
+  --sidebar-text-hover:  #A8A496;
+  --sidebar-text-active: #E8E4D9;
+  --sidebar-accent:      #5A7850;
+  --sidebar-accent-bg:   rgba(63, 92, 69, 0.18);
+  --sidebar-label:       #4A4A42;
+  --sidebar-footer:      #070A08;
 }
 
 /* ── Base ────────────────────────────────────────────────── */
@@ -125,13 +150,27 @@
 }
 
 html {
-  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  font-feature-settings: "cv01", "cv03", "ss03";
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
   background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+/* Jerarquía tipográfica: headings con tracking ajustado y weight ≤600 */
+h1, h2, h3, h4, h5, h6 {
+  letter-spacing: var(--tracking-heading);
+  font-weight: 500;
+}
+
+/* Selección sobria (verde primary muy sutil) */
+::selection {
+  background-color: color-mix(in srgb, var(--primary) 35%, transparent);
   color: var(--foreground);
 }
 
@@ -143,15 +182,136 @@ body {
   display: none;
 }
 
+/* Scrollbar sobrio para contenedores con overflow visible */
+.scrollbar-kuro {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-medium) transparent;
+}
+.scrollbar-kuro::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.scrollbar-kuro::-webkit-scrollbar-thumb {
+  background-color: var(--border-medium);
+  border-radius: 9999px;
+}
+.scrollbar-kuro::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Tonos semánticos SOBRIOS (reemplazan amber/emerald/red/blue brillantes).
+   `tone-*` = solo color de texto/icono. `surface-*` = bloque tintado (bg +
+   border-color + texto); combinar con `border` para el ancho. */
+.tone-success { color: var(--kuro-success); }
+.tone-warning { color: var(--kuro-warning); }
+.tone-danger  { color: var(--kuro-danger); }
+.tone-info    { color: var(--kuro-info); }
+
+.tone-border-success { border-color: color-mix(in srgb, var(--kuro-success) 45%, transparent); }
+.tone-border-warning { border-color: color-mix(in srgb, var(--kuro-warning) 45%, transparent); }
+.tone-border-danger  { border-color: color-mix(in srgb, var(--kuro-danger) 45%, transparent); }
+.tone-border-info    { border-color: color-mix(in srgb, var(--kuro-info) 45%, transparent); }
+
+.tone-bg-warning { background-color: var(--kuro-warning); }
+
+.surface-success {
+  background-color: color-mix(in srgb, var(--kuro-success) 12%, transparent);
+  border-color: color-mix(in srgb, var(--kuro-success) 38%, transparent);
+  color: var(--kuro-success);
+}
+.surface-warning {
+  background-color: color-mix(in srgb, var(--kuro-warning) 12%, transparent);
+  border-color: color-mix(in srgb, var(--kuro-warning) 38%, transparent);
+  color: var(--kuro-warning);
+}
+.surface-danger {
+  background-color: color-mix(in srgb, var(--kuro-danger) 12%, transparent);
+  border-color: color-mix(in srgb, var(--kuro-danger) 38%, transparent);
+  color: var(--kuro-danger);
+}
+.surface-info {
+  background-color: color-mix(in srgb, var(--kuro-info) 12%, transparent);
+  border-color: color-mix(in srgb, var(--kuro-info) 38%, transparent);
+  color: var(--kuro-info);
+}
+
+/* BgAnimateButton — shimmer verde SUTIL (primary → primary-hover), loop lento.
+   Sin neon. Solo para CTAs primarios. */
+.kuro-bg-animate {
+  /* CTA oscuro: deep academy green ↔ olive primary. Texto cream encima.
+     Más oscuro/sólido para resaltar como bloque sobrio. */
+  background: linear-gradient(
+    110deg,
+    var(--primary-deep) 0%,
+    var(--primary) 50%,
+    var(--primary-deep) 100%
+  );
+  background-size: 220% 100%;
+  animation: kuro-bg-shimmer 5s linear infinite;
+}
+.kuro-bg-animate:hover {
+  animation-duration: 3s;
+}
+/* Estado deshabilitado claramente legible (no invisible): muted, sin shimmer. */
+.kuro-bg-animate:disabled {
+  background: var(--muted);
+  color: var(--muted-foreground);
+  animation: none;
+}
+@keyframes kuro-bg-shimmer {
+  to {
+    background-position: -220% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kuro-bg-animate {
+    animation: none;
+  }
+}
+
+/* CutoutCard — recorte circular cóncavo en la esquina superior derecha.
+   El inset ring (border) queda recortado junto con el fondo. */
+.kuro-cutout {
+  -webkit-mask: radial-gradient(
+    circle 20px at calc(100% - 22px) 22px,
+    transparent 0 20px,
+    #000 21px
+  );
+  mask: radial-gradient(
+    circle 20px at calc(100% - 22px) 22px,
+    transparent 0 20px,
+    #000 21px
+  );
+}
+
+/* Mono labels (uppercase, tracking) — patrón recurrente del sistema */
+.label-mono {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted-foreground);
+}
+
 .font-display {
-  font-family: var(--font-display), system-ui, sans-serif;
+  font-family: var(--font-geist), system-ui, sans-serif;
+  letter-spacing: var(--tracking-heading);
 }
 
 .font-kuro-mono {
-  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
 }
 
-/* Fajas */
+/* Textura sutil de cuadros (Fabric of Squares) — generada por CSS, sin PNG.
+   Rejilla discreta sobre superficies; opacidad muy baja, sobre verde oliva. */
+.kuro-fabric {
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--primary) 10%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--primary) 10%, transparent) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+/* Fajas (graduaciones) — se mantienen, son dominio BJJ */
 .belt-branca  { background: #f0f0ec; color: #555550; }
 .belt-azul    { background: #1a4fa0; color: #ffffff; }
 .belt-roxa    { background: #6a1b9a; color: #ffffff; }

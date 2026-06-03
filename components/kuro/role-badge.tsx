@@ -14,15 +14,15 @@ export type KuroRole =
   | 'STUDENT'
 
 // Solo el estilo visual vive acá; los labels vienen de common.roles.*
+// KURO Design System 2.5 — la jerarquía la da la tipografía (uppercase mono),
+// NO un arcoíris de colores. Acento primary solo para el rol más alto; el
+// resto neutral/sobrio. INSTRUCTOR mantiene un primary tenue.
 const ROLE_CLASS: Record<KuroRole, string> = {
-  MESTRE: 'border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-300',
-  ORG_ADMIN:
-    'border-purple-500/40 bg-purple-500/10 text-purple-700 dark:text-purple-300',
-  ACADEMY_MANAGER:
-    'border-blue-500/40 bg-blue-500/10 text-blue-700 dark:text-blue-300',
-  HEAD_COACH:
-    'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300',
-  INSTRUCTOR: 'border-primary/40 bg-primary/10 text-primary',
+  MESTRE: 'border-primary/50 bg-primary/15 text-primary',
+  ORG_ADMIN: 'border-primary/30 bg-primary/[0.07] text-foreground',
+  ACADEMY_MANAGER: 'border-border bg-muted/50 text-foreground',
+  HEAD_COACH: 'border-border bg-muted/50 text-foreground',
+  INSTRUCTOR: 'border-primary/30 bg-primary/[0.07] text-primary',
   STAFF: 'border-border text-muted-foreground',
   STUDENT: 'border-border text-foreground',
 }

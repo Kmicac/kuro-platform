@@ -292,7 +292,7 @@ function BranchCard({
 
           <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/60">
             {needsReview ? (
-              <span className="flex items-center gap-1.5 text-[11px] text-amber-600 dark:text-amber-400">
+              <span className="flex items-center gap-1.5 text-[11px] tone-warning">
                 <AlertTriangle className="h-3 w-3" />
                 {t('card.needsReview')}
               </span>
@@ -317,7 +317,7 @@ function BranchStatusDot({ status }: { status?: string }) {
   const normalized = (status ?? 'ACTIVE').toUpperCase()
   const tone =
     normalized === 'SUSPENDED'
-      ? 'bg-amber-500'
+      ? 'tone-bg-warning'
       : normalized === 'INACTIVE'
         ? 'bg-muted-foreground/40'
         : 'bg-primary'

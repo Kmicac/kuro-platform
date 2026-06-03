@@ -8,15 +8,8 @@ import {
   CalendarDays,
   ClipboardCheck,
   Clock,
-  GraduationCap,
   Pencil,
-  UserRound,
-  Users,
 } from 'lucide-react'
-import {
-  TextureCard,
-  TextureCardContent,
-} from '@/components/ui/texture-card'
 import { Button } from '@/components/ui/button'
 import { ApiError } from '@/lib/api/client'
 import { useSession } from '@/lib/hooks/use-sessions'
@@ -43,11 +36,10 @@ import type {
   ClassSessionInstructor,
   ClassSessionStatus,
 } from '@/lib/api/types'
-import { cn } from '@/lib/utils'
 
 export interface SessionDetailProps {
   sessionId: string
-  /** Cierra el contenedor (popover). Lo usa, p.ej., cancelar la clase. */
+  /** Cierra el contenedor (sheet). Lo usa, p.ej., cancelar la clase. */
   onClose?: () => void
 }
 
@@ -60,7 +52,7 @@ export function SessionDetail({ sessionId, onClose }: SessionDetailProps) {
 
   if (query.error instanceof ApiError && query.error.status === 403) {
     return (
-      <div className="p-6 max-w-md mx-auto">
+      <div className="p-8">
         <ForbiddenState
           title={te('forbiddenTitle')}
           description={te('forbiddenDescription')}
@@ -71,7 +63,7 @@ export function SessionDetail({ sessionId, onClose }: SessionDetailProps) {
 
   if (query.error instanceof ApiError && query.error.status === 404) {
     return (
-      <div className="p-6 max-w-md mx-auto">
+      <div className="p-8">
         <EmptyState
           icon={CalendarDays}
           title={tEmpty('notFoundTitle')}
@@ -83,7 +75,7 @@ export function SessionDetail({ sessionId, onClose }: SessionDetailProps) {
 
   if (query.error) {
     return (
-      <div className="p-6 max-w-md mx-auto">
+      <div className="p-8">
         <ErrorState error={query.error} onRetry={() => query.refetch()} />
       </div>
     )
@@ -92,7 +84,7 @@ export function SessionDetail({ sessionId, onClose }: SessionDetailProps) {
   const session = query.data
   if (!session) {
     return (
-      <div className="p-6 max-w-md mx-auto">
+      <div className="p-8">
         <EmptyState
           icon={AlertCircle}
           title={tEmpty('noDataTitle')}
@@ -103,20 +95,21 @@ export function SessionDetail({ sessionId, onClose }: SessionDetailProps) {
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-5xl">
+    <div className="p-8">
       <Header session={session} />
 
-      {session.status === 'CANCELED' && (
-        <CancellationCard session={session} />
-      )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <InstructorCard instructor={session.instructor} />
-        <CapacityCard capacity={session.capacity} />
-        <AttendanceCard
+      {/* Secciones verticales separadas por border sutil. */}
+      <div className="mt-6 divide-y divide-border">
+        <InstructorSection instructor={session.instructor} />
+        <CapacitySection capacity={session.capacity} />
+        <AttendanceSection
           attendance={session.attendance}
           status={session.status}
         />
+        {session.notes && <NotesSection notes={session.notes} />}
+        {session.status === 'CANCELED' && (
+          <CancellationSection session={session} />
+        )}
       </div>
 
       <ActionsBar session={session} onClose={onClose} />
@@ -124,7 +117,7 @@ export function SessionDetail({ sessionId, onClose }: SessionDetailProps) {
   )
 }
 
-// ── Header ─────────────────────────────────────────────────
+// ── Header (sin cambios de estructura) ─────────────────────
 
 function Header({ session }: { session: ClassSessionDetailType }) {
   const format = useFormatter()
@@ -156,72 +149,57 @@ function Header({ session }: { session: ClassSessionDetailType }) {
   )
 }
 
-function CancellationCard({ session }: { session: ClassSessionDetailType }) {
-  const t = useTranslations('calendar.session')
-  const format = useFormatter()
+// ── Section primitive (label mono + contenido) ─────────────
+
+function Section({
+  label,
+  children,
+}: {
+  label: string
+  children: React.ReactNode
+}) {
   return (
-    <div
-      role="alert"
-      className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 flex items-start gap-3"
-    >
-      <Ban className="h-4 w-4 text-destructive flex-shrink-0 mt-0.5" />
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-foreground">
-          {t('cancelled')}
-        </p>
-        <p className="text-xs text-muted-foreground mt-1">
-          {session.cancellationReason ?? t('noReason')}
-        </p>
-        {session.cancelledAt && (
-          <p className="text-[11px] text-muted-foreground/80 mt-1 tabular-nums">
-            {t('cancelledOn', {
-              date: formatLongDate(format, session.cancelledAt),
-              time: formatTime(format, session.cancelledAt),
-            })}
-          </p>
-        )}
-      </div>
-    </div>
+    <section className="py-6 first:pt-0 last:pb-0">
+      <p className="label-mono">{label}</p>
+      <div className="mt-3">{children}</div>
+    </section>
   )
 }
 
 // ── Instructor ─────────────────────────────────────────────
 
-function InstructorCard({
+function InstructorSection({
   instructor,
 }: {
   instructor: ClassSessionInstructor | null
 }) {
   const t = useTranslations('calendar.session')
   return (
-    <SectionCard title={t('instructor')} icon={GraduationCap}>
+    <Section label={t('instructor')}>
       {instructor ? (
-        <div className="flex items-start gap-3">
+        <div className="flex items-center gap-3">
           <Avatar initials={initialsFor(instructor)} />
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-foreground truncate">
+            <p className="text-sm text-foreground">
               {instructor.firstName} {instructor.lastName}
             </p>
-            <div className="mt-2 flex items-center gap-2 flex-wrap">
-              <RoleBadge role={instructor.role} />
+            <div className="mt-1.5 flex items-center gap-2 flex-wrap">
               <BeltBadge rank={instructor.primaryBelt} size="sm" />
+              <RoleBadge role={instructor.role} />
             </div>
           </div>
         </div>
       ) : (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <UserRound className="h-4 w-4" />
-          {t('noInstructor')}
-        </div>
+        <p className="text-sm text-muted-foreground">{t('noInstructor')}</p>
       )}
-    </SectionCard>
+    </Section>
   )
 }
 
 function Avatar({ initials }: { initials: string }) {
   return (
     <span
-      className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+      className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold"
       style={{
         background: 'color-mix(in srgb, var(--primary) 14%, transparent)',
         color: 'var(--primary)',
@@ -236,72 +214,54 @@ function Avatar({ initials }: { initials: string }) {
 
 // ── Capacidad ──────────────────────────────────────────────
 
-function CapacityCard({ capacity }: { capacity: ClassSessionCapacity }) {
+function CapacitySection({ capacity }: { capacity: ClassSessionCapacity }) {
   const t = useTranslations('calendar.session')
-  const ratio = capacity.max > 0 ? capacity.enrolled / capacity.max : 0
-  const pct = Math.min(100, Math.round(ratio * 100))
-
-  const barColor =
-    ratio > 0.9
-      ? 'bg-destructive'
-      : ratio >= 0.7
-        ? 'bg-amber-500'
-        : 'bg-primary'
-
-  const labelColor =
-    ratio > 0.9
-      ? 'text-destructive'
-      : ratio >= 0.7
-        ? 'text-amber-600 dark:text-amber-400'
-        : 'text-foreground'
+  const pct =
+    capacity.max > 0
+      ? Math.min(100, Math.round((capacity.enrolled / capacity.max) * 100))
+      : 0
+  const available = Math.max(0, capacity.max - capacity.enrolled)
 
   return (
-    <SectionCard title={t('capacity')} icon={Users}>
-      <div className="space-y-3">
-        <div className="flex items-baseline gap-2">
-          <span
-            className={cn(
-              'text-3xl font-semibold tabular-nums leading-none',
-              labelColor
-            )}
-          >
+    <Section label={t('capacity')}>
+      <div className="space-y-2.5">
+        <p className="leading-none">
+          <span className="text-3xl font-medium tabular-nums text-foreground">
             {capacity.enrolled}
           </span>
-          <span className="text-sm text-muted-foreground">
+          <span className="text-xl tabular-nums text-muted-foreground">
+            {' '}
             / {capacity.max}
           </span>
-          <span className="ml-auto text-xs text-muted-foreground tabular-nums">
-            {pct}%
-          </span>
-        </div>
+        </p>
+        <p className="text-xs text-[var(--text-tertiary)]">
+          {t('enrolledLabel')}
+        </p>
 
         <div
-          className="h-2 w-full rounded-full bg-muted overflow-hidden"
+          className="h-0.5 w-full overflow-hidden rounded-full bg-muted"
           role="progressbar"
           aria-valuemin={0}
           aria-valuemax={capacity.max}
           aria-valuenow={capacity.enrolled}
         >
           <div
-            className={cn('h-full transition-all', barColor)}
+            className="h-full bg-primary transition-all"
             style={{ width: `${pct}%` }}
           />
         </div>
 
-        {/* waitlist: oculta cuando es 0 (siempre 0 hoy — no hay dominio) */}
-        {capacity.waitlist > 0 && (
-          <p className="text-xs text-muted-foreground">
-            {t('waitlist', { count: capacity.waitlist })}
-          </p>
-        )}
+        <p className="text-xs text-[var(--text-tertiary)]">
+          {t('occupancy', { pct, available })}
+        </p>
       </div>
-    </SectionCard>
+    </Section>
   )
 }
 
 // ── Asistencia ─────────────────────────────────────────────
 
-function AttendanceCard({
+function AttendanceSection({
   attendance,
   status,
 }: {
@@ -309,67 +269,91 @@ function AttendanceCard({
   status: ClassSessionStatus
 }) {
   const t = useTranslations('calendar.session.attendance')
-  const notRecorded = status === 'SCHEDULED' && attendance.present === 0
 
-  const cells: {
-    label: string
-    value: number
-    tone: 'neutral' | 'success' | 'warning' | 'destructive' | 'muted'
-  }[] = [
-    { label: t('expected'), value: attendance.expected, tone: 'neutral' },
-    { label: t('present'),  value: attendance.present,  tone: 'success' },
-    { label: t('absent'),   value: attendance.absent,   tone: 'destructive' },
-    { label: t('excused'),  value: attendance.excused,  tone: 'muted' },
-    { label: t('late'),     value: attendance.late,     tone: 'warning' },
+  if (status !== 'COMPLETED') {
+    return (
+      <Section label={t('title')}>
+        <p className="text-sm text-[var(--text-tertiary)]">
+          {t('notRecorded')}
+        </p>
+      </Section>
+    )
+  }
+
+  // Lista vertical, sin colores por estado (solo tipografía + posición).
+  const rows: { label: string; value: number }[] = [
+    { label: t('present'), value: attendance.present },
+    { label: t('late'), value: attendance.late },
+    { label: t('absent'), value: attendance.absent },
+    { label: t('excused'), value: attendance.excused },
+    { label: t('expected'), value: attendance.expected },
   ]
 
   return (
-    <SectionCard title={t('title')} icon={ClipboardCheck}>
-      <div className="grid grid-cols-5 gap-2">
-        {cells.map((c) => (
+    <Section label={t('title')}>
+      <div>
+        {rows.map((row) => (
           <div
-            key={c.label}
-            className="rounded-lg border border-border bg-card px-2 py-2 text-center"
+            key={row.label}
+            className="flex items-center justify-between border-b border-border/60 py-2 last:border-b-0"
           >
-            <p
-              className={cn(
-                'text-xl font-semibold tabular-nums leading-none',
-                toneColor(c.tone)
-              )}
-            >
-              {c.value}
-            </p>
-            <p className="text-[10px] uppercase tracking-wide text-muted-foreground mt-1">
-              {c.label}
-            </p>
+            <span className="text-sm text-muted-foreground">{row.label}</span>
+            <span className="text-sm font-medium tabular-nums text-foreground">
+              {row.value}
+            </span>
           </div>
         ))}
       </div>
-      {notRecorded && (
-        <p className="text-xs text-muted-foreground italic">
-          {t('notRecorded')}
-        </p>
-      )}
-    </SectionCard>
+    </Section>
   )
 }
 
-function toneColor(tone: 'neutral' | 'success' | 'warning' | 'destructive' | 'muted') {
-  switch (tone) {
-    case 'success':
-      return 'text-emerald-600 dark:text-emerald-400'
-    case 'warning':
-      return 'text-amber-600 dark:text-amber-400'
-    case 'destructive':
-      return 'text-destructive'
-    case 'muted':
-      return 'text-muted-foreground'
-    default:
-      return 'text-foreground'
-  }
+// ── Notas ──────────────────────────────────────────────────
+
+function NotesSection({ notes }: { notes: string }) {
+  const t = useTranslations('calendar.session')
+  return (
+    <Section label={t('notes')}>
+      <p className="whitespace-pre-wrap rounded-lg bg-muted/40 p-3 text-sm text-foreground">
+        {notes}
+      </p>
+    </Section>
+  )
 }
 
-// ── Acciones ───────────────────────────────────────────────
+// ── Cancelación ────────────────────────────────────────────
+
+function CancellationSection({
+  session,
+}: {
+  session: ClassSessionDetailType
+}) {
+  const t = useTranslations('calendar.session')
+  const format = useFormatter()
+  return (
+    <section className="py-6 first:pt-0 last:pb-0">
+      <div
+        role="alert"
+        className="rounded-lg border border-destructive/30 bg-destructive/5 p-3"
+      >
+        <p className="text-sm font-medium text-foreground">{t('cancelled')}</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {session.cancellationReason ?? t('noReason')}
+        </p>
+        {session.cancelledAt && (
+          <p className="mt-1 text-[11px] tabular-nums text-muted-foreground/80">
+            {t('cancelledOn', {
+              date: formatLongDate(format, session.cancelledAt),
+              time: formatTime(format, session.cancelledAt),
+            })}
+          </p>
+        )}
+      </div>
+    </section>
+  )
+}
+
+// ── Acciones (footer — sin cambios funcionales) ────────────
 
 function ActionsBar({
   session,
@@ -394,10 +378,8 @@ function ActionsBar({
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/60">
-        <span className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium mr-2">
-          {t('title')}
-        </span>
+      <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-border pt-6">
+        <span className="label-mono mr-2">{t('title')}</span>
         {canManage && (
           <Button
             variant="outline"
@@ -455,51 +437,24 @@ function ActionsBar({
   )
 }
 
-// ── Section primitive ──────────────────────────────────────
-
-function SectionCard({
-  title,
-  icon: Icon,
-  children,
-}: {
-  title: string
-  icon: React.ComponentType<{ className?: string }>
-  children: React.ReactNode
-}) {
-  return (
-    <TextureCard>
-      <TextureCardContent className="p-5 space-y-4">
-        <div className="flex items-center gap-2.5">
-          <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary">
-            <Icon className="h-4 w-4" />
-          </span>
-          <p className="text-sm font-semibold text-foreground">{title}</p>
-        </div>
-        {children}
-      </TextureCardContent>
-    </TextureCard>
-  )
-}
-
 // ── Skeleton ──────────────────────────────────────────────
 
 function DetailSkeleton() {
   return (
-    <div className="p-6 space-y-6 max-w-5xl">
+    <div className="p-8">
       <div className="space-y-3">
-        <div className="h-3 w-32 rounded-md bg-muted/60 animate-pulse" />
-        <div className="h-7 w-80 rounded-md bg-muted animate-pulse" />
-        <div className="h-4 w-64 rounded-md bg-muted/60 animate-pulse" />
+        <div className="h-3 w-28 rounded-md bg-muted/60 animate-pulse" />
+        <div className="h-7 w-64 rounded-md bg-muted animate-pulse" />
+        <div className="h-4 w-56 rounded-md bg-muted/60 animate-pulse" />
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="mt-6 space-y-6">
         {[0, 1, 2].map((i) => (
-          <div
-            key={i}
-            className="h-40 rounded-[24px] bg-muted/40 animate-pulse"
-          />
+          <div key={i} className="space-y-2 border-t border-border pt-6">
+            <div className="h-3 w-20 rounded bg-muted/60 animate-pulse" />
+            <div className="h-10 w-full rounded bg-muted/40 animate-pulse" />
+          </div>
         ))}
       </div>
-      <div className="h-10 w-72 rounded-md bg-muted/40 animate-pulse" />
     </div>
   )
 }

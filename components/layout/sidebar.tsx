@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl'
 import { useTheme } from 'next-themes'
 import {
   LayoutDashboard, Network, Users, UserPlus, ClipboardList, Calendar,
-  ChevronLeft, ChevronRight, LogOut,
+  CalendarClock, ChevronLeft, ChevronRight, LogOut,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -18,20 +18,22 @@ import { cn } from '@/lib/utils'
 
 // ── Colores por tema ──────────────────────────────────────────
 
+// KURO Design System 2.5 — paleta sobria. DARK = dark mode (default);
+// MILITAR = sidebar para light mode (se mantiene verde militar oscuro).
 const DARK = {
-  bg: '#0f1210', surface: '#141918', border: '#252c25',
-  text: '#6a7868', textHover: '#a8b8a0', textActive: '#e8ece0',
-  accent: '#899878', accentBg: 'rgba(137,152,120,0.08)',
-  label: '#384036', footer: '#0c0f0c',
-  badge: { bg: '#899878', text: '#0f1210' },
+  bg: '#0A0E0C', surface: '#13181A', border: '#2A3530',
+  text: '#6B6B5E', textHover: '#A8A496', textActive: '#E8E4D9',
+  accent: '#5A7850', accentBg: 'rgba(63,92,69,0.18)',
+  label: '#4A4A42', footer: '#070A08',
+  badge: { bg: '#5A7850', text: '#0A0E0C' },
 }
 
 const MILITAR = {
-  bg: '#1a2c1a', surface: '#1e3020', border: '#2d4230',
-  text: '#5a7850', textHover: '#8ab080', textActive: '#dff0d4',
-  accent: '#c8d8a8', accentBg: 'rgba(200,216,168,0.10)',
-  label: '#3a5035', footer: '#172518',
-  badge: { bg: '#c8d8a8', text: '#1a2c1a' },
+  bg: '#1A2520', surface: '#20302A', border: '#2A3530',
+  text: '#7A8576', textHover: '#A8B89F', textActive: '#E8E4D9',
+  accent: '#5A7850', accentBg: 'rgba(90,120,80,0.14)',
+  label: '#4A5548', footer: '#141C18',
+  badge: { bg: '#8AB080', text: '#1A2520' },
 }
 
 // ── Navegación ───────────────────────────────────────────────
@@ -70,9 +72,10 @@ const NAV: NavSection[] = [
   {
     labelKey: 'branchSection',
     items: [
-      { id: 'branch',   labelKey: 'branchPanel', icon: Network,       scope: 'branch', path: '' },
-      { id: 'students', labelKey: 'students',    icon: Users,         scope: 'branch', path: '/students' },
-      { id: 'intake',   labelKey: 'intake',      icon: ClipboardList, scope: 'branch', path: '/intake' },
+      { id: 'branch',    labelKey: 'branchPanel', icon: Network,       scope: 'branch', path: '' },
+      { id: 'students',  labelKey: 'students',    icon: Users,         scope: 'branch', path: '/students' },
+      { id: 'schedules', labelKey: 'schedules',   icon: CalendarClock, scope: 'branch', path: '/schedules' },
+      { id: 'intake',    labelKey: 'intake',      icon: ClipboardList, scope: 'branch', path: '/intake' },
     ],
   },
 ]

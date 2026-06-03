@@ -28,8 +28,7 @@ const SESSION_STATUS_META: Record<ClassSessionStatus, SessionStatusMeta> = {
     icon: Calendar,
   },
   COMPLETED: {
-    className:
-      'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
+    className: 'surface-success',
     icon: Check,
   },
   CANCELED: {

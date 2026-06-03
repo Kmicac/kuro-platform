@@ -277,7 +277,7 @@ function Header({
           {needsReview && (
             <Badge
               variant="outline"
-              className="border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+              className="surface-warning"
             >
               <AlertTriangle className="h-3 w-3" />
               {t('needsReview')}
@@ -630,7 +630,7 @@ function RiskLevelBadge({ level }: { level?: string }) {
     MEDIUM: {
       label: t('risk.level.medium'),
       className:
-        'border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400',
+        'surface-warning',
     },
     LOW: {
       label: t('risk.level.low'),

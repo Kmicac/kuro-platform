@@ -532,7 +532,7 @@ function InviteFeedback({ state }: { state: InviteState }) {
   }
   if (state.kind === 'sent') {
     return (
-      <span className="hidden sm:flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400">
+      <span className="hidden sm:flex items-center gap-1 text-[11px] tone-success">
         <Check className="h-3 w-3" />
         {t('invitationSent')}
       </span>

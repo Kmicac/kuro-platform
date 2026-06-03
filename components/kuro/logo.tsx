@@ -81,11 +81,11 @@ export function KuroLogo({
       <text
         x="22"
         y={vh * 0.72}
-        fontFamily="var(--font-display), 'Space Grotesk', system-ui, sans-serif"
+        fontFamily="var(--font-geist), system-ui, sans-serif"
         fontSize={s.text}
-        fontWeight="700"
+        fontWeight="600"
         fill={textFill}
-        letterSpacing="0.12em"
+        letterSpacing="0.14em"
       >
         KURO
       </text>

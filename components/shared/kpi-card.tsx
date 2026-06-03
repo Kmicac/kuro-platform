@@ -3,10 +3,7 @@
 import Link from 'next/link'
 import { useFormatter, useTranslations } from 'next-intl'
 import { AlertCircle, Lock } from 'lucide-react'
-import {
-  TextureCard,
-  TextureCardContent,
-} from '@/components/ui/texture-card'
+import { CutoutCard } from '@/components/ui/cutout-card'
 import { ApiError } from '@/lib/api/client'
 import { cn } from '@/lib/utils'
 
@@ -60,45 +57,29 @@ export function KpiCard({
   const navigable = Boolean(href) && status === 'ready'
 
   const body = (
-    <TextureCard
-      className={cn(
-        navigable && 'transition-transform hover:-translate-y-0.5',
-        isAlerted && 'ring-1 ring-amber-500/30'
+    <CutoutCard
+      icon={<Icon className="h-4 w-4" />}
+      iconClassName={cn(
+        'stroke-[1.5]',
+        isAlerted ? 'surface-warning' : 'border-transparent bg-primary/10 text-primary',
       )}
+      className={cn(navigable && 'transition-transform hover:-translate-y-0.5')}
     >
-      <TextureCardContent className="p-5">
-        <div className="flex items-start justify-between">
-          <div className="space-y-1">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              {label}
-            </p>
-            <KpiValue
-              status={status}
-              value={value}
-              isAlerted={isAlerted}
-              formatValue={formatValue}
-            />
-          </div>
-          <span
-            className={cn(
-              'flex h-9 w-9 items-center justify-center rounded-md',
-              isAlerted
-                ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
-                : 'bg-primary/10 text-primary'
-            )}
-          >
-            <Icon className="h-4 w-4" />
-          </span>
-        </div>
-        <p className="text-xs text-muted-foreground mt-3">
-          {status === 'error'
-            ? t('loadError')
-            : status === 'forbidden'
-              ? t('forbidden')
-              : (hint ?? '')}
-        </p>
-      </TextureCardContent>
-    </TextureCard>
+      <p className="label-mono">{label}</p>
+      <KpiValue
+        status={status}
+        value={value}
+        isAlerted={isAlerted}
+        formatValue={formatValue}
+      />
+      <p className="text-xs text-[var(--text-tertiary)] mt-3">
+        {status === 'error'
+          ? t('loadError')
+          : status === 'forbidden'
+            ? t('forbidden')
+            : (hint ?? '')}
+      </p>
+    </CutoutCard>
   )
 
   if (navigable && href) {
@@ -150,8 +131,8 @@ function KpiValue({
   return (
     <p
       className={cn(
-        'text-2xl font-semibold tabular-nums mt-1',
-        isAlerted ? 'text-amber-600 dark:text-amber-400' : 'text-foreground'
+        'text-3xl font-medium tabular-nums mt-1',
+        isAlerted ? 'tone-warning' : 'text-foreground'
       )}
     >
       {formatted}

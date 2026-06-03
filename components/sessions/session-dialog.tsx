@@ -37,6 +37,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
+import { BgAnimateButton } from '@/components/ui/bg-animate-button'
 import {
   Select,
   SelectContent,
@@ -303,7 +304,7 @@ export function SessionDialog(props: SessionDialogProps) {
                 {isNotEditable && notEditableReason && (
                   <div
                     role="alert"
-                    className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-300"
+                    className="surface-warning rounded-lg border p-3 text-sm"
                   >
                     {tEdit(`notEditable.${notEditableReason}`)}
                   </div>
@@ -556,8 +557,9 @@ export function SessionDialog(props: SessionDialogProps) {
                     {isEdit ? tEdit('actions.close') : tCreate('actions.cancel')}
                   </Button>
                   {!isNotEditable && (
-                    <Button
+                    <BgAnimateButton
                       type="submit"
+                      className="h-10"
                       disabled={
                         isPending || (isEdit && !form.formState.isDirty)
                       }
@@ -569,7 +571,7 @@ export function SessionDialog(props: SessionDialogProps) {
                         : isEdit
                           ? tEdit('actions.submit')
                           : tCreate('actions.submit')}
-                    </Button>
+                    </BgAnimateButton>
                   )}
                 </DialogFooter>
               </form>

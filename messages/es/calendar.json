@@ -140,12 +140,16 @@
   },
   "session": {
     "detailTitle": "Detalle de la clase",
+    "detailDescription": "Información, asistencia y acciones de la clase seleccionada.",
     "cancelled": "Clase cancelada",
     "noReason": "Sin motivo registrado.",
     "cancelledOn": "Cancelada el {date} · {time}",
     "instructor": "Instructor",
     "noInstructor": "Sin instructor asignado",
     "capacity": "Capacidad",
+    "enrolledLabel": "alumnos inscritos",
+    "occupancy": "{pct}% ocupado · {available, plural, =0 {sin cupos disponibles} =1 {1 cupo disponible} other {# cupos disponibles}}",
+    "notes": "Notas",
     "waitlist": "+{count} en lista de espera",
     "attendance": {
       "title": "Asistencia",
