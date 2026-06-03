@@ -1,0 +1,139 @@
+{
+  "meta": {
+    "title": "Grilla semanal"
+  },
+  "page": {
+    "title": "Grilla semanal",
+    "subtitle": "Gestiona los horarios recurrentes de tu filial."
+  },
+  "toolbar": {
+    "newSchedule": "Nuevo horario",
+    "generateAll": "Generar sesiones",
+    "fillGaps": "Llenar huecos",
+    "fillGapsHint": "Detecta sesiones faltantes y las crea",
+    "activeOnly": "Solo activos"
+  },
+  "weekdays": {
+    "MONDAY": "Lunes",
+    "TUESDAY": "Martes",
+    "WEDNESDAY": "Miércoles",
+    "THURSDAY": "Jueves",
+    "FRIDAY": "Viernes",
+    "SATURDAY": "Sábado",
+    "SUNDAY": "Domingo"
+  },
+  "card": {
+    "instructor": "Instructor",
+    "capacity": "Capacidad",
+    "capacityCount": "{count, plural, =1 {1 cupo} other {# cupos}}",
+    "noCapacity": "Sin límite",
+    "noInstructor": "Sin instructor asignado",
+    "inactive": "Inactivo",
+    "optionsAria": "Opciones del horario",
+    "actions": {
+      "edit": "Editar",
+      "generate": "Generar sesiones",
+      "deactivate": "Desactivar",
+      "activate": "Activar"
+    }
+  },
+  "emptyState": {
+    "title": "Sin horarios definidos",
+    "description": "Crea tu primer horario para empezar a programar clases.",
+    "action": "Crear horario",
+    "filteredTitle": "Sin horarios activos",
+    "filteredDescription": "No hay horarios activos. Desactiva el filtro para ver los inactivos."
+  },
+  "createDialog": {
+    "title": "Nuevo horario",
+    "description": "Define un horario recurrente. Después podrás generar sesiones específicas en el calendario.",
+    "fields": {
+      "title": "Título",
+      "titlePlaceholder": "Ej: Fundamentos AM",
+      "classType": "Tipo de clase",
+      "classTypePlaceholder": "Selecciona un tipo",
+      "instructor": "Instructor",
+      "instructorPlaceholder": "Selecciona un instructor",
+      "instructorEmpty": "No hay instructores disponibles",
+      "weekday": "Día de la semana",
+      "weekdayPlaceholder": "Selecciona un día",
+      "startTime": "Hora de inicio",
+      "endTime": "Hora de fin",
+      "capacity": "Capacidad",
+      "capacityPlaceholder": "Cantidad máxima (opcional)"
+    },
+    "actions": {
+      "cancel": "Cancelar",
+      "submit": "Crear horario",
+      "submitting": "Creando..."
+    },
+    "success": "Horario creado correctamente",
+    "errors": {
+      "titleRequired": "El título es obligatorio",
+      "instructorRequired": "Selecciona un instructor",
+      "endBeforeStart": "La hora de fin debe ser posterior al inicio",
+      "forbidden": "No tienes permiso para crear horarios"
+    }
+  },
+  "editDialog": {
+    "title": "Editar horario",
+    "description": "Modifica los datos de este horario recurrente.",
+    "loading": "Cargando datos del horario...",
+    "active": "Activo",
+    "actions": {
+      "cancel": "Cancelar",
+      "submit": "Guardar cambios",
+      "submitting": "Guardando..."
+    },
+    "success": "Cambios guardados correctamente",
+    "errors": {
+      "forbidden": "No tienes permiso para editar horarios"
+    },
+    "deactivate": {
+      "title": "¿Desactivar este horario?",
+      "description": "Las sesiones ya generadas se mantienen en el calendario. No se crearán nuevas sesiones desde este horario hasta que lo reactives.",
+      "submit": "Desactivar",
+      "submitting": "Desactivando...",
+      "cancel": "Volver",
+      "success": "Horario desactivado",
+      "activateSuccess": "Horario activado",
+      "forbidden": "No tienes permiso para cambiar el estado del horario"
+    }
+  },
+  "generateDialog": {
+    "titleGenerate": "Generar sesiones",
+    "titleGenerateForSchedule": "Generar sesiones de {scheduleTitle}",
+    "titleMissing": "Llenar huecos en la grilla",
+    "descriptionGenerate": "Crea sesiones para todos los horarios activos en el rango seleccionado.",
+    "descriptionForSchedule": "Crea sesiones de este horario en el rango seleccionado.",
+    "descriptionMissing": "Detecta sesiones faltantes según los horarios activos y las crea automáticamente.",
+    "fields": {
+      "fromDate": "Desde",
+      "toDate": "Hasta",
+      "datePlaceholder": "Elegir fecha",
+      "rangeHelp": "Máximo 42 días por generación"
+    },
+    "actions": {
+      "cancel": "Cancelar",
+      "submit": "Generar",
+      "submitting": "Generando..."
+    },
+    "progress": "{count, plural, =1 {Generando 1 sesión...} other {Generando # sesiones...}}",
+    "summary": {
+      "title": "Resumen de generación",
+      "created": "{count, plural, =0 {Sin sesiones creadas} =1 {1 sesión creada} other {# sesiones creadas}}",
+      "skipped": "{count, plural, =0 {} =1 {1 omitida (ya existía)} other {# omitidas (ya existían)}}",
+      "conflicts": "{count, plural, =0 {} =1 {1 conflicto detectado} other {# conflictos detectados}}",
+      "errors": "{count, plural, =0 {} =1 {1 error} other {# errores}}",
+      "close": "Cerrar",
+      "viewCalendar": "Ver calendario"
+    },
+    "errors": {
+      "rangeRequired": "Selecciona un rango de fechas",
+      "rangeInvalid": "La fecha de fin debe ser posterior a la de inicio",
+      "rangeTooLong": "El rango máximo es de 42 días",
+      "fromDateInPast": "No se pueden generar sesiones en el pasado",
+      "forbidden": "No tienes permiso para generar sesiones"
+    }
+  }
+}

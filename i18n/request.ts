@@ -13,6 +13,7 @@ const NAMESPACES = [
   'navigation',
   'dashboard',
   'calendar',
+  'schedules',
   'students',
   'intake',
   'claims',

@@ -215,6 +215,12 @@ export const classSchedulesApi = {
     )
   },
 
+  /** GET /organizations/:orgId/branches/:branchId/class-schedules/:scheduleId */
+  get: (orgId: string, branchId: string, scheduleId: string) =>
+    api.get<ClassSchedule>(
+      `/organizations/${orgId}/branches/${branchId}/class-schedules/${scheduleId}`
+    ),
+
   /** POST /organizations/:orgId/branches/:branchId/class-schedules */
   create: (orgId: string, branchId: string, body: ClassScheduleCreateBody) =>
     api.post<ClassSchedule>(
@@ -271,15 +277,58 @@ export interface SessionsGenerateBody {
   toDate: string
 }
 
+/** Estado por par schedule/fecha en la respuesta de generación. */
+export type SessionsGenerateItemStatus =
+  | 'CREATED'
+  | 'SKIPPED_EXISTING'
+  | 'CONFLICT'
+  | 'ERROR'
+
+export interface SessionsGenerateItem {
+  scheduleId: string
+  classSessionId?: string | null
+  date: string
+  status: SessionsGenerateItemStatus
+  /** Presente cuando status === 'CONFLICT' (mismo shape que el 409). */
+  conflict?: {
+    type: string
+    classSessionId?: string
+    branchId?: string
+    instructorMembershipId?: string
+    startAt?: string
+    endAt?: string
+  }
+}
+
+/**
+ * Respuesta síncrona de generación (generate / generate-missing).
+ *
+ * El backend ahora prefiere los counters `created`/`skipped`/`conflicts`/
+ * `errors` (API-CONTRACT §"Generate class sessions"); los legacy
+ * (`generatedCount`/`skippedExistingCount`/`skippedConflictCount`) se
+ * mantienen opcionales por compatibilidad. La UI debe coalescer
+ * (`created ?? generatedCount ?? 0`) para ser robusta a ambos shapes.
+ *
+ * Este mismo shape lo produce también la generación por-schedule del
+ * frontend (loop del endpoint single-date agregado client-side), para que
+ * el summary se renderice con un único componente.
+ */
 export interface SessionsGenerateResponse {
+  status?: string
   fromDate: string
   toDate: string
-  processedSchedules: number
-  candidateCount: number
-  generatedCount: number
-  skippedExistingCount: number
-  skippedConflictCount: number
+  processedSchedules?: number
+  candidateCount?: number
   missingCandidateCount?: number
+  created?: number
+  skipped?: number
+  conflicts?: number
+  errors?: number
+  // Legacy counters (compatibilidad).
+  generatedCount?: number
+  skippedExistingCount?: number
+  skippedConflictCount?: number
+  items?: SessionsGenerateItem[]
 }
 
 export interface ClassSessionsListParams {

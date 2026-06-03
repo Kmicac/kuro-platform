@@ -13,6 +13,7 @@ import type auth from '../messages/es/auth.json'
 import type navigation from '../messages/es/navigation.json'
 import type dashboard from '../messages/es/dashboard.json'
 import type calendar from '../messages/es/calendar.json'
+import type schedules from '../messages/es/schedules.json'
 import type students from '../messages/es/students.json'
 import type intake from '../messages/es/intake.json'
 import type claims from '../messages/es/claims.json'
@@ -29,6 +30,7 @@ declare module 'next-intl' {
       navigation: typeof navigation
       dashboard: typeof dashboard
       calendar: typeof calendar
+      schedules: typeof schedules
       students: typeof students
       intake: typeof intake
       claims: typeof claims
