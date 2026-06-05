@@ -222,6 +222,11 @@ Controller-verified on 2026-05-28. This index is the parity list used to keep th
 - `POST /organizations/:organizationId/branches/:branchId/class-sessions/:sessionId/attendance/qr-token`
 - `POST /organizations/:organizationId/branches/:branchId/class-sessions/:sessionId/attendance/self-check-in`
 - `POST /organizations/:organizationId/branches/:branchId/class-sessions/:sessionId/attendance/suggestions`
+- `GET /organizations/:organizationId/branches/:branchId/class-sessions/:sessionId/attendance/suggestions`
+- `POST /organizations/:organizationId/branches/:branchId/class-sessions/:sessionId/attendance/suggestions/:suggestionId/cancel`
+- `GET /organizations/:organizationId/students/me/attendance-suggestions`
+- `POST /organizations/:organizationId/students/me/attendance-suggestions/:suggestionId/accept`
+- `POST /organizations/:organizationId/students/me/attendance-suggestions/:suggestionId/decline`
 - `POST /organizations/:organizationId/branches/:branchId/class-sessions/generate`
 - `POST /organizations/:organizationId/branches/:branchId/class-sessions/generate-missing`
 - `POST /organizations/:organizationId/branches/:branchId/general-income`
@@ -3014,10 +3019,10 @@ Same schedule item shape used by create, update, and list items, without paginat
 
 #### Errores específicos del endpoint
 
-| Status | Caso                                  | Mensaje                                |
-| ------ | ------------------------------------- | -------------------------------------- |
+| Status | Caso                                  | Mensaje                                     |
+| ------ | ------------------------------------- | ------------------------------------------- |
 | 403    | no branch class read capability       | Insufficient class schedule read capability |
-| 404    | schedule does not exist in branch/org | Class schedule not found               |
+| 404    | schedule does not exist in branch/org | Class schedule not found                    |
 
 ### Update class schedule
 
@@ -3375,6 +3380,13 @@ Same synchronous response shape as generate, plus:
     "excused": 0,
     "late": 0
   },
+  "suggestions": {
+    "total": 0,
+    "pending": 0,
+    "accepted": 0,
+    "declined": 0,
+    "canceled": 0
+  },
   "cancellationReason": null,
   "cancelledAt": null,
   "cancelledByMembershipId": null,
@@ -3390,6 +3402,7 @@ Same synchronous response shape as generate, plus:
 - `status` uses the backend enum value `CANCELED`, not `CANCELLED`.
 - `scheduledDate` is serialized as an ISO timestamp (`YYYY-MM-DDT00:00:00.000Z`) by Nest/JSON.
 - `capacity.enrolled` and `attendance.expected` currently use active attendance intents; `waitlist` is `0` because there is no waitlist domain yet.
+- `suggestions` is a summary only. Use the dedicated attendance suggestions endpoint when the frontend needs the full list.
 - `cancelledAt` and `cancelledByMembershipId` are derived from the latest `class_session.canceled` audit entry when available.
 
 #### Errores específicos del endpoint
@@ -3908,7 +3921,7 @@ No body or optional intent creation payload, depending on use case wiring.
 
 `POST /organizations/:organizationId/branches/:branchId/class-sessions/:sessionId/attendance/suggestions`
 
-Creates staff-authored attendance suggestions for one or more students. This is not official attendance, not an attendance intent, not QR check-in, not staff manual attendance, and not enrollment/RSVP.
+Creates staff-authored attendance suggestions for one or more students. This persists `AttendanceSuggestion` as the source of truth and may also create an in-app notification. This is not official attendance, not QR check-in, not staff manual attendance, and not enrollment/RSVP.
 
 **Roles permitted**: `MESTRE`, `ORG_ADMIN`, `ACADEMY_MANAGER`, branch/effective `HEAD_COACH`, `STAFF`, and the assigned `INSTRUCTOR` for the target session
 **Capability requerida**: `attendance.canSuggestAttendance`
@@ -3933,6 +3946,7 @@ Rules:
 - Students must belong to the organization, be active, and be allowed in the branch by primary branch or an approved visit overlapping the session window.
 - Students must have an active recipient `OrganizationMembership` to receive the in-app notification.
 - Existing pending suggestions for the same student/session are deduplicated and returned as `created: false`.
+- Creating a suggestion does not create `AttendanceIntent` or `AttendanceRecord`.
 
 #### Response
 
@@ -3942,6 +3956,7 @@ Rules:
   "created": 2,
   "skipped": 1,
   "alreadySuggested": 1,
+  "notificationFailures": [],
   "invalidStudents": [
     {
       "studentId": "student_4",
@@ -3976,12 +3991,12 @@ Rules:
 
 #### Errors
 
-| Status | Condition                                      | Message                                                           |
-| ------ | ---------------------------------------------- | ----------------------------------------------------------------- |
-| 403    | missing organization/branch capability          | Organization access denied / Branch access denied / missing capability |
-| 404    | branch or class session does not exist in scope | Branch not found / Class session not found                        |
+| Status | Condition                                       | Message                                                                                                                 |
+| ------ | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| 403    | missing organization/branch capability          | Organization access denied / Branch access denied / missing capability                                                  |
+| 404    | branch or class session does not exist in scope | Branch not found / Class session not found                                                                              |
 | 409    | session not scheduled or already finished       | Attendance suggestions can only be created for scheduled class sessions / cannot be created for finished class sessions |
-| 422    | invalid body                                    | validation error                                                  |
+| 422    | invalid body                                    | validation error                                                                                                        |
 
 #### Notification
 
@@ -4005,13 +4020,198 @@ For every newly created valid suggestion, the backend creates one in-app notific
 
 Notification payloads intentionally omit `ClassSession.notes`, attendance operational notes, private staff notes, and internal actor details. Existing pending suggestions do not create a second notification.
 
+Notifications are best-effort after DB persistence. If notification creation fails, the request still returns `201`, the persisted suggestion remains the source of truth, `notificationId` is `null` for that item, and `notificationFailures[]` identifies the affected `suggestionId`/`studentId`.
+
 #### Relation to attendance intent and enrolledCount
 
 - The student confirms independently through `PUT /organizations/:organizationId/branches/:branchId/class-sessions/:sessionId/attendance/intent`.
 - Creating an attendance suggestion does not create an `AttendanceIntent`.
 - Creating an attendance suggestion does not create an `AttendanceRecord`.
 - `enrolledCount` continues to count active attendance intents only; suggestions do not increment it.
-- V1 does not automatically move suggestions from `PENDING` to `ACCEPTED` when the student later creates intent.
+- Student `accept` changes the suggestion to `ACCEPTED` and creates/reactivates an active `AttendanceIntent`.
+- Student `decline` changes the suggestion to `DECLINED` and does not create an intent.
+- Manual student intent creation through `PUT .../attendance/intent` closes matching pending suggestions for that same student/session as `ACCEPTED`.
+- `AttendanceRecord` remains independent and is created only by actual attendance/check-in/validation flows.
+
+### List class-session attendance suggestions
+
+`GET /organizations/:organizationId/branches/:branchId/class-sessions/:sessionId/attendance/suggestions`
+
+**Roles permitted**: `MESTRE`, `ORG_ADMIN`, `ACADEMY_MANAGER`, branch/effective `HEAD_COACH`, `STAFF`, and the assigned `INSTRUCTOR` for the target session
+**Capability requerida**: `attendance.canSuggestAttendance`
+**Step-up required**: no
+**Scope**: BRANCH_SCOPED
+
+#### Response
+
+```json
+{
+  "classSessionId": "session_123",
+  "summary": {
+    "total": 3,
+    "pending": 1,
+    "accepted": 1,
+    "declined": 1,
+    "canceled": 0
+  },
+  "items": [
+    {
+      "id": "suggestion_1",
+      "organizationId": "org_123",
+      "branchId": "branch_123",
+      "targetType": "CLASS_SESSION",
+      "classSessionId": "session_123",
+      "studentId": "student_123",
+      "suggestedByMembershipId": "membership_staff",
+      "status": "PENDING",
+      "message": "Te recomendamos asistir a esta clase.",
+      "notificationId": "notification_123",
+      "respondedAt": null,
+      "canceledAt": null,
+      "expiresAt": null,
+      "createdAt": "2026-06-05T12:00:00.000Z",
+      "updatedAt": "2026-06-05T12:00:00.000Z",
+      "student": {
+        "id": "student_123",
+        "primaryBranchId": "branch_123",
+        "firstName": "Ana",
+        "lastName": "Silva",
+        "email": "ana@example.com",
+        "phone": null,
+        "status": "ACTIVE",
+        "currentBelt": "WHITE",
+        "currentStripes": 0
+      }
+    }
+  ]
+}
+```
+
+### Cancel class-session attendance suggestion
+
+`POST /organizations/:organizationId/branches/:branchId/class-sessions/:sessionId/attendance/suggestions/:suggestionId/cancel`
+
+Cancels a pending suggestion by staff/instructor. It does not delete the row and does not create/cancel attendance intent or attendance record.
+
+**Roles permitted**: same as create/list suggestions
+**Capability requerida**: `attendance.canSuggestAttendance`
+**Scope**: BRANCH_SCOPED
+
+#### Response
+
+```json
+{
+  "id": "suggestion_1",
+  "status": "CANCELED",
+  "canceledAt": "2026-06-05T12:15:00.000Z"
+}
+```
+
+### List my attendance suggestions
+
+`GET /organizations/:organizationId/students/me/attendance-suggestions`
+
+Returns only suggestions for the authenticated user's linked `Student` in the organization. If a suggestion belongs to another student, it is not returned.
+
+**Roles permitted**: authenticated `STUDENT`
+**Capability requerida**: student organization access
+**Scope**: ORGANIZATION_SCOPED self view
+
+#### Response
+
+```json
+{
+  "studentId": "student_123",
+  "items": [
+    {
+      "id": "suggestion_1",
+      "organizationId": "org_123",
+      "branchId": "branch_123",
+      "targetType": "CLASS_SESSION",
+      "classSessionId": "session_123",
+      "studentId": "student_123",
+      "suggestedByMembershipId": "membership_staff",
+      "status": "PENDING",
+      "message": "Te recomendamos asistir a esta clase.",
+      "notificationId": "notification_123",
+      "respondedAt": null,
+      "canceledAt": null,
+      "expiresAt": null,
+      "createdAt": "2026-06-05T12:00:00.000Z",
+      "updatedAt": "2026-06-05T12:00:00.000Z",
+      "branch": {
+        "id": "branch_123",
+        "name": "Alliance Centro",
+        "slug": "centro",
+        "timezone": "America/Sao_Paulo"
+      },
+      "classSession": {
+        "id": "session_123",
+        "organizationId": "org_123",
+        "branchId": "branch_123",
+        "instructorMembershipId": "membership_instructor",
+        "title": "Fundamentals",
+        "classType": "GI",
+        "status": "SCHEDULED",
+        "startAt": "2026-06-05T18:00:00.000Z",
+        "endAt": "2026-06-05T19:00:00.000Z",
+        "scheduledDate": "2026-06-05T00:00:00.000Z"
+      }
+    }
+  ]
+}
+```
+
+Student-facing responses expose `message` as the visible student message. There is no staff-only note field in the current API; do not place private staff notes in `message`.
+
+### Accept my attendance suggestion
+
+`POST /organizations/:organizationId/students/me/attendance-suggestions/:suggestionId/accept`
+
+Accepts a pending suggestion owned by the authenticated student's linked student profile and creates/reactivates the active `AttendanceIntent` for the suggestion's class session.
+
+#### Response
+
+```json
+{
+  "suggestion": {
+    "id": "suggestion_1",
+    "status": "ACCEPTED",
+    "respondedAt": "2026-06-05T12:20:00.000Z"
+  },
+  "attendanceIntent": {
+    "id": "attendance_intent_1",
+    "status": "ACTIVE",
+    "classSessionId": "session_123",
+    "studentId": "student_123"
+  },
+  "intentCreated": true,
+  "intentReactivated": false
+}
+```
+
+Errors:
+
+| Status | Condition                                                                      |
+| ------ | ------------------------------------------------------------------------------ |
+| 404    | suggestion does not exist for the authenticated student                        |
+| 409    | suggestion is no longer pending or session no longer accepts attendance intent |
+
+### Decline my attendance suggestion
+
+`POST /organizations/:organizationId/students/me/attendance-suggestions/:suggestionId/decline`
+
+Declines a pending suggestion owned by the authenticated student. It does not create an `AttendanceIntent`.
+
+#### Response
+
+```json
+{
+  "id": "suggestion_1",
+  "status": "DECLINED",
+  "respondedAt": "2026-06-05T12:20:00.000Z"
+}
+```
 
 ### Update attendance record
 
@@ -5699,17 +5899,34 @@ Communications are implemented through announcements, institutional messages, in
 
 #### Query params
 
-| Param         | Tipo   | Default                    | Descripción      |
-| ------------- | ------ | -------------------------- | ---------------- |
-| `countryCode` | string | required unless geo search | ISO country code |
-| `q`           | string | -                          | search string    |
-| `city`        | string | -                          | city filter      |
-| `region`      | string | -                          | region filter    |
-| `lat`         | number | -                          | geosearch        |
-| `lng`         | number | -                          | geosearch        |
-| `radiusKm`    | number | -                          | geosearch radius |
-| `page`        | number | `1`                        | page             |
-| `limit`       | number | `20`                       | page size        |
+| Param         | Tipo   | Default                       | Descripción                                               |
+| ------------- | ------ | ----------------------------- | --------------------------------------------------------- |
+| `countryCode` | string | required unless `lat` + `lng` | ISO country code                                          |
+| `q`           | string | -                             | search string matched against branch/profile/city/region  |
+| `city`        | string | -                             | city filter                                               |
+| `region`      | string | -                             | region filter                                             |
+| `lat`         | number | -                             | geosearch origin latitude                                 |
+| `lng`         | number | -                             | geosearch origin longitude                                |
+| `radiusKm`    | number | `25` when origin is provided  | geosearch radius, `1..100`; values above max return `422` |
+| `page`        | number | `1`                           | page                                                      |
+| `limit`       | number | `20`                          | page size                                                 |
+
+Rules:
+
+- `lat` and `lng` must be provided together.
+- `radiusKm` is optional when `lat` + `lng` are present; default is `25`.
+- `lat` must be between `-90` and `90`; `lng` must be between `-180` and `180`.
+- distance search uses PostGIS `geography(Point,4326)` and excludes profiles without `location`.
+- distance results are ordered by nearest first and include `distance`.
+- public search returns only active organizations, active branches with `isPublicListed=true`, and `BranchPublicProfile.isPublished=true`.
+- `addressLine1` is `null` when `publicAddressVisibility=false`.
+- Backend does not store end-user location and does not call map-provider Directions APIs.
+
+Validation errors:
+
+- `422` when only one coordinate is provided.
+- `422` when coordinate ranges are invalid.
+- `422` when `radiusKm` is outside `1..100`.
 
 #### Response
 
@@ -5726,10 +5943,17 @@ Communications are implemented through announcements, institutional messages, in
         "city": "Buenos Aires",
         "region": "CABA",
         "countryCode": "AR",
+        "timezone": "America/Argentina/Buenos_Aires",
         "address": null,
-        "latitude": null,
-        "longitude": null,
+        "addressLine1": null,
+        "publicAddressVisibility": false,
+        "latitude": -34.6,
+        "longitude": -58.4,
         "distanceKm": null
+      },
+      "distance": {
+        "meters": 2350,
+        "kilometers": 2.35
       },
       "classTypes": ["GI"],
       "contacts": {
@@ -5748,9 +5972,101 @@ Communications are implemented through announcements, institutional messages, in
       }
     }
   ],
-  "meta": { "page": 1, "limit": 20, "total": 1 }
+  "meta": {
+    "page": 1,
+    "limit": 20,
+    "total": 1,
+    "hasDistanceSort": true,
+    "origin": { "lat": -34.6, "lng": -58.4, "radiusKm": 25 }
+  }
 }
 ```
+
+`distance` appears only when `lat` + `lng` are provided. The legacy
+`location.distanceKm` remains for compatibility and is `null` without origin.
+Public coordinates are still returned from `BranchPublicProfile` even when
+`publicAddressVisibility=false`; if the product later needs "show on map" and
+"show exact address" to diverge, add a separate approved flag such as
+`isMapVisible`.
+
+### Public branch geocoding preview
+
+`POST /organizations/:organizationId/branches/:branchId/geocode-preview`
+
+**Roles permitted**: authenticated organization admin
+**Capability required**: backend authorization
+**Step-up required**: no
+**Scope**: organization
+
+Request:
+
+```json
+{
+  "address": "La Rioja 619",
+  "city": "Buenos Aires",
+  "region": "CABA",
+  "countryCode": "AR"
+}
+```
+
+Response:
+
+```json
+{
+  "status": "VERIFIED",
+  "candidates": [
+    {
+      "latitude": -34.585,
+      "longitude": -58.421,
+      "formattedAddress": "La Rioja 619, Buenos Aires, Argentina",
+      "provider": "MAPBOX",
+      "status": "VERIFIED",
+      "providerPlaceId": "mapbox.feature-id",
+      "confidence": "exact"
+    }
+  ]
+}
+```
+
+`status` values: `NOT_PROVIDED`, `VERIFIED`, `NEEDS_REVIEW`, `FAILED`.
+Ambiguous or low-confidence candidates are not auto-persisted as verified.
+The endpoint returns normalized candidates only and never returns the full raw
+provider payload.
+
+Confirmed candidate persistence uses the existing branch update endpoint:
+
+```json
+{
+  "publicProfile": {
+    "confirmedGeocodingCandidate": {
+      "latitude": -34.585,
+      "longitude": -58.421,
+      "formattedAddress": "La Rioja 619, Buenos Aires, Argentina",
+      "provider": "MAPBOX",
+      "providerPlaceId": "mapbox.feature-id"
+    }
+  }
+}
+```
+
+Direct manual coordinates are also accepted through `publicProfile.latitude`
+and `publicProfile.longitude`; both must be present together or both set to
+`null` to clear location. Saving coordinates updates the PostGIS `location`
+column through the database trigger. Manual coordinates are treated as operator
+confirmed geography, persist with `geocodingProvider=MANUAL`, and do not persist
+`providerPlaceId`.
+
+Provider note: Mapbox is the initial backend geocoding provider and is stored as
+`geocodingProvider=MAPBOX`, but persisted geography is provider-agnostic:
+`latitude`, `longitude`, and PostGIS `location` are the standard source for
+public discovery. Storing Mapbox geocoding results requires using the Mapbox
+permanent geocoding mode/plan. Server-side Mapbox requests use
+`MAPBOX_SECRET_TOKEN`; persistent storage should only be enabled when
+`MAPBOX_PERMANENT_GEOCODING_ENABLED=true` is contractually allowed.
+When `MAPBOX_PERMANENT_GEOCODING_ENABLED=false`, preview may still return
+temporary Mapbox candidates for immediate UX, but PATCH with
+`confirmedGeocodingCandidate.provider=MAPBOX` returns `422`:
+`Permanent geocoding storage is not enabled for this provider`.
 
 ### Public branch detail by branch id
 
@@ -7165,7 +7481,7 @@ Same as list item plus:
   - `AttendanceSuggestion` (separate from records and intents): a staff-authored recommendation for a student to consider attending one class session (`POST .../attendance/suggestions`). It notifies the student but does not mark real attendance and does not feed `enrolledCount`.
 - `AttendanceIntentStatus`: `ACTIVE`, `CANCELED`
 - `AttendanceSuggestionTargetType`: `CLASS_SESSION`
-- `AttendanceSuggestionStatus`: `PENDING`, `ACCEPTED`, `DISMISSED`, `EXPIRED`
+- `AttendanceSuggestionStatus`: `PENDING`, `ACCEPTED`, `DECLINED`, `CANCELED`, `EXPIRED`
 - `AttendanceIntentCancelReasonCode`: `PLAN_CHANGED`, `INJURY`, `TRAVEL`, `SCHEDULE_CONFLICT`, `TEMPORARY_SUSPENSION`, `OTHER`
 - `AttendanceFollowUpStatus`: `PENDING`, `IN_PROGRESS`, `CONTACTED`, `REACTIVATED`, `UNRESPONSIVE`
 - `AttendanceFollowUpActionType`: `ASSIGNMENT_UPDATED`, `FOLLOW_UP_STARTED`, `CONTACT_RECORDED`, `REACTIVATED`, `UNRESPONSIVE_MARKED`
