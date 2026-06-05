@@ -29,7 +29,8 @@ export const BgAnimateButton = React.forwardRef<
       ref={ref}
       className={cn(
         'kuro-bg-animate group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-md',
-        'px-4 text-sm font-medium text-primary-foreground',
+        // El color del texto lo fija `.kuro-bg-animate` (cream sobre CTA oscuro).
+        'px-4 text-sm font-medium',
         'transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
         // El estado :disabled lo da `.kuro-bg-animate:disabled` (muted, visible).
         'disabled:pointer-events-none',

@@ -48,7 +48,7 @@
 
 /* ── LIGHT MODE (preparado — sin switcher todavía, ver 2.5.7) ── */
 :root {
-  --radius: 0.375rem; /* 6px */
+  --radius: 0.125rem; /* 2px — esquinas casi rectas (look Night Ops / disciplinado) */
 
   --background:           #F5F3EC; /* cream cálido */
   --foreground:           #1F2820; /* texto primario */
@@ -96,52 +96,55 @@
   --sidebar-footer:      #141C18;
 }
 
-/* ── DARK MODE (default — `defaultTheme="dark"`) ────────────── */
+/* ── DARK MODE (default — `defaultTheme="dark"`) ──────────────
+   Paleta "Night Ops" (ver docs/DESIGN-SYSTEM.md): nocturna, olivo luminoso,
+   elevación por capas tonales (base → container → elevado, cada una MÁS clara)
+   y borders sutiles en vez de sombras. */
 .dark {
-  --background:           #0A0E0C; /* negro con tinte verde sutil */
-  --foreground:           #E8E4D9; /* off-white cálido, NO blanco puro */
-  --card:                 #1A2520; /* verde oliva oscuro */
-  --card-foreground:      #E8E4D9;
-  --popover:              #13181A; /* surface elevado */
-  --popover-foreground:   #E8E4D9;
-  --primary:              #3F5C45;
-  --primary-foreground:   #E8E4D9;
-  --secondary:            #1A2520;
-  --secondary-foreground: #E8E4D9;
-  --muted:                #13181A;
-  --muted-foreground:     #A8A496; /* texto secundario */
-  --accent:               #13181A;
-  --accent-foreground:    #E8E4D9;
-  --destructive:          #8B4A3F; /* rojo terracota apagado */
-  --destructive-foreground: #E8E4D9;
-  --border:               #2A3530; /* border sutil */
-  --input:                #2A3530;
-  --ring:                 #3F5C45;
+  --background:           #0D0F0D; /* Tier 1 — deep forest charcoal */
+  --foreground:           #E2E3DF; /* on-surface, off-white frío */
+  --card:                 #1A1D1A; /* Tier 2 — container (border, sin sombra) */
+  --card-foreground:      #E2E3DF;
+  --popover:              #242824; /* Tier 3 — elevado (más claro que card) */
+  --popover-foreground:   #E2E3DF;
+  --primary:              #8C9366; /* olivo luminoso — CTAs y status críticos */
+  --primary-foreground:   #1E2310; /* texto OSCURO sobre olivo sólido */
+  --secondary:            #1A1D1A;
+  --secondary-foreground: #E2E3DF;
+  --muted:                #1E201E; /* hover/skeleton — lift sutil sobre card */
+  --muted-foreground:     #A9A89B; /* texto secundario */
+  --accent:               #1E201E;
+  --accent-foreground:    #E2E3DF;
+  --destructive:          #9A5246; /* terracota apagado, legible en dark */
+  --destructive-foreground: #F0E9E5;
+  --border:               #2D362E; /* border sutil (Tier 2) */
+  --input:                #2D362E;
+  --ring:                 #8C9366;
 
   /* Extensiones KURO */
-  --primary-hover:   #4A6B52;
-  --primary-bright:  #5A7850; /* stop claro del shimmer del CTA */
-  --primary-deep:    #2D4A20; /* Deep Academy Green — CTA oscuro */
-  --primary-muted:   #2A3B30;
-  --border-medium:   #3A4540;
-  --text-tertiary:   #6B6B5E; /* placeholders, hints */
-  --text-disabled:   #4A4A42;
-  --kuro-success:    #4A6B52;
-  --kuro-warning:    #8B7340;
-  --kuro-danger:     #8B4A3F;
-  --kuro-info:       #4A5760;
+  --primary-hover:   #9AA174; /* lift del olivo en hover */
+  --primary-bright:  #A8AE82; /* stop claro del shimmer */
+  --primary-deep:    #2D4A20; /* Deep Academy Green — base del CTA oscuro */
+  --primary-muted:   #2A311E; /* tinte de relleno (chips/iconos) */
+  --border-medium:   #3C4A3E; /* border en hover/énfasis */
+  --text-tertiary:   #6E7166; /* placeholders, hints */
+  --text-disabled:   #474A43;
+  --kuro-success:    #8C9366; /* olivo = positivo (check-in, OK) */
+  --kuro-warning:    #A98A4C; /* ochre apagado */
+  --kuro-danger:     #9A5246;
+  --kuro-info:       #5E7079;
 
-  /* Sidebar (dark) */
-  --sidebar-bg:          #0A0E0C;
-  --sidebar-surface:     #13181A;
-  --sidebar-border:      #2A3530;
-  --sidebar-text:        #6B6B5E;
-  --sidebar-text-hover:  #A8A496;
-  --sidebar-text-active: #E8E4D9;
-  --sidebar-accent:      #5A7850;
-  --sidebar-accent-bg:   rgba(63, 92, 69, 0.18);
-  --sidebar-label:       #4A4A42;
-  --sidebar-footer:      #070A08;
+  /* Sidebar (dark) — coherente con Night Ops */
+  --sidebar-bg:          #0D0F0D;
+  --sidebar-surface:     #1A1D1A;
+  --sidebar-border:      #2D362E;
+  --sidebar-text:        #7C7E72;
+  --sidebar-text-hover:  #C8C7B9;
+  --sidebar-text-active: #E2E3DF;
+  --sidebar-accent:      #8C9366;
+  --sidebar-accent-bg:   rgba(140, 147, 102, 0.16);
+  --sidebar-label:       #5A5C50;
+  --sidebar-footer:      #090B09;
 }
 
 /* ── Base ────────────────────────────────────────────────── */
@@ -238,12 +241,14 @@ h1, h2, h3, h4, h5, h6 {
 /* BgAnimateButton — shimmer verde SUTIL (primary → primary-hover), loop lento.
    Sin neon. Solo para CTAs primarios. */
 .kuro-bg-animate {
-  /* CTA oscuro: deep academy green ↔ olive primary. Texto cream encima.
-     Más oscuro/sólido para resaltar como bloque sobrio. */
+  /* CTA oscuro en ambos modes (deep academy green). Texto cream fijo: el
+     fondo siempre es oscuro, así que no depende de --primary-foreground (que
+     en dark es texto oscuro para botones de olivo luminoso). */
+  color: #E8E4D9;
   background: linear-gradient(
     110deg,
     var(--primary-deep) 0%,
-    var(--primary) 50%,
+    #43662f 50%,
     var(--primary-deep) 100%
   );
   background-size: 220% 100%;

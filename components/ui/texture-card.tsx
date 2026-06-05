@@ -29,7 +29,11 @@ const TextureCardStyled = React.forwardRef<
   </div>
 ))
 
-// Allows for global css overrides and theme support - similar to shad cn
+// KURO custom: superficie sobria on-token. Se reemplazó el tratamiento
+// original de cult-ui (gradiente neutro + 4 borders anidados + text-neutral-500)
+// por un único card semántico (`bg-card` + `border-border`), alineado al design
+// system KURO (jerarquía por tipografía, sin ruido de superficie). La API
+// (TextureCard + TextureCardContent) se mantiene para no tocar los callers.
 const TextureCard = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement> & { children?: React.ReactNode }
@@ -38,21 +42,15 @@ const TextureCard = React.forwardRef<
     <div
       ref={ref}
       className={cn(
-        "rounded-lg border border-white/60 dark:border-border/30",
-        "rounded-[calc(var(--radius))]", // Base radius with fallback
+        // overflow-hidden clipa el contenido edge-to-edge (listas p-0) a las
+        // esquinas redondeadas. Los overlays (dropdown/popover/tooltip) usan
+        // portales Radix, así que no quedan recortados.
+        "overflow-hidden rounded-lg border border-border bg-card text-foreground",
         className
       )}
       {...props}
     >
-      <div className="border dark:border-neutral-900/80 border-black/10 rounded-[calc(var(--radius)-1px)]">
-        <div className="border dark:border-neutral-950 border-white/50 rounded-[calc(var(--radius)-2px)]">
-          <div className="border dark:border-neutral-900/70 border-neutral-950/20 rounded-[calc(var(--radius)-3px)]">
-            <div className=" w-full border border-white/50 dark:border-neutral-700/50 text-neutral-500 bg-gradient-to-b from-card/70 to-secondary/50 rounded-[calc(var(--radius)-4px)] ">
-              {children}
-            </div>
-          </div>
-        </div>
-      </div>
+      {children}
     </div>
   )
 })

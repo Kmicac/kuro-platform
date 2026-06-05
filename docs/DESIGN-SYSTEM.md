@@ -1,10 +1,17 @@
 # KURO — Design System
 
-> "Academia japonesa moderna": minimalismo, jerarquía clara, foco.
-> Premium · sobrio · disciplinado. Inspirado en Linear / Vercel / Geist.
-> **La jerarquía la da la tipografía, NO el color.**
+> **"Night Ops" — Disciplined Authority Dark**: nocturno, premium, sobrio,
+> disciplinado. Estética de *command panel* institucional (finanzas /
+> inteligencia) cruzada con Linear / Vercel / Geist.
+> **La jerarquía la da la tipografía y la elevación tonal, NO el color.**
 
-Implementado en la Fase 2.5 (Sistema de Diseño KURO).
+Base Fase 2.5; paleta y forma actualizadas a "Night Ops" (olivo luminoso +
+esquinas casi rectas) tras la revisión de diseño con los mockups en
+`docs/design-refs/`.
+
+> **Esquinas casi rectas:** `--radius` = **2px** (`0.125rem`) — look técnico /
+> disciplinado. `rounded-md` ≈ 2px, `rounded-lg` ≈ 4px, `rounded-xl` ≈ 8px.
+> Los dots de status y avatares siguen circulares (`rounded-full`).
 
 ---
 
@@ -23,28 +30,37 @@ El tema por defecto es **dark** (`defaultTheme="dark"` en `providers/index.tsx`)
 
 ---
 
-## Paleta — DARK (default)
+## Paleta — DARK (default · "Night Ops")
+
+**Elevación por capas tonales** (cada tier MÁS claro, con border sutil en vez de
+sombra): base `#0D0F0D` → card `#1A1D1A` → muted `#1E201E` → elevado `#242824`.
 
 | Rol | Token | HEX |
 |---|---|---|
-| Background base | `--background` | `#0A0E0C` (negro con tinte verde) |
-| Surface elevado | `--popover` | `#13181A` |
-| Surface card | `--card` / `--secondary` | `#1A2520` (verde oliva oscuro) |
-| Muted (hover/skeleton) | `--muted` / `--accent` | `#13181A` |
-| Primary verde | `--primary` | `#3F5C45` |
-| Primary hover | `--primary-hover` | `#4A6B52` |
-| Primary muted | `--primary-muted` | `#2A3B30` |
-| Border sutil | `--border` / `--input` | `#2A3530` |
-| Border medium | `--border-medium` | `#3A4540` |
-| Texto primario | `--foreground` | `#E8E4D9` (off-white cálido) |
-| Texto secundario | `--muted-foreground` | `#A8A496` |
-| Texto terciario | `--text-tertiary` | `#6B6B5E` (placeholders, hints) |
-| Texto disabled | `--text-disabled` | `#4A4A42` |
-| Destructive | `--destructive` | `#8B4A3F` (terracota apagado) |
-| Warning | `--kuro-warning` | `#8B7340` (ámbar apagado) |
-| Success | `--kuro-success` | `#4A6B52` (verde) |
-| Info | `--kuro-info` | `#4A5760` (azul gris apagado) |
-| Focus ring | `--ring` | `#3F5C45` |
+| Background base (Tier 1) | `--background` | `#0D0F0D` (deep forest charcoal) |
+| Surface card (Tier 2) | `--card` / `--secondary` | `#1A1D1A` (container, border sin sombra) |
+| Muted (hover/skeleton) | `--muted` / `--accent` | `#1E201E` (lift sutil sobre card) |
+| Surface elevado (Tier 3) | `--popover` | `#242824` (popovers/modales, más claro) |
+| Primary olivo luminoso | `--primary` | `#8C9366` (CTAs y status críticos) |
+| Primary foreground | `--primary-foreground` | `#1E2310` (texto OSCURO sobre olivo sólido) |
+| Primary hover | `--primary-hover` | `#9AA174` |
+| Primary muted | `--primary-muted` | `#2A311E` (relleno de chips/iconos) |
+| Border sutil | `--border` / `--input` | `#2D362E` |
+| Border medium | `--border-medium` | `#3C4A3E` (hover/énfasis) |
+| Texto primario | `--foreground` | `#E2E3DF` (off-white frío, NO blanco puro) |
+| Texto secundario | `--muted-foreground` | `#A9A89B` |
+| Texto terciario | `--text-tertiary` | `#6E7166` (placeholders, hints) |
+| Texto disabled | `--text-disabled` | `#474A43` |
+| Destructive | `--destructive` | `#9A5246` (terracota apagado) |
+| Warning | `--kuro-warning` | `#A98A4C` (ochre apagado) |
+| Success | `--kuro-success` | `#8C9366` (olivo = positivo: check-in, OK) |
+| Info | `--kuro-info` | `#5E7079` (azul gris apagado) |
+| Focus ring | `--ring` | `#8C9366` |
+
+> **Botones primarios:** olivo luminoso sólido (`bg-primary`) con texto oscuro
+> (`text-primary-foreground` = `#1E2310`). Excepción: el CTA animado
+> `.kuro-bg-animate` (login / create submit) es un bloque **oscuro** con texto
+> cream fijo — no usa `--primary-foreground`.
 
 ## Paleta — LIGHT (preparada, sin switcher aún — ver §Light mode)
 
@@ -53,7 +69,7 @@ El tema por defecto es **dark** (`defaultTheme="dark"` en `providers/index.tsx`)
 | Background base | `--background` | `#F5F3EC` (cream cálido) |
 | Surface elevado | `--popover` / `--card` | `#EBE8DD` |
 | Surface card | `--secondary` / `--muted` | `#DFD9C8` |
-| Primary verde | `--primary` | `#3F5C45` (mismo en ambos modes) |
+| Primary verde | `--primary` | `#3F5C45` (light usa olivo oscuro; dark usa olivo luminoso `#8C9366`) |
 | Border sutil | `--border` | `#C9C3B0` |
 | Texto primario | `--foreground` | `#1F2820` |
 | Texto secundario | `--muted-foreground` | `#4A5048` |
@@ -115,6 +131,11 @@ Family coherente (luminosidad ~30-40%, saturación baja ~20%). Fuente única:
   `KURO_CLASS_TYPE_COLORS`): mismos hex como clases arbitrarias **literales**
   (`bg-[#3F5C45]`) — el JIT de Tailwind solo detecta literales, por eso se
   duplican en vez de derivarse del constant.
+- **Event chips (Night Ops):** NO son bloques de color sólido. Se renderizan
+  como chip oscuro (`bg-muted/50` + `border-border`) con una **barra de acento
+  vertical** del color del tipo a la izquierda (`w-[3px]` con el `bg-[hex]`
+  literal); el título va en `--foreground` y el hover es estable (`bg-muted`,
+  sin scale/shadow). Mismo lenguaje que el mockup `training-calendar`.
 
 ---
 
