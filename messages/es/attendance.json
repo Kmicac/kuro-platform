@@ -102,7 +102,8 @@
   "warnings": {
     "outsideWindow": "Estás corrigiendo asistencia fuera de la ventana estándar.",
     "windowClosed": "La asistencia solo puede registrarse cerca del horario de la clase. La ventana de registro aún no está abierta o ya se cerró.",
-    "windowRange": "Ventana de registro: {start} – {end}"
+    "windowRange": "Ventana de registro: {start} – {end}",
+    "searchTruncated": "Mostrando {shown} de {total} alumnos. Si no encuentras al alumno, refina tu búsqueda."
   },
   "success": {
     "marked": "Asistencia registrada",

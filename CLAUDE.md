@@ -107,6 +107,18 @@ Gaps backend conocidos:
   confirmar con backend: si el producto necesita "sumar a la clase" fuera de
   ventana, requiere endpoint nuevo (enroll/intent sin attendance). Hoy la UI
   maneja el 409 con mensaje de dominio (ver `useAttendanceErrorHandler`).
+  El autocomplete del walk-in trae solo los primeros 100 alumnos del padrón
+  (sin search server-side); si la filial supera ese tope, la UI lo avisa con
+  un banner sobrio (ver `TODO(backend-search)` en `walk-in-dialog.tsx`).
+
+Resiliencia (Sprint 1, auditoría 2026-06-05):
+- Error boundaries por route group: `app/global-error.tsx` (root, re-monta su
+  propio provider i18n) + `error.tsx` en `(auth)`, `(platform)`, `org/[orgId]`
+  y `branches/[branchId]`. Los scoped a org/branch conservan el AppShell; todos
+  reintentan vía `reset()` y muestran `requestId` cuando el error es `ApiError`.
+- Botón "Invitar" de Claims gateado por capability
+  (`usersMemberships.canCreateStudentMembershipFromClaim` ó
+  `students.canInviteExistingStudent`; el backend doble-mapea el endpoint).
 
 ---
 

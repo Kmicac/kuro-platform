@@ -22,7 +22,12 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ApiError } from '@/lib/api/client'
-import { useBranches, useBranchStudents, useInviteStudent } from '@/lib/hooks'
+import {
+  useBranches,
+  useBranchStudents,
+  useCapabilities,
+  useInviteStudent,
+} from '@/lib/hooks'
 import {
   EmptyState,
   ErrorState,
@@ -42,7 +47,7 @@ type InviteState =
   | { kind: 'idle' }
   | { kind: 'sending' }
   | { kind: 'sent' }
-  | { kind: 'error'; message: string }
+  | { kind: 'error'; message: string; requestId?: string }
 
 export function ClaimsManager({ orgId }: ClaimsManagerProps) {
   const t = useTranslations('claims')
@@ -55,6 +60,18 @@ export function ClaimsManager({ orgId }: ClaimsManagerProps) {
   const branchesQuery = useBranches(orgId)
   const branches = branchesQuery.data ?? []
   const activeBranch = branches.find((b) => b.id === branchId)
+
+  // Gating del botón "Invitar" (Paso 6 del playbook). El backend doble-mapea
+  // este invite (`POST /students/:id/invite`) a dos capabilities — la del
+  // path exacto (`usersMemberships.canCreateStudentMembershipFromClaim`) y la
+  // semántica (`students.canInviteExistingStudent`). Mostramos el botón si
+  // cualquiera está activa; el 403 del backend sigue siendo la fuente final.
+  const capabilitiesQuery = useCapabilities(orgId)
+  const caps = capabilitiesQuery.data?.capabilities
+  const canInvite = Boolean(
+    caps?.usersMemberships?.canCreateStudentMembershipFromClaim ||
+      caps?.students?.canInviteExistingStudent,
+  )
 
   return (
     <div className="p-6 space-y-6">
@@ -90,6 +107,7 @@ export function ClaimsManager({ orgId }: ClaimsManagerProps) {
           search={search}
           onPage={setPage}
           onSearch={setSearch}
+          canInvite={canInvite}
         />
       )}
     </div>
@@ -242,6 +260,7 @@ function BranchRoster({
   search,
   onPage,
   onSearch,
+  canInvite,
 }: {
   orgId: string
   branch: Branch
@@ -249,6 +268,7 @@ function BranchRoster({
   search: string
   onPage: (page: number) => void
   onSearch: (q: string) => void
+  canInvite: boolean
 }) {
   const t = useTranslations('claims')
   const tCommon = useTranslations('common')
@@ -317,6 +337,7 @@ function BranchRoster({
         search={search}
         onRetry={() => listQuery.refetch()}
         orgId={orgId}
+        canInvite={canInvite}
       />
 
       {meta && meta.total > PAGE_SIZE && !listQuery.error && (
@@ -360,6 +381,7 @@ function RosterBody({
   search,
   onRetry,
   orgId,
+  canInvite,
 }: {
   isLoading: boolean
   error: unknown
@@ -368,6 +390,7 @@ function RosterBody({
   search: string
   onRetry: () => void
   orgId: string
+  canInvite: boolean
 }) {
   const tErrors = useTranslations('errors.claims')
   const tEmpty = useTranslations('empty-states')
@@ -431,7 +454,12 @@ function RosterBody({
       <TextureCardContent className="p-0">
         <ul className="divide-y divide-border">
           {items.map((s) => (
-            <InviteRow key={s.id} student={s} orgId={orgId} />
+            <InviteRow
+              key={s.id}
+              student={s}
+              orgId={orgId}
+              canInvite={canInvite}
+            />
           ))}
         </ul>
       </TextureCardContent>
@@ -442,9 +470,11 @@ function RosterBody({
 function InviteRow({
   student,
   orgId,
+  canInvite,
 }: {
   student: StudentListItem
   orgId: string
+  canInvite: boolean
 }) {
   const t = useTranslations('claims')
   const tErrors = useTranslations('errors.claims')
@@ -462,11 +492,16 @@ function InviteRow({
       {
         onSuccess: () => setState({ kind: 'sent' }),
         onError: (err) => {
+          // Solo mensajes de dominio mapeados o genérico — nunca el
+          // body.message crudo del backend (posible info disclosure). El
+          // requestId se adjunta para soporte.
           const msg =
             err instanceof ApiError
               ? interpretInviteError(err, tErrors)
               : tErrors('sendError')
-          setState({ kind: 'error', message: msg })
+          const requestId =
+            err instanceof ApiError ? err.requestId : undefined
+          setState({ kind: 'error', message: msg, requestId })
         },
       }
     )
@@ -490,29 +525,31 @@ function InviteRow({
 
       <InviteFeedback state={state} />
 
-      <Button
-        variant={state.kind === 'sent' ? 'outline' : 'default'}
-        size="sm"
-        disabled={state.kind === 'sending' || state.kind === 'sent'}
-        onClick={onClick}
-      >
-        {state.kind === 'sending' ? (
-          <>
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            {t('sending')}
-          </>
-        ) : state.kind === 'sent' ? (
-          <>
-            <Check className="h-3.5 w-3.5" />
-            {t('sent')}
-          </>
-        ) : (
-          <>
-            <Send className="h-3.5 w-3.5" />
-            {t('invite')}
-          </>
-        )}
-      </Button>
+      {canInvite && (
+        <Button
+          variant={state.kind === 'sent' ? 'outline' : 'default'}
+          size="sm"
+          disabled={state.kind === 'sending' || state.kind === 'sent'}
+          onClick={onClick}
+        >
+          {state.kind === 'sending' ? (
+            <>
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              {t('sending')}
+            </>
+          ) : state.kind === 'sent' ? (
+            <>
+              <Check className="h-3.5 w-3.5" />
+              {t('sent')}
+            </>
+          ) : (
+            <>
+              <Send className="h-3.5 w-3.5" />
+              {t('invite')}
+            </>
+          )}
+        </Button>
+      )}
     </li>
   )
 }
@@ -522,11 +559,18 @@ function InviteFeedback({ state }: { state: InviteState }) {
 
   if (state.kind === 'error') {
     return (
-      <span className="hidden sm:flex items-center gap-1 text-[11px] text-destructive max-w-[200px] truncate">
-        <AlertCircle className="h-3 w-3 flex-shrink-0" />
-        <span className="truncate" title={state.message}>
-          {state.message}
+      <span className="hidden sm:flex flex-col items-end gap-0.5 text-[11px] text-destructive max-w-[220px]">
+        <span className="flex items-center gap-1">
+          <AlertCircle className="h-3 w-3 flex-shrink-0" />
+          <span className="truncate" title={state.message}>
+            {state.message}
+          </span>
         </span>
+        {state.requestId && (
+          <span className="font-mono text-[10px] text-muted-foreground/70 truncate max-w-full">
+            {state.requestId}
+          </span>
+        )}
       </span>
     )
   }
@@ -575,6 +619,8 @@ function interpretInviteError(err: ApiError, tErrors: Translator): string {
   if (err.status === 403) return tErrors('noPermission')
   if (err.status === 404) return tErrors('studentNotFound')
   if (err.status === 429) return tErrors('tooMany')
-  const body = err.body as { message?: string } | null
-  return body?.message ?? tErrors('sendError')
+  // Status no mapeado → mensaje genérico de dominio. NUNCA renderizar
+  // err.body.message crudo del backend (puede filtrar detalle interno /
+  // IDs de otro tenant). El requestId se surface aparte para soporte.
+  return tErrors('sendError')
 }

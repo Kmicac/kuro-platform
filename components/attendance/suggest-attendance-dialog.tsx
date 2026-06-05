@@ -328,8 +328,10 @@ function notifyResult(
   // Si no se creó nada y no hubo nada que reportar, igual confirmamos envío.
   notifySuccess(parts.length > 0 ? parts.join(' · ') : t('success.allCreated', { count: created }))
 
-  if (invalidStudents.length > 0) {
-    console.warn('[SUGGEST] Alumnos inválidos:', invalidStudents)
+  // El toast ya informa al usuario los inválidos. No logueamos IDs/nombres
+  // (PII en devtools); en dev solo el conteo para diagnóstico.
+  if (invalidStudents.length > 0 && process.env.NODE_ENV === 'development') {
+    console.warn('[SUGGEST] Alumnos inválidos:', invalidStudents.length)
   }
 }
 

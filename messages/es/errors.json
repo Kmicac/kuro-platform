@@ -4,6 +4,22 @@
     "description": "Revisa la conexión e intenta nuevamente.",
     "requestId": "request-id:"
   },
+  "boundary": {
+    "title": "Algo salió mal",
+    "message": "Ocurrió un error inesperado. Reintenta o vuelve al inicio.",
+    "retry": "Reintentar",
+    "goHome": "Volver al inicio",
+    "reload": "Recargar aplicación",
+    "global": {
+      "title": "Error crítico",
+      "message": "La aplicación encontró un error y no puede continuar. Recarga la página."
+    },
+    "auth": {
+      "title": "Error en el portal",
+      "message": "Ocurrió un problema con la pantalla de acceso.",
+      "backToLogin": "Volver al login"
+    }
+  },
   "forbidden": {
     "title": "Sin permisos",
     "description": "Tu rol no permite ver este contenido."

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { Search } from 'lucide-react'
+import { AlertTriangle, Search } from 'lucide-react'
 
 import {
   Dialog,
@@ -17,6 +17,16 @@ import { useBranchStudents } from '@/lib/hooks'
 import { usePromotionRankResolver } from '@/lib/hooks/use-catalogs'
 import { BeltBadge } from '@/components/kuro'
 import type { StudentListItem } from '@/lib/api/types'
+
+// Tope de alumnos que se traen del padrón para el autocomplete. El backend
+// no expone search server-side en este endpoint, así que el filtro es
+// client-side sobre esta página. Si la filial supera este tope, los alumnos
+// fuera de la primera página quedan inbuscables → se avisa con un banner.
+// TODO(backend-search): cuando el backend exponga search en
+// GET /branches/:id/students?q=, eliminar este tope client-side y el banner.
+// Ver docs/AUDIT-REPORT.md Sprint 1.
+const STUDENTS_FETCH_LIMIT = 100
+const RESULTS_RENDER_LIMIT = 50
 
 export interface WalkInDialogProps {
   open: boolean
@@ -39,11 +49,20 @@ export function WalkInDialog({
   pending,
 }: WalkInDialogProps) {
   const t = useTranslations('attendance.walkIn')
+  const tWarn = useTranslations('attendance.warnings')
   const [query, setQuery] = useState('')
 
   // Lista del padrón de la filial (paginada). El filtro de búsqueda es
   // client-side: el backend no expone search en este endpoint todavía.
-  const studentsQuery = useBranchStudents(orgId, branchId, { limit: 100 })
+  const studentsQuery = useBranchStudents(orgId, branchId, {
+    limit: STUDENTS_FETCH_LIMIT,
+  })
+
+  // El padrón completo de la filial supera lo que trajimos → hay alumnos
+  // inbuscables silenciosamente. Se avisa con un banner sobrio.
+  const total = studentsQuery.data?.meta?.total
+  const isTruncated =
+    typeof total === 'number' && total > STUDENTS_FETCH_LIMIT
 
   const excluded = useMemo(
     () => new Set(rosterStudentIds),
@@ -60,7 +79,7 @@ export function WalkInDialog({
         const hay = `${s.firstName} ${s.lastName} ${s.email}`.toLowerCase()
         return hay.includes(q)
       })
-      .slice(0, 50)
+      .slice(0, RESULTS_RENDER_LIMIT)
   }, [studentsQuery.data, query, excluded])
 
   const resolveRank = usePromotionRankResolver()
@@ -84,6 +103,21 @@ export function WalkInDialog({
             aria-label={t('searchPlaceholder')}
           />
         </div>
+
+        {isTruncated && (
+          <div className="flex items-start gap-2 rounded-lg border px-3 py-2 text-xs surface-warning">
+            <AlertTriangle
+              className="mt-0.5 h-3.5 w-3.5 flex-shrink-0"
+              aria-hidden
+            />
+            <p>
+              {tWarn('searchTruncated', {
+                shown: STUDENTS_FETCH_LIMIT,
+                total: total ?? STUDENTS_FETCH_LIMIT,
+              })}
+            </p>
+          </div>
+        )}
 
         <ScrollArea className="max-h-72">
           {studentsQuery.isLoading ? (
