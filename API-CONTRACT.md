@@ -221,6 +221,7 @@ Controller-verified on 2026-05-28. This index is the parity list used to keep th
 - `POST /organizations/:organizationId/branches/:branchId/class-sessions/:sessionId/attendance/qr-check-in`
 - `POST /organizations/:organizationId/branches/:branchId/class-sessions/:sessionId/attendance/qr-token`
 - `POST /organizations/:organizationId/branches/:branchId/class-sessions/:sessionId/attendance/self-check-in`
+- `POST /organizations/:organizationId/branches/:branchId/class-sessions/:sessionId/attendance/suggestions`
 - `POST /organizations/:organizationId/branches/:branchId/class-sessions/generate`
 - `POST /organizations/:organizationId/branches/:branchId/class-sessions/generate-missing`
 - `POST /organizations/:organizationId/branches/:branchId/general-income`
@@ -1108,6 +1109,7 @@ The backend exposes capabilities as a read model. Use these as route-family guid
 | `classes.canReadClassTechnicalRoster`                  | technical roster endpoint                                                                                                                    |
 | `attendance.canReadSessionAttendance`                  | session attendance listing                                                                                                                   |
 | `attendance.canValidateAttendance`                     | attendance record/write endpoints                                                                                                            |
+| `attendance.canSuggestAttendance`                      | class-session attendance suggestion endpoint                                                                                                 |
 | `attendance.canCorrectAttendanceWithinWindow`          | attendance correction within allowed window                                                                                                  |
 | `attendance.canCorrectAttendanceAsAdmin`               | administrative attendance correction                                                                                                         |
 | `attendance.canReadAttendanceBehaviorSignals`          | branch attendance signals and follow-up queues                                                                                               |
@@ -3901,6 +3903,115 @@ No body or optional intent creation payload, depending on use case wiring.
   "item": {}
 }
 ```
+
+### Create class-session attendance suggestions
+
+`POST /organizations/:organizationId/branches/:branchId/class-sessions/:sessionId/attendance/suggestions`
+
+Creates staff-authored attendance suggestions for one or more students. This is not official attendance, not an attendance intent, not QR check-in, not staff manual attendance, and not enrollment/RSVP.
+
+**Roles permitted**: `MESTRE`, `ORG_ADMIN`, `ACADEMY_MANAGER`, branch/effective `HEAD_COACH`, `STAFF`, and the assigned `INSTRUCTOR` for the target session
+**Capability requerida**: `attendance.canSuggestAttendance`
+**Step-up required**: no
+**Scope**: BRANCH_SCOPED
+
+#### Request body
+
+```json
+{
+  "studentIds": ["student_1", "student_2", "student_3"],
+  "message": "Te recomendamos asistir a esta clase para preparar tu próxima graduación."
+}
+```
+
+Rules:
+
+- `studentIds`: required, 1..300 unique strings.
+- `message`: optional, trimmed, max 280 characters.
+- Target is currently `CLASS_SESSION` only.
+- The class session must belong to the requested organization and branch, be `SCHEDULED`, and not be finished.
+- Students must belong to the organization, be active, and be allowed in the branch by primary branch or an approved visit overlapping the session window.
+- Students must have an active recipient `OrganizationMembership` to receive the in-app notification.
+- Existing pending suggestions for the same student/session are deduplicated and returned as `created: false`.
+
+#### Response
+
+```json
+{
+  "classSessionId": "session_123",
+  "created": 2,
+  "skipped": 1,
+  "alreadySuggested": 1,
+  "invalidStudents": [
+    {
+      "studentId": "student_4",
+      "reason": "NO_BRANCH_ACCESS"
+    }
+  ],
+  "items": [
+    {
+      "studentId": "student_1",
+      "suggestionId": "suggestion_1",
+      "status": "PENDING",
+      "notificationId": "notification_1",
+      "created": true
+    },
+    {
+      "studentId": "student_2",
+      "suggestionId": "suggestion_existing",
+      "status": "PENDING",
+      "notificationId": "notification_existing",
+      "created": false
+    }
+  ]
+}
+```
+
+`invalidStudents[].reason` can be:
+
+- `NOT_FOUND`
+- `INACTIVE`
+- `NO_BRANCH_ACCESS`
+- `NO_ACTIVE_RECIPIENT_MEMBERSHIP`
+
+#### Errors
+
+| Status | Condition                                      | Message                                                           |
+| ------ | ---------------------------------------------- | ----------------------------------------------------------------- |
+| 403    | missing organization/branch capability          | Organization access denied / Branch access denied / missing capability |
+| 404    | branch or class session does not exist in scope | Branch not found / Class session not found                        |
+| 409    | session not scheduled or already finished       | Attendance suggestions can only be created for scheduled class sessions / cannot be created for finished class sessions |
+| 422    | invalid body                                    | validation error                                                  |
+
+#### Notification
+
+For every newly created valid suggestion, the backend creates one in-app notification for the student's active membership:
+
+```json
+{
+  "type": "ATTENDANCE_SUGGESTION",
+  "resourceType": "ATTENDANCE_SUGGESTION",
+  "resourceId": "suggestion_123",
+  "payload": {
+    "summary": "Te recomendaron asistir a Fundamentals - Gi.",
+    "organizationId": "org_123",
+    "branchId": "branch_123",
+    "classSessionId": "session_123",
+    "suggestionId": "suggestion_123",
+    "message": "Te recomendamos asistir a esta clase para preparar tu próxima graduación."
+  }
+}
+```
+
+Notification payloads intentionally omit `ClassSession.notes`, attendance operational notes, private staff notes, and internal actor details. Existing pending suggestions do not create a second notification.
+
+#### Relation to attendance intent and enrolledCount
+
+- The student confirms independently through `PUT /organizations/:organizationId/branches/:branchId/class-sessions/:sessionId/attendance/intent`.
+- Creating an attendance suggestion does not create an `AttendanceIntent`.
+- Creating an attendance suggestion does not create an `AttendanceRecord`.
+- `enrolledCount` continues to count active attendance intents only; suggestions do not increment it.
+- V1 does not automatically move suggestions from `PENDING` to `ACCEPTED` when the student later creates intent.
 
 ### Update attendance record
 
@@ -7051,7 +7162,10 @@ Same as list item plus:
   - `STAFF_MANUAL`: staff/instructor records attendance for one or more students via `POST .../attendance` (roles STAFF/INSTRUCTOR/HEAD_COACH/ACADEMY_MANAGER/ORG_ADMIN/MESTRE). Not a student action.
   - `KIOSK_CHECKIN`: staff/kiosk actor checks in a specific student via `POST .../attendance/kiosk-check-in` (passes `studentId`). Not a student action.
   - `AttendanceIntent` (separate from records): a student's non-binding "planning to attend" signal (`PUT/GET/DELETE .../attendance/intent`). It is not an attendance record and feeds `enrolledCount`.
+  - `AttendanceSuggestion` (separate from records and intents): a staff-authored recommendation for a student to consider attending one class session (`POST .../attendance/suggestions`). It notifies the student but does not mark real attendance and does not feed `enrolledCount`.
 - `AttendanceIntentStatus`: `ACTIVE`, `CANCELED`
+- `AttendanceSuggestionTargetType`: `CLASS_SESSION`
+- `AttendanceSuggestionStatus`: `PENDING`, `ACCEPTED`, `DISMISSED`, `EXPIRED`
 - `AttendanceIntentCancelReasonCode`: `PLAN_CHANGED`, `INJURY`, `TRAVEL`, `SCHEDULE_CONFLICT`, `TEMPORARY_SUSPENSION`, `OTHER`
 - `AttendanceFollowUpStatus`: `PENDING`, `IN_PROGRESS`, `CONTACTED`, `REACTIVATED`, `UNRESPONSIVE`
 - `AttendanceFollowUpActionType`: `ASSIGNMENT_UPDATED`, `FOLLOW_UP_STARTED`, `CONTACT_RECORDED`, `REACTIVATED`, `UNRESPONSIVE_MARKED`
@@ -7111,8 +7225,8 @@ Same as list item plus:
 
 ### Notifications
 
-- `NotificationType`: `ANNOUNCEMENT_PUBLISHED`, `INVITATION_ACCEPTED`, `ACADEMY_INTAKE_REQUEST_CREATED`, `INSTITUTIONAL_REQUEST_ACTION_REQUIRED`, `INSTITUTIONAL_REQUEST_ASSIGNED`, `INSTITUTIONAL_REQUEST_CLOSED`, `INSTITUTIONAL_REQUEST_REMINDER`, `INSTITUTIONAL_REQUEST_ESCALATED`, `ATTENDANCE_FOLLOW_UP_ASSIGNED`, `TRAINING_NOTE_VISIBLE`, `TRAINING_NOTE_COACH_REVIEW`
-- `NotificationResourceType`: `ANNOUNCEMENT`, `MEMBERSHIP`, `ACADEMY_INTAKE_REQUEST`, `INSTITUTIONAL_MESSAGE`, `ATTENDANCE_FOLLOW_UP`, `TRAINING_NOTE`
+- `NotificationType`: `ANNOUNCEMENT_PUBLISHED`, `INVITATION_ACCEPTED`, `ACADEMY_INTAKE_REQUEST_CREATED`, `INSTITUTIONAL_REQUEST_ACTION_REQUIRED`, `INSTITUTIONAL_REQUEST_ASSIGNED`, `INSTITUTIONAL_REQUEST_CLOSED`, `INSTITUTIONAL_REQUEST_REMINDER`, `INSTITUTIONAL_REQUEST_ESCALATED`, `ATTENDANCE_FOLLOW_UP_ASSIGNED`, `ATTENDANCE_SUGGESTION`, `TRAINING_NOTE_VISIBLE`, `TRAINING_NOTE_COACH_REVIEW`
+- `NotificationResourceType`: `ANNOUNCEMENT`, `MEMBERSHIP`, `ACADEMY_INTAKE_REQUEST`, `INSTITUTIONAL_MESSAGE`, `ATTENDANCE_FOLLOW_UP`, `ATTENDANCE_SUGGESTION`, `TRAINING_NOTE`
 - `NotificationEventStatus`: `PENDING`, `PROCESSING`, `FANNED_OUT`, `FAILED`
 - `NotificationDeliveryChannel`: `IN_APP`
 - `NotificationDeliveryStatus`: `PENDING`, `PROCESSING`, `DELIVERED`, `FAILED`

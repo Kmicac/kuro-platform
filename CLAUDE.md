@@ -98,6 +98,15 @@ MESTRE → ORG_ADMIN → ACADEMY_MANAGER → HEAD_COACH → INSTRUCTOR → STAFF
 Gaps backend conocidos:
 - Forgot password → no existe endpoint → mostrar UI pero sin conectar
 - Org discovery pre-auth → login requiere `organizationSlug` explícito
+- **Walk-in / "agregar alumno a la clase"** → NO existe endpoint propio de enroll.
+  Tanto "marcar asistencia" como "agregar alumno" usan el MISMO
+  `POST .../class-sessions/:id/attendance`, sujeto a la **ventana horaria
+  STAFF_MANUAL** (409 fuera de ella: *"Staff attendance operation is only
+  allowed between …"*). La capacidad/`expected` se deriva de **attendance
+  intents** (`PUT .../attendance/intent`), no de un enroll. PENDIENTE de
+  confirmar con backend: si el producto necesita "sumar a la clase" fuera de
+  ventana, requiere endpoint nuevo (enroll/intent sin attendance). Hoy la UI
+  maneja el 409 con mensaje de dominio (ver `useAttendanceErrorHandler`).
 
 ---
 
