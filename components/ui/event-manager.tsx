@@ -21,8 +21,10 @@ import { useCallback, useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import {
   Calendar,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   Clock,
   Filter,
   Grid3x3,
@@ -134,6 +136,15 @@ export interface EventManagerProps {
   /** Ocultar la barra de búsqueda + filter dropdowns + chips activos. */
   hideFilters?: boolean
 
+  /**
+   * KURO custom: rango horario visible en las vistas week/day (hora local).
+   * Default 0..24 = día completo (comportamiento original). Las vistas month y
+   * list los ignoran. Los eventos fuera del rango no desaparecen: se reportan
+   * con un banner que enlaza a la vista list (ver OutOfRangeBanner).
+   */
+  startHour?: number
+  endHour?: number
+
   className?: string
 }
 
@@ -220,6 +231,9 @@ export function EventManager({
   onEventClick: externalEventClick,
   hideHeader = false,
   hideFilters = false,
+  // KURO custom: rango horario visible en week/day (default día completo).
+  startHour = 0,
+  endHour = 24,
   className,
   availableTags = ['Adultos', 'Kids', 'Femenino', 'Competición', 'Open Mat'],
 }: EventManagerProps) {
@@ -817,6 +831,9 @@ export function EventManager({
           onDragEnd={handleDragEnd}
           onDrop={handleDrop}
           getColorClasses={getColorClasses}
+          startHour={startHour}
+          endHour={endHour}
+          onShowList={() => setView('list')}
         />
       )}
       {view === 'day' && (
@@ -828,6 +845,9 @@ export function EventManager({
           onDragEnd={handleDragEnd}
           onDrop={handleDrop}
           getColorClasses={getColorClasses}
+          startHour={startHour}
+          endHour={endHour}
+          onShowList={() => setView('list')}
         />
       )}
       {view === 'list' && (
@@ -1150,14 +1170,16 @@ function EventCard({
       >
         <div
           className={cn(
-            'rounded px-1.5 py-0.5 text-xs font-medium transition-all duration-300',
-            colorClasses.bg,
-            'text-white truncate animate-in fade-in slide-in-from-top-1',
-            isHovered && 'scale-105 shadow-lg z-10',
+            'flex items-stretch overflow-hidden rounded-[2px] border border-border/70 bg-muted/50 text-xs transition-colors',
+            'animate-in fade-in slide-in-from-top-1',
+            isHovered && 'bg-muted',
             event.dimmed && 'opacity-50 line-through',
           )}
         >
-          {event.title}
+          <span className={cn('w-[3px] shrink-0', colorClasses.bg)} aria-hidden />
+          <span className="truncate px-1.5 py-0.5 font-medium text-foreground">
+            {event.title}
+          </span>
         </div>
         {isHovered && (
           <div className="absolute left-0 top-full z-50 mt-1 w-64 animate-in fade-in slide-in-from-top-2 duration-200">
@@ -1220,37 +1242,39 @@ function EventCard({
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         className={cn(
-          'cursor-pointer rounded-lg p-3 transition-all duration-300',
-          colorClasses.bg,
-          'text-white animate-in fade-in slide-in-from-left-2',
-          isHovered && 'scale-[1.03] shadow-2xl ring-2 ring-white/50',
+          'flex cursor-pointer items-stretch overflow-hidden rounded-[3px] border border-border/70 bg-card transition-colors',
+          'animate-in fade-in slide-in-from-left-2',
+          isHovered && 'bg-muted',
           event.dimmed && 'opacity-50 line-through',
         )}
       >
-        <div className="font-semibold">{event.title}</div>
-        {event.description && (
-          <div className="mt-1 text-sm opacity-90 line-clamp-2">
-            {event.description}
+        <span className={cn('w-1 shrink-0', colorClasses.bg)} aria-hidden />
+        <div className="min-w-0 flex-1 p-3">
+          <div className="font-semibold text-foreground">{event.title}</div>
+          {event.description && (
+            <div className="mt-1 text-sm text-muted-foreground line-clamp-2">
+              {event.description}
+            </div>
+          )}
+          <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+            <Clock className="h-3 w-3" />
+            {formatTime(event.startTime)} - {formatTime(event.endTime)}
           </div>
-        )}
-        <div className="mt-2 flex items-center gap-2 text-xs opacity-80">
-          <Clock className="h-3 w-3" />
-          {formatTime(event.startTime)} - {formatTime(event.endTime)}
+          {isHovered && (
+            <div className="mt-2 flex flex-wrap gap-1 animate-in fade-in slide-in-from-bottom-1 duration-200">
+              {event.category && (
+                <Badge variant="secondary" className="text-xs">
+                  {event.category}
+                </Badge>
+              )}
+              {event.tags?.map((tag) => (
+                <Badge key={tag} variant="outline" className="text-xs">
+                  {tag}
+                </Badge>
+              ))}
+            </div>
+          )}
         </div>
-        {isHovered && (
-          <div className="mt-2 flex flex-wrap gap-1 animate-in fade-in slide-in-from-bottom-1 duration-200">
-            {event.category && (
-              <Badge variant="secondary" className="text-xs">
-                {event.category}
-              </Badge>
-            )}
-            {event.tags?.map((tag) => (
-              <Badge key={tag} variant="outline" className="text-xs">
-                {tag}
-              </Badge>
-            ))}
-          </div>
-        )}
       </div>
     )
   }
@@ -1267,14 +1291,14 @@ function EventCard({
     >
       <div
         className={cn(
-          'cursor-pointer rounded px-2 py-1 text-xs font-medium transition-all duration-300',
-          colorClasses.bg,
-          'text-white animate-in fade-in slide-in-from-left-1',
-          isHovered && 'scale-105 shadow-lg z-10',
+          'flex cursor-pointer items-stretch overflow-hidden rounded-[2px] border border-border/70 bg-muted/50 text-xs font-medium transition-colors',
+          'animate-in fade-in slide-in-from-left-1',
+          isHovered && 'bg-muted',
           event.dimmed && 'opacity-50 line-through',
         )}
       >
-        <div className="truncate">{event.title}</div>
+        <span className={cn('w-[3px] shrink-0', colorClasses.bg)} aria-hidden />
+        <div className="truncate px-2 py-1 text-foreground">{event.title}</div>
       </div>
       {isHovered && (
         <div className="absolute left-0 top-full z-50 mt-1 w-72 animate-in fade-in slide-in-from-top-2 duration-200">
@@ -1430,6 +1454,104 @@ function MonthView({
   )
 }
 
+// ──────────────────────────────────────────────────────────────
+// KURO custom: rango horario visible (week/day) + banner de eventos
+// fuera de rango. Las academias BJJ en LATAM operan ~06:00–00:00, así que
+// el caller recorta la grilla para no desperdiciar scroll en la madrugada.
+// Los eventos fuera del rango NO se ocultan en silencio: se cuentan y se
+// ofrece saltar a la vista list (que muestra el día completo).
+// ──────────────────────────────────────────────────────────────
+
+/** Etiqueta "HH:00" de una hora (24 → "00:00"). */
+function formatHourLabel(hour: number): string {
+  return `${String(hour % 24).padStart(2, '0')}:00`
+}
+
+/**
+ * Cuenta eventos cuyo horario cae fuera de [startHour, endHour), entre los que
+ * pasan el predicado de pertenencia (al día o a la semana visible).
+ */
+function countOutOfRange(
+  events: Event[],
+  startHour: number,
+  endHour: number,
+  belongs: (d: Date) => boolean,
+): { before: number; after: number } {
+  let before = 0
+  let after = 0
+  for (const event of events) {
+    const d = new Date(event.startTime)
+    if (!belongs(d)) continue
+    const h = d.getHours()
+    if (h < startHour) before += 1
+    else if (h >= endHour) after += 1
+  }
+  return { before, after }
+}
+
+/**
+ * Banner sutil (paleta sobria) que aparece cuando hay clases fuera del rango
+ * horario visible. Cada indicador enlaza a la vista list. Si no hay eventos
+ * fuera de rango, no renderiza nada.
+ */
+function OutOfRangeBanner({
+  beforeCount,
+  afterCount,
+  startHour,
+  endHour,
+  onShowList,
+}: {
+  beforeCount: number
+  afterCount: number
+  startHour: number
+  endHour: number
+  onShowList: () => void
+}) {
+  const t = useTranslations('calendar.grid')
+  if (beforeCount === 0 && afterCount === 0) return null
+
+  return (
+    <div className="flex flex-col gap-1 border-b bg-muted/30 px-3 py-2 text-xs sm:flex-row sm:items-center sm:gap-4">
+      {beforeCount > 0 && (
+        <button
+          type="button"
+          onClick={onShowList}
+          className="inline-flex items-center gap-1.5 text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ChevronUp className="h-3.5 w-3.5 flex-shrink-0" />
+          <span>
+            {t('outOfRange.before', {
+              count: beforeCount,
+              time: formatHourLabel(startHour),
+            })}
+          </span>
+          <span className="underline underline-offset-2">
+            {t('outOfRange.viewList')}
+          </span>
+        </button>
+      )}
+      {afterCount > 0 && (
+        <button
+          type="button"
+          onClick={onShowList}
+          className="inline-flex items-center gap-1.5 text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ChevronDown className="h-3.5 w-3.5 flex-shrink-0" />
+          <span>
+            {t('outOfRange.after', {
+              count: afterCount,
+              time: formatHourLabel(endHour),
+            })}
+          </span>
+          <span className="underline underline-offset-2">
+            {t('outOfRange.viewList')}
+          </span>
+        </button>
+      )}
+    </div>
+  )
+}
+
 // Week View
 function WeekView({
   currentDate,
@@ -1439,6 +1561,9 @@ function WeekView({
   onDragEnd,
   onDrop,
   getColorClasses,
+  startHour,
+  endHour,
+  onShowList,
 }: {
   currentDate: Date
   events: Event[]
@@ -1447,6 +1572,9 @@ function WeekView({
   onDragEnd: () => void
   onDrop: (date: Date, hour: number) => void
   getColorClasses: (color: string) => EventColor
+  startHour: number
+  endHour: number
+  onShowList: () => void
 }) {
   const t = useTranslations('calendar.grid')
   const startOfWeek = new Date(currentDate)
@@ -1458,7 +1586,11 @@ function WeekView({
     return day
   })
 
-  const hours = Array.from({ length: 24 }, (_, i) => i)
+  // KURO custom: rango horario configurable (default 0..24 = día completo).
+  const hours = Array.from(
+    { length: Math.max(0, endHour - startHour) },
+    (_, i) => i + startHour,
+  )
 
   const getEventsForDayAndHour = (date: Date, hour: number) =>
     events.filter((event) => {
@@ -1471,8 +1603,30 @@ function WeekView({
       )
     })
 
+  // KURO custom: eventos de la semana fuera del rango horario visible.
+  const inWeek = (d: Date) =>
+    weekDays.some(
+      (wd) =>
+        wd.getDate() === d.getDate() &&
+        wd.getMonth() === d.getMonth() &&
+        wd.getFullYear() === d.getFullYear(),
+    )
+  const { before: beforeCount, after: afterCount } = countOutOfRange(
+    events,
+    startHour,
+    endHour,
+    inWeek,
+  )
+
   return (
     <Card className="overflow-auto">
+      <OutOfRangeBanner
+        beforeCount={beforeCount}
+        afterCount={afterCount}
+        startHour={startHour}
+        endHour={endHour}
+        onShowList={onShowList}
+      />
       <div className="grid grid-cols-8 border-b">
         <div className="border-r p-2 text-center text-xs font-medium sm:text-sm">
           {t('hourColumn')}
@@ -1539,6 +1693,9 @@ function DayView({
   onDragEnd,
   onDrop,
   getColorClasses,
+  startHour,
+  endHour,
+  onShowList,
 }: {
   currentDate: Date
   events: Event[]
@@ -1547,22 +1704,44 @@ function DayView({
   onDragEnd: () => void
   onDrop: (date: Date, hour: number) => void
   getColorClasses: (color: string) => EventColor
+  startHour: number
+  endHour: number
+  onShowList: () => void
 }) {
-  const hours = Array.from({ length: 24 }, (_, i) => i)
+  // KURO custom: rango horario configurable (default 0..24 = día completo).
+  const hours = Array.from(
+    { length: Math.max(0, endHour - startHour) },
+    (_, i) => i + startHour,
+  )
+
+  const sameDay = (d: Date) =>
+    d.getDate() === currentDate.getDate() &&
+    d.getMonth() === currentDate.getMonth() &&
+    d.getFullYear() === currentDate.getFullYear()
 
   const getEventsForHour = (hour: number) =>
     events.filter((event) => {
       const d = new Date(event.startTime)
-      return (
-        d.getDate() === currentDate.getDate() &&
-        d.getMonth() === currentDate.getMonth() &&
-        d.getFullYear() === currentDate.getFullYear() &&
-        d.getHours() === hour
-      )
+      return sameDay(d) && d.getHours() === hour
     })
+
+  // KURO custom: eventos del día fuera del rango horario visible.
+  const { before: beforeCount, after: afterCount } = countOutOfRange(
+    events,
+    startHour,
+    endHour,
+    sameDay,
+  )
 
   return (
     <Card className="overflow-auto">
+      <OutOfRangeBanner
+        beforeCount={beforeCount}
+        afterCount={afterCount}
+        startHour={startHour}
+        endHour={endHour}
+        onShowList={onShowList}
+      />
       <div className="space-y-0">
         {hours.map((hour) => {
           const hourEvents = getEventsForHour(hour)

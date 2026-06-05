@@ -234,7 +234,7 @@ export function TrainingCalendar({ orgId }: TrainingCalendarProps) {
     setSelectedStatuses(new Set())
   }, [])
 
-  // ── Selección de sesión vía searchParam ?session= ──
+  // ── Selección de sesión vía searchParam ?session= → side panel (Sheet) ──
   const selectedSessionId = searchParams.get('session')
 
   const handleEventClick = useCallback(
@@ -367,6 +367,10 @@ export function TrainingCalendar({ orgId }: TrainingCalendarProps) {
           onEventClick={handleEventClick}
           hideHeader
           hideFilters
+          // Academias BJJ LATAM operan ~06:00–00:00: recortamos la grilla
+          // week/day para no desperdiciar scroll en la madrugada.
+          startHour={6}
+          endHour={24}
         />
       )}
 

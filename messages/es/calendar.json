@@ -136,7 +136,12 @@
     "allClasses": "Todas las clases",
     "weekOf": "Semana del {date}",
     "hourColumn": "Hora",
-    "moreEvents": "+{count} más"
+    "moreEvents": "+{count} más",
+    "outOfRange": {
+      "before": "{count, plural, =1 {1 clase antes de las {time}} other {# clases antes de las {time}}}",
+      "after": "{count, plural, =1 {1 clase después de las {time}} other {# clases después de las {time}}}",
+      "viewList": "Ver lista"
+    }
   },
   "session": {
     "detailTitle": "Detalle de la clase",
@@ -167,7 +172,9 @@
       "cancel": "Cancelar clase",
       "cancelSoon": "Cancelar clase (próximamente)",
       "markAttendance": "Marcar asistencia",
-      "markAttendanceSoon": "Marcar asistencia (próximamente)",
+      "generateQr": "Generar QR",
+      "suggestAttendance": "Sugerir asistencia",
+      "viewDetail": "Ver detalle completo",
       "notAvailableForStatus": "No disponible para este estado"
     }
   }
