@@ -391,7 +391,8 @@ function SessionStatusBadge({ status }: { status?: string }) {
       label: t('agenda.sessionStatus.completed'),
       className: 'border-border text-muted-foreground',
     },
-    CANCELLED: {
+    // El backend usa CANCELED (una L); ver ClassSessionStatus en lib/api/types.
+    CANCELED: {
       label: t('agenda.sessionStatus.canceled'),
       className: 'border-destructive/40 bg-destructive/10 text-destructive',
     },
@@ -493,14 +494,12 @@ function IntakePipelineCard({
         }
       >
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-          {normalized.map((s, idx) => (
+          {normalized.map((s) => (
             <div
               key={s.stage}
               className="rounded-lg border border-border bg-card p-3"
             >
-              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                {idx + 1}. {s.label}
-              </p>
+              <p className="label-mono">{s.label}</p>
               <p className="text-2xl font-semibold text-foreground tabular-nums mt-1">
                 {format.number(s.count)}
               </p>
@@ -589,7 +588,10 @@ function RiskRosterCard({
             </thead>
             <tbody className="divide-y divide-border">
               {items?.slice(0, 6).map((item) => (
-                <tr key={item.studentId}>
+                <tr
+                  key={item.studentId}
+                  className="transition-colors hover:bg-muted/40"
+                >
                   <td className="py-2.5">
                     <Link
                       href={`/org/${orgId}/students/${item.studentId}`}

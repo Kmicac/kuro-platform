@@ -60,10 +60,13 @@ export function KpiCard({
     <CutoutCard
       icon={<Icon className="h-4 w-4" />}
       iconClassName={cn(
-        'stroke-[1.5]',
-        isAlerted ? 'surface-warning' : 'border-transparent bg-primary/10 text-primary',
+        'stroke-[1.5] transition-colors',
+        isAlerted
+          ? 'surface-warning'
+          : 'border-transparent bg-primary/10 text-primary',
+        // Hover estable (sin layout-shift): el ícono se intensifica al pasar.
+        navigable && !isAlerted && 'group-hover:bg-primary/20',
       )}
-      className={cn(navigable && 'transition-transform hover:-translate-y-0.5')}
     >
       <p className="label-mono">{label}</p>
       <KpiValue
@@ -84,7 +87,7 @@ export function KpiCard({
 
   if (navigable && href) {
     return (
-      <Link href={href} className="block">
+      <Link href={href} className="group block">
         {body}
       </Link>
     )

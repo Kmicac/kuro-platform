@@ -192,7 +192,7 @@ function BranchListSection({
           {[0, 1, 2].map((i) => (
             <div
               key={i}
-              className="h-28 rounded-[24px] bg-muted/50 animate-pulse"
+              className="h-28 rounded-lg bg-muted/50 animate-pulse"
             />
           ))}
         </div>
@@ -256,7 +256,7 @@ function BranchCard({
 
   return (
     <Link href={`/org/${orgId}/branches/${branch.id}`} className="block group">
-      <TextureCard className="transition-transform group-hover:-translate-y-0.5">
+      <TextureCard className="transition-colors">
         <TextureCardContent className="p-4">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
@@ -280,10 +280,8 @@ function BranchCard({
           <div className="grid grid-cols-3 gap-2 mt-3">
             {stats.map((s) => (
               <div key={s.label}>
-                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                  {s.label}
-                </p>
-                <p className="text-sm font-semibold text-foreground tabular-nums">
+                <p className="label-mono">{s.label}</p>
+                <p className="text-sm font-semibold text-foreground tabular-nums mt-0.5">
                   {s.value != null ? format.number(s.value) : '—'}
                 </p>
               </div>
