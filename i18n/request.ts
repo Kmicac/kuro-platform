@@ -17,12 +17,15 @@ const NAMESPACES = [
   'students',
   'intake',
   'claims',
+  'attendance',
+  'qr-checkin',
+  'class-detail',
   'errors',
   'empty-states',
 ] as const
 
 /**
- * Carga y mergea los 10 namespaces de messages/<locale>/*.json en un solo
+ * Carga y mergea los 13 namespaces de messages/<locale>/*.json en un solo
  * objeto `{ [namespace]: { ...keys } }`.
  */
 async function loadMessages(locale: string) {

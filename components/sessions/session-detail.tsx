@@ -1,14 +1,18 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useFormatter, useTranslations } from 'next-intl'
 import {
   AlertCircle,
+  ArrowUpRight,
   Ban,
   CalendarDays,
   ClipboardCheck,
   Clock,
   Pencil,
+  QrCode,
+  Send,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ApiError } from '@/lib/api/client'
@@ -16,6 +20,7 @@ import { useSession } from '@/lib/hooks/use-sessions'
 import { useCapabilities, useCurrentContext } from '@/lib/hooks'
 import { SessionDialog } from '@/components/sessions/session-dialog'
 import { CancelSessionDialog } from '@/components/sessions/cancel-session-dialog'
+import { SuggestAttendanceDialog } from '@/components/attendance/suggest-attendance-dialog'
 import {
   BeltBadge,
   ClassTypeChip,
@@ -363,23 +368,54 @@ function ActionsBar({
   onClose?: () => void
 }) {
   const t = useTranslations('calendar.session.actions')
-  const tc = useTranslations('common.actions')
   const tCancel = useTranslations('calendar.cancelDialog')
-  const { orgId } = useCurrentContext()
+  const router = useRouter()
+  const { orgId, branchId } = useCurrentContext()
   const caps = useCapabilities(orgId ?? '')
   const canManage = Boolean(
     caps.data?.capabilities?.classes?.canManageSchedules,
   )
+  const canValidate = Boolean(
+    caps.data?.capabilities?.attendance?.canValidateAttendance,
+  )
   const isEditable =
     session.status !== 'CANCELED' && session.status !== 'COMPLETED'
   const canCancel = session.status === 'SCHEDULED'
+  const isCanceled = session.status === 'CANCELED'
+  // El branchId del detalle es la fuente de verdad (la sesión puede verse
+  // desde el calendar org-level, donde la URL no trae branchId).
+  const sessionBranchId = session.branchId || branchId
+  const canSuggest = Boolean(
+    caps.data?.capabilities?.attendance?.canSuggestAttendance,
+  )
   const [editOpen, setEditOpen] = useState(false)
   const [cancelOpen, setCancelOpen] = useState(false)
+  const [suggestOpen, setSuggestOpen] = useState(false)
+
+  // Solo push: NO llamar onClose() — en el calendario onClose hace un
+  // router.replace que cancelaría esta navegación. Al cambiar de ruta, el
+  // calendario (y su Sheet) se desmontan solos.
+  const goToDetail = () =>
+    router.push(
+      `/org/${orgId}/branches/${sessionBranchId}/sessions/${session.id}`,
+    )
+  const goToAttendance = () =>
+    router.push(
+      `/org/${orgId}/branches/${sessionBranchId}/sessions/${session.id}/attendance`,
+    )
+  const goToQR = () =>
+    router.push(
+      `/org/${orgId}/branches/${sessionBranchId}/sessions/${session.id}/qr`,
+    )
 
   return (
     <>
       <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-border pt-6">
         <span className="label-mono mr-2">{t('title')}</span>
+        <Button variant="default" size="sm" onClick={goToDetail}>
+          <ArrowUpRight className="h-3.5 w-3.5" />
+          {t('viewDetail')}
+        </Button>
         {canManage && (
           <Button
             variant="outline"
@@ -405,16 +441,42 @@ function ActionsBar({
             {t('cancel')}
           </Button>
         )}
-        <Button
-          variant="default"
-          size="sm"
-          disabled
-          title={tc('comingSoon')}
-          aria-label={t('markAttendanceSoon')}
-        >
-          <ClipboardCheck className="h-3.5 w-3.5" />
-          {t('markAttendance')}
-        </Button>
+        {canValidate && (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isCanceled}
+            title={isCanceled ? t('notAvailableForStatus') : undefined}
+            onClick={goToAttendance}
+          >
+            <ClipboardCheck className="h-3.5 w-3.5" />
+            {t('markAttendance')}
+          </Button>
+        )}
+        {canValidate && (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isCanceled}
+            title={isCanceled ? t('notAvailableForStatus') : undefined}
+            onClick={goToQR}
+          >
+            <QrCode className="h-3.5 w-3.5" />
+            {t('generateQr')}
+          </Button>
+        )}
+        {canSuggest && (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isCanceled}
+            title={isCanceled ? t('notAvailableForStatus') : undefined}
+            onClick={() => setSuggestOpen(true)}
+          >
+            <Send className="h-3.5 w-3.5" />
+            {t('suggestAttendance')}
+          </Button>
+        )}
       </div>
 
       <SessionDialog
@@ -433,6 +495,19 @@ function ActionsBar({
         sessionEndAt={session.endAt}
         onSuccess={() => onClose?.()}
       />
+
+      {/* Desde el Sheet no cargamos el roster: excludeStudentIds vacío. El
+          backend deduplica sugerencias ya existentes (alreadySuggested). */}
+      {canSuggest && orgId && sessionBranchId && (
+        <SuggestAttendanceDialog
+          open={suggestOpen}
+          onOpenChange={setSuggestOpen}
+          sessionId={session.id}
+          branchId={sessionBranchId}
+          orgId={orgId}
+          excludeStudentIds={[]}
+        />
+      )}
     </>
   )
 }

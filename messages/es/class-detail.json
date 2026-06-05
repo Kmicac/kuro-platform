@@ -1,0 +1,86 @@
+{
+  "meta": {
+    "title": "Detalle de clase"
+  },
+  "back": "Volver al calendario",
+  "header": {
+    "instructor": "Instructor",
+    "noInstructor": "Sin instructor asignado",
+    "duration": "{minutes} min"
+  },
+  "actions": {
+    "cancel": "Cancelar clase",
+    "markAttendance": "Marcar asistencia",
+    "edit": "Editar",
+    "suggest": "Sugerir asistencia",
+    "generateQr": "Generar QR",
+    "notAvailableForStatus": "No disponible para este estado"
+  },
+  "attendance": {
+    "title": "Resumen de asistencia",
+    "checkedIn": "Alumnos con check-in",
+    "capacityPct": "{pct}% de capacidad",
+    "spotsLeft": "{count, plural, =0 {Sin cupos libres} =1 {1 cupo libre} other {# cupos libres}}"
+  },
+  "curriculum": {
+    "title": "Currícula técnica",
+    "empty": "Sin nota técnica para esta clase.",
+    "add": "Agregar nota técnica",
+    "edit": "Editar nota técnica",
+    "dialogTitle": "Nota técnica de la clase",
+    "placeholder": "Ej: Half guard bottom — defensa de pressure passing...",
+    "save": "Guardar nota",
+    "tooLong": "La nota no puede superar los 500 caracteres.",
+    "saved": "Nota técnica guardada"
+  },
+  "students": {
+    "title": "Alumnos registrados",
+    "search": "Filtrar alumnos...",
+    "showing": "Mostrando {showing} de {total}",
+    "col": {
+      "student": "Alumno",
+      "rank": "Graduación",
+      "status": "Estado",
+      "actions": "Acciones"
+    },
+    "status": {
+      "checkedIn": "Check-in",
+      "registered": "Registrado",
+      "pending": "Sin marcar"
+    },
+    "checkIn": "Check in",
+    "empty": "Sin alumnos registrados",
+    "emptyDescription": "Ningún alumno marcó intención de asistir a esta clase.",
+    "checkedInSuccess": "Alumno marcado presente"
+  },
+  "compliance": {
+    "waiverTitle": "Cumplimiento de waiver",
+    "paymentTitle": "Estado de pagos",
+    "unavailable": "No integrado",
+    "externalDep": "Depende de integración externa"
+  },
+  "qr": {
+    "expand": "Expandir QR",
+    "title": "Check-in con QR",
+    "description": "Los alumnos escanean este código para marcar asistencia.",
+    "generate": "Generar QR",
+    "regenerate": "Regenerar",
+    "generating": "Generando...",
+    "scanInstructions": "Escanea el código para marcar asistencia",
+    "expiresIn": "Expira en {time}",
+    "expired": "El código expiró",
+    "fullscreen": "Abrir en pantalla completa",
+    "generationFailed": "No se pudo generar el QR. Intenta de nuevo.",
+    "forbidden": "No tienes permiso para generar QR"
+  },
+  "errors": {
+    "forbidden": "No tienes permiso para marcar asistencia",
+    "forbiddenTitle": "Sin acceso a la clase",
+    "forbiddenDescription": "Tu rol no permite ver el detalle de esta clase.",
+    "loadErrorTitle": "No se pudo cargar la clase",
+    "notFoundTitle": "Clase no encontrada",
+    "notFoundDescription": "La clase no existe o pertenece a otra organización.",
+    "sessionCanceled": "Esta clase está cancelada",
+    "outOfWindow": "Fuera de la ventana horaria: la asistencia solo se registra cerca del horario de la clase."
+  }
+}

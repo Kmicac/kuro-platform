@@ -1,0 +1,57 @@
+{
+  "meta": {
+    "title": "Check-in con QR"
+  },
+  "page": {
+    "title": "Check-in con QR",
+    "back": "Volver"
+  },
+  "info": {
+    "instructor": "Instructor",
+    "schedule": "Horario",
+    "duration": "Duración",
+    "durationMinutes": "{minutes} min"
+  },
+  "qr": {
+    "generate": "Generar QR",
+    "regenerate": "Regenerar QR",
+    "scanInstructions": "Escanea el código para marcar asistencia",
+    "expiresIn": "Expira en {time}",
+    "expired": "El código expiró",
+    "expiringWarning": "El código está por expirar",
+    "generating": "Generando...",
+    "idleTitle": "Listo para generar",
+    "idleDescription": "Genera un código QR para que los alumnos marquen asistencia."
+  },
+  "capacity": {
+    "title": "Capacidad",
+    "checkedIn": "Check-in completado",
+    "available": "{count} cupos disponibles",
+    "occupied": "{percent}% ocupado"
+  },
+  "roster": {
+    "title": "Alumnos registrados",
+    "showing": "Mostrando {showing} de {total}",
+    "empty": "Sin alumnos registrados",
+    "filter": {
+      "all": "Todos",
+      "checkedIn": "Check-in",
+      "expected": "Esperados"
+    },
+    "search": "Buscar alumno..."
+  },
+  "status": {
+    "checkedIn": "Check-in",
+    "expected": "Esperado"
+  },
+  "errors": {
+    "generationFailed": "No se pudo generar el QR. Intenta de nuevo.",
+    "sessionCanceled": "Esta clase está cancelada",
+    "forbidden": "No tienes permiso para generar QR",
+    "forbiddenTitle": "Sin acceso al check-in",
+    "forbiddenDescription": "Tu rol no permite generar códigos QR para esta clase.",
+    "loadErrorTitle": "No se pudo cargar la clase",
+    "notFoundTitle": "Clase no encontrada",
+    "notFoundDescription": "La clase no existe o pertenece a otra organización."
+  }
+}

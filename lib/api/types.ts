@@ -709,6 +709,82 @@ export interface UpdateAttendanceBody {
   correctionNote?: string
 }
 
+// ── QR check-in token (POST .../attendance/qr-token) ───────────
+
+export interface IssueQRTokenBody {
+  /** Minutos hasta expiración. El backend puede capear este valor. */
+  expiresInMinutes: number
+}
+
+/**
+ * Token QR emitido por el instructor/staff. El alumno lo escanea desde la app
+ * y el backend registra asistencia con source `QR_CHECKIN`. `token` es el valor
+ * crudo a renderizar en el código; nunca se persiste en el cliente.
+ */
+export interface QRTokenResponse {
+  id: string
+  organizationId: string
+  branchId: string
+  classSessionId: string
+  mode: 'QR'
+  issuedByMembershipId: string
+  expiresAt: string
+  revokedAt: string | null
+  createdAt: string
+  token: string
+}
+
+// ── Attendance suggestions (POST .../attendance/suggestions) ───
+//
+// Recomendación de asistencia hecha por staff. NO es asistencia real, ni
+// intent, ni QR check-in, ni enrollment: solo notifica al alumno para que
+// decida confirmar por su cuenta (API-CONTRACT §"Create class-session
+// attendance suggestions"). No crea AttendanceRecord/AttendanceIntent ni
+// incrementa enrolledCount.
+
+export interface SuggestAttendanceBody {
+  /** 1..300 ids únicos. */
+  studentIds: string[]
+  /** Opcional, max 280 chars (trim del backend). */
+  message?: string
+}
+
+export type AttendanceSuggestionStatus =
+  | 'PENDING'
+  | 'ACCEPTED'
+  | 'DISMISSED'
+  | 'EXPIRED'
+
+/** Motivo por el que un alumno no pudo ser sugerido. */
+export type AttendanceSuggestionInvalidReason =
+  | 'NOT_FOUND'
+  | 'INACTIVE'
+  | 'NO_BRANCH_ACCESS'
+  | 'NO_ACTIVE_RECIPIENT_MEMBERSHIP'
+
+export interface SuggestAttendanceItem {
+  studentId: string
+  suggestionId: string
+  status: AttendanceSuggestionStatus
+  notificationId: string
+  /** false si ya existía una sugerencia PENDING (deduplicada). */
+  created: boolean
+}
+
+export interface SuggestAttendanceInvalidStudent {
+  studentId: string
+  reason: AttendanceSuggestionInvalidReason | string
+}
+
+export interface SuggestAttendanceResponse {
+  classSessionId: string
+  created: number
+  skipped: number
+  alreadySuggested: number
+  invalidStudents: SuggestAttendanceInvalidStudent[]
+  items: SuggestAttendanceItem[]
+}
+
 // ── Instructor candidates (GET .../instructors/candidates) ─────
 
 export interface InstructorCandidate {

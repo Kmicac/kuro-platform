@@ -1,0 +1,128 @@
+{
+  "meta": {
+    "title": "Asistencia"
+  },
+  "page": {
+    "title": "Asistencia",
+    "back": "Volver al calendario"
+  },
+  "header": {
+    "instructor": "Instructor",
+    "capacity": "Capacidad",
+    "schedule": "Horario"
+  },
+  "toolbar": {
+    "search": "Buscar alumno...",
+    "filter": {
+      "all": "Todos",
+      "expected": "Esperados",
+      "marked": "Marcados"
+    },
+    "markAllPresent": "Marcar todos presentes",
+    "addWalkIn": "Agregar alumno",
+    "counter": "{marked} de {total} marcados"
+  },
+  "table": {
+    "student": "Alumno",
+    "belt": "Faixa",
+    "intent": "Intención",
+    "status": "Estado",
+    "actions": "Acciones",
+    "expectedBadge": "Esperado",
+    "walkInBadge": "Sin inscripción"
+  },
+  "status": {
+    "PRESENT": "Presente",
+    "LATE": "Tarde",
+    "ABSENT": "Ausente",
+    "EXCUSED": "Justificado",
+    "pending": "Pendiente"
+  },
+  "reasonCode": {
+    "INJURY": "Lesión",
+    "TRAVEL": "Viaje",
+    "SCHEDULE_CONFLICT": "Conflicto de horario",
+    "TEMPORARY_SUSPENSION": "Suspensión temporal",
+    "VALID_VISIT": "Visita válida",
+    "OPERATIONAL_ERROR": "Error operativo",
+    "OTHER": "Otro"
+  },
+  "actions": {
+    "markPresent": "Marcar presente",
+    "markLate": "Marcar tarde",
+    "markAbsent": "Marcar ausente",
+    "markExcused": "Marcar justificado",
+    "remove": "Eliminar registro",
+    "addNote": "Agregar nota"
+  },
+  "walkIn": {
+    "title": "Agregar alumno",
+    "description": "Buscar alumno de la filial",
+    "searchPlaceholder": "Nombre o email del alumno...",
+    "noResults": "No hay resultados",
+    "addAsPresent": "Marcar presente"
+  },
+  "suggest": {
+    "title": "Sugerir asistencia",
+    "description": "Recomendá esta clase a uno o más alumnos. Recibirán una notificación para que decidan si confirman su asistencia.",
+    "fields": {
+      "search": "Buscar alumnos...",
+      "message": "Mensaje (opcional)",
+      "messagePlaceholder": "Te recomendamos esta clase porque...",
+      "messageHelp": "Si lo dejas vacío, se enviará el mensaje por defecto."
+    },
+    "counter": "{count, plural, =0 {Ningún alumno seleccionado} =1 {1 alumno seleccionado} other {# alumnos seleccionados}}",
+    "actions": {
+      "cancel": "Cancelar",
+      "submit": "Enviar recomendación",
+      "submitting": "Enviando..."
+    },
+    "success": {
+      "allCreated": "{count, plural, =1 {Recomendación enviada a 1 alumno} other {Recomendación enviada a # alumnos}}"
+    },
+    "summary": {
+      "created": "{count, plural, =1 {1 nueva recomendación} other {# nuevas recomendaciones}}",
+      "alreadySuggested": "{count, plural, =1 {1 alumno ya tenía sugerencia} other {# alumnos ya tenían sugerencia}}",
+      "invalid": "{count, plural, =1 {1 alumno no pudo ser sugerido} other {# alumnos no pudieron ser sugeridos}}"
+    },
+    "errors": {
+      "forbidden": "No tienes permiso para sugerir asistencia",
+      "sessionCanceled": "Esta clase está cancelada",
+      "noStudentsSelected": "Selecciona al menos un alumno",
+      "generic": "No se pudo enviar la recomendación. Intentá de nuevo."
+    },
+    "emptyResults": "No se encontraron alumnos con ese nombre"
+  },
+  "noteDialog": {
+    "title": "Nota de asistencia",
+    "placeholder": "Escribe una nota sobre este alumno...",
+    "save": "Guardar nota",
+    "tooLong": "La nota no puede superar los 500 caracteres."
+  },
+  "warnings": {
+    "outsideWindow": "Estás corrigiendo asistencia fuera de la ventana estándar.",
+    "windowClosed": "La asistencia solo puede registrarse cerca del horario de la clase. La ventana de registro aún no está abierta o ya se cerró.",
+    "windowRange": "Ventana de registro: {start} – {end}"
+  },
+  "success": {
+    "marked": "Asistencia registrada",
+    "updated": "Asistencia actualizada",
+    "removed": "Registro eliminado",
+    "walkInAdded": "Alumno agregado correctamente"
+  },
+  "errors": {
+    "forbidden": "No tienes permiso para marcar asistencia",
+    "forbiddenTitle": "Sin acceso a la asistencia",
+    "forbiddenDescription": "Tu rol no permite registrar asistencia de esta clase.",
+    "loadErrorTitle": "No se pudo cargar el roster",
+    "notFoundTitle": "Clase no encontrada",
+    "notFoundDescription": "La clase no existe o pertenece a otra organización.",
+    "sessionCanceled": "Esta clase está cancelada",
+    "outOfWindow": "Fuera de la ventana horaria: la asistencia solo se registra cerca del horario de la clase."
+  },
+  "emptyState": {
+    "title": "Sin alumnos esperados",
+    "description": "Ningún alumno marcó intención de asistir a esta clase.",
+    "addWalkIn": "Agregar alumno manualmente"
+  }
+}

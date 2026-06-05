@@ -16,8 +16,12 @@ import type {
   ClassSessionStatus,
   ClassType,
   InstructorCandidatesResponse,
+  IssueQRTokenBody,
   PromotionRankCatalogEntry,
+  QRTokenResponse,
   RecordAttendanceBody,
+  SuggestAttendanceBody,
+  SuggestAttendanceResponse,
   RiskRoster,
   SessionAttendance,
   SessionTechnicalRoster,
@@ -495,6 +499,41 @@ export const classSessionsApi = {
   ) =>
     api.patch<unknown>(
       `/organizations/${orgId}/branches/${branchId}/class-sessions/${sessionId}/attendance/${studentId}`,
+      body
+    ),
+
+  /** DELETE .../class-sessions/:sessionId/attendance/:studentId — elimina el registro */
+  deleteAttendance: (
+    orgId: string,
+    branchId: string,
+    sessionId: string,
+    studentId: string
+  ) =>
+    api.delete<unknown>(
+      `/organizations/${orgId}/branches/${branchId}/class-sessions/${sessionId}/attendance/${studentId}`
+    ),
+
+  /** POST .../class-sessions/:sessionId/attendance/qr-token — emite token QR */
+  issueQRToken: (
+    orgId: string,
+    branchId: string,
+    sessionId: string,
+    body: IssueQRTokenBody
+  ) =>
+    api.post<QRTokenResponse>(
+      `/organizations/${orgId}/branches/${branchId}/class-sessions/${sessionId}/attendance/qr-token`,
+      body
+    ),
+
+  /** POST .../class-sessions/:sessionId/attendance/suggestions — sugerir asistencia (no marca) */
+  suggestAttendance: (
+    orgId: string,
+    branchId: string,
+    sessionId: string,
+    body: SuggestAttendanceBody
+  ) =>
+    api.post<SuggestAttendanceResponse>(
+      `/organizations/${orgId}/branches/${branchId}/class-sessions/${sessionId}/attendance/suggestions`,
       body
     ),
 }
