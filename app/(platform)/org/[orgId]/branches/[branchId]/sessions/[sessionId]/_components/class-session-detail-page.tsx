@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl'
 import { CalendarDays } from 'lucide-react'
 
 import { ApiError } from '@/lib/api/client'
+import { isAttendanceWindowError } from '@/lib/api/error-parsers'
 import {
   useCapabilities,
   useRecordAttendance,
@@ -29,9 +30,6 @@ export interface ClassSessionDetailPageProps {
   branchId: string
   sessionId: string
 }
-
-/** El backend solo permite asistencia STAFF_MANUAL dentro de la ventana horaria. */
-const WINDOW_409_RE = /only allowed between/i
 
 export function ClassSessionDetailPage({
   orgId,
@@ -76,11 +74,7 @@ export function ClassSessionDetailPage({
   const handleCheckInError = (error: unknown) => {
     if (error instanceof ApiError && error.status === 403)
       return notifyError(t('errors.forbidden'))
-    if (
-      error instanceof ApiError &&
-      error.status === 409 &&
-      hasWindowMessage(error)
-    )
+    if (isAttendanceWindowError(error))
       return notifyError(t('errors.outOfWindow'), error)
     notifyError(t('errors.loadErrorTitle'), error)
   }
@@ -202,15 +196,6 @@ export function ClassSessionDetailPage({
 }
 
 // ── Helpers ────────────────────────────────────────────────────
-
-function hasWindowMessage(error: ApiError): boolean {
-  const body = error.body
-  if (body && typeof body === 'object' && 'message' in body) {
-    const msg = (body as { message?: unknown }).message
-    return typeof msg === 'string' && WINDOW_409_RE.test(msg)
-  }
-  return false
-}
 
 function DetailSkeleton() {
   return (

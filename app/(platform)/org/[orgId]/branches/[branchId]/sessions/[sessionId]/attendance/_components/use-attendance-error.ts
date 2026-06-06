@@ -3,8 +3,8 @@
 import { useTranslations } from 'next-intl'
 
 import { ApiError } from '@/lib/api/client'
+import { isAttendanceWindowError } from '@/lib/api/error-parsers'
 import { notifyError } from '@/lib/utils/toast'
-import { isAttendanceWindowError } from './attendance-window'
 
 /**
  * Handler de error compartido por todos los callers de mutations de asistencia
