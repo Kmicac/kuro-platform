@@ -6,6 +6,7 @@ import { CheckCircle2, Circle, Search } from 'lucide-react'
 
 import { Input } from '@/components/ui/input'
 import { BeltBadge } from '@/components/kuro'
+import { ErrorState } from '@/components/shared'
 import { cn } from '@/lib/utils'
 import type { TechnicalRosterItem } from '@/lib/api/types'
 import type { usePromotionRankResolver } from '@/lib/hooks/use-catalogs'
@@ -15,6 +16,9 @@ type RosterFilter = 'all' | 'checkedIn' | 'expected'
 export interface QRRosterPreviewProps {
   items: TechnicalRosterItem[]
   isLoading: boolean
+  isError?: boolean
+  error?: unknown
+  onRetry?: () => void
   resolveRank: ReturnType<typeof usePromotionRankResolver>
 }
 
@@ -23,6 +27,9 @@ const FILTERS: RosterFilter[] = ['all', 'checkedIn', 'expected']
 export function QRRosterPreview({
   items,
   isLoading,
+  isError = false,
+  error,
+  onRetry,
   resolveRank,
 }: QRRosterPreviewProps) {
   const t = useTranslations('qr-checkin.roster')
@@ -89,7 +96,14 @@ export function QRRosterPreview({
         </div>
       </div>
 
-      {isLoading ? (
+      {isError ? (
+        <ErrorState
+          dense
+          error={error}
+          title={t('loadError')}
+          onRetry={onRetry}
+        />
+      ) : isLoading ? (
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {[0, 1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="h-16 animate-pulse rounded-lg bg-muted/50" />

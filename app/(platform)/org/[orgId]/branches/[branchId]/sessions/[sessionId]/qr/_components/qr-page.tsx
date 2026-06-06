@@ -159,6 +159,9 @@ export function QRPage({ orgId, sessionId }: QRPageProps) {
         <QRRosterPreview
           items={rosterItems}
           isLoading={rosterQuery.isLoading}
+          isError={rosterQuery.isError}
+          error={rosterQuery.error}
+          onRetry={() => rosterQuery.refetch()}
           resolveRank={resolveRank}
         />
       </div>

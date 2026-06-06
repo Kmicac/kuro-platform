@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { ErrorState } from '@/components/shared'
 import { useBranchStudents } from '@/lib/hooks'
 import { usePromotionRankResolver } from '@/lib/hooks/use-catalogs'
 import { BeltBadge } from '@/components/kuro'
@@ -120,7 +121,14 @@ export function WalkInDialog({
         )}
 
         <ScrollArea className="max-h-72">
-          {studentsQuery.isLoading ? (
+          {studentsQuery.isError ? (
+            <ErrorState
+              dense
+              error={studentsQuery.error}
+              title={t('loadError')}
+              onRetry={() => studentsQuery.refetch()}
+            />
+          ) : studentsQuery.isLoading ? (
             <div className="space-y-2 py-1">
               {[0, 1, 2].map((i) => (
                 <div

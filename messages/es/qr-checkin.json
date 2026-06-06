@@ -33,6 +33,7 @@
     "title": "Alumnos registrados",
     "showing": "Mostrando {showing} de {total}",
     "empty": "Sin alumnos registrados",
+    "loadError": "No se pudo cargar el roster",
     "filter": {
       "all": "Todos",
       "checkedIn": "Check-in",

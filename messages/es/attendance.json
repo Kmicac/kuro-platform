@@ -60,6 +60,7 @@
     "description": "Buscar alumno de la filial",
     "searchPlaceholder": "Nombre o email del alumno...",
     "noResults": "No hay resultados",
+    "loadError": "No se pudo cargar el padrón",
     "addAsPresent": "Marcar presente"
   },
   "suggest": {
