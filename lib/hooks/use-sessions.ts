@@ -11,6 +11,7 @@ import type {
   ClassCalendarResponse,
   ClassSessionListItem,
 } from '@/lib/api/types'
+import { optimisticId } from '@/lib/utils/optimistic'
 import { STALE, kuroRetry } from './_shared'
 import { useCurrentContext } from './use-current-context'
 
@@ -264,7 +265,7 @@ export function useCreateSession() {
         filter,
       ) as CalendarSnapshot
       const optimistic: ClassSessionListItem = {
-        id: `optimistic-${crypto.randomUUID()}`,
+        id: optimisticId(crypto.randomUUID()),
         organizationId: orgId ?? '',
         branchId: branchId ?? '',
         classScheduleId: body.classScheduleId ?? null,

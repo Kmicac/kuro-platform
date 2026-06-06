@@ -16,6 +16,7 @@ import {
   type Event,
 } from '@/components/ui/event-manager'
 import { ApiError } from '@/lib/api/client'
+import { isOptimisticId } from '@/lib/utils/optimistic'
 import { useCalendarRange, useCurrentContext } from '@/lib/hooks'
 import { useAuthStore } from '@/stores/auth.store'
 import type { ClassSessionStatus, ClassType } from '@/lib/api/types'
@@ -235,10 +236,15 @@ export function TrainingCalendar({ orgId }: TrainingCalendarProps) {
   }, [])
 
   // ── Selección de sesión vía searchParam ?session= → side panel (Sheet) ──
-  const selectedSessionId = searchParams.get('session')
+  // Guard: un id optimista (`optimistic-…`) es una clase recién creada que el
+  // backend todavía no persistió; abrir su detalle daría 404. Se ignora hasta
+  // que `onSettled` reemplace el chip optimista por la entidad real.
+  const rawSessionId = searchParams.get('session')
+  const selectedSessionId = isOptimisticId(rawSessionId) ? null : rawSessionId
 
   const handleEventClick = useCallback(
     (event: Event) => {
+      if (isOptimisticId(event.id)) return
       const params = new URLSearchParams(searchParams.toString())
       params.set('session', event.id)
       router.replace(`?${params.toString()}`, { scroll: false })
