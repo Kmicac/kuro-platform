@@ -14,6 +14,7 @@
  *    store está vacío, antes de /auth/refresh (evita el 403 double-submit)
  */
 
+import * as Sentry from '@sentry/nextjs'
 import { useAuthStore } from '@/stores/auth.store'
 import type { HydrateSessionPayload } from '@/stores/auth.store'
 import type { AuthPrincipal, LoginResponse, MeResponse } from './types'
@@ -282,7 +283,17 @@ async function request<T>(
   if (!res.ok) {
     let body: unknown = null
     try { body = await res.json() } catch { /* body no es JSON */ }
-    throw new ApiError(res.status, body, requestId)
+    const error = new ApiError(res.status, body, requestId)
+    // Telemetría: solo 5xx (fallas reales del servidor). Los 4xx esperables
+    // (403/404/409/422) son ruido y el 401 ya lo maneja el refresh handler
+    // arriba — no se reportan.
+    if (res.status >= 500) {
+      Sentry.captureException(error, {
+        tags: { endpoint: path, method: options.method ?? 'GET' },
+        extra: { requestId, status: res.status },
+      })
+    }
+    throw error
   }
 
   if (res.status === 204) return undefined as T
