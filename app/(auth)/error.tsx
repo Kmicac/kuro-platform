@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import * as Sentry from '@sentry/nextjs'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { AlertTriangle } from 'lucide-react'
@@ -23,7 +24,10 @@ export default function AuthError({ error, reset }: ErrorProps) {
   const requestId = error.requestId
 
   useEffect(() => {
-    console.error('[AuthErrorBoundary]', error)
+    Sentry.captureException(error)
+    if (process.env.NODE_ENV === 'development') {
+      console.error('[AuthErrorBoundary]', error)
+    }
   }, [error])
 
   return (

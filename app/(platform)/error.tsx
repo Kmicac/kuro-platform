@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import * as Sentry from '@sentry/nextjs'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { useAuthStore } from '@/stores/auth.store'
@@ -25,7 +26,10 @@ export default function PlatformError({ error, reset }: ErrorProps) {
   const orgId = useAuthStore((s) => s.organizationId ?? s.currentOrg?.id ?? null)
 
   useEffect(() => {
-    console.error('[PlatformErrorBoundary]', error)
+    Sentry.captureException(error)
+    if (process.env.NODE_ENV === 'development') {
+      console.error('[PlatformErrorBoundary]', error)
+    }
   }, [error])
 
   return (

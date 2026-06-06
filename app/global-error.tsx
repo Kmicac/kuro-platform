@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import * as Sentry from '@sentry/nextjs'
 import { NextIntlClientProvider, useTranslations } from 'next-intl'
 import { AlertTriangle } from 'lucide-react'
 import esErrors from '@/messages/es/errors.json'
@@ -42,8 +43,10 @@ function GlobalErrorBody({ error, reset }: GlobalErrorProps) {
   const t = useTranslations('errors.boundary')
 
   useEffect(() => {
-    // Dev: visible en consola. Prod: enganchar telemetría (futuro Sentry).
-    console.error('[GlobalErrorBoundary]', error)
+    Sentry.captureException(error)
+    if (process.env.NODE_ENV === 'development') {
+      console.error('[GlobalErrorBoundary]', error)
+    }
   }, [error])
 
   return (

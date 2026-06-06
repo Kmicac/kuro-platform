@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import * as Sentry from '@sentry/nextjs'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
@@ -23,7 +24,10 @@ export default function BranchError({ error, reset }: ErrorProps) {
   const params = useParams<{ orgId: string; branchId: string }>()
 
   useEffect(() => {
-    console.error('[BranchErrorBoundary]', error)
+    Sentry.captureException(error)
+    if (process.env.NODE_ENV === 'development') {
+      console.error('[BranchErrorBoundary]', error)
+    }
   }, [error])
 
   return (
