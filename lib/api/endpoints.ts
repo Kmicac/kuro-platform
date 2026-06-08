@@ -22,6 +22,8 @@ import type {
   RecordAttendanceBody,
   SuggestAttendanceBody,
   SuggestAttendanceResponse,
+  SuggestionsListResponse,
+  CancelSuggestionResponse,
   RiskRoster,
   SessionAttendance,
   SessionTechnicalRoster,
@@ -536,6 +538,23 @@ export const classSessionsApi = {
       `/organizations/${orgId}/branches/${branchId}/class-sessions/${sessionId}/attendance/suggestions`,
       body
     ),
+
+  /** GET .../class-sessions/:sessionId/attendance/suggestions — listado completo (operador) */
+  listSuggestions: (orgId: string, branchId: string, sessionId: string) =>
+    api.get<SuggestionsListResponse>(
+      `/organizations/${orgId}/branches/${branchId}/class-sessions/${sessionId}/attendance/suggestions`
+    ),
+
+  /** POST .../suggestions/:suggestionId/cancel — cancelar una suggestion PENDING (operador) */
+  cancelSuggestion: (
+    orgId: string,
+    branchId: string,
+    sessionId: string,
+    suggestionId: string
+  ) =>
+    api.post<CancelSuggestionResponse>(
+      `/organizations/${orgId}/branches/${branchId}/class-sessions/${sessionId}/attendance/suggestions/${suggestionId}/cancel`
+    ),
 }
 
 // ── Instructors ───────────────────────────────────────────────
@@ -581,14 +600,15 @@ export const studentsApi = {
   listByBranch: (
     orgId: string,
     branchId: string,
-    params?: { page?: number; limit?: number }
+    params?: { page?: number; limit?: number; q?: string }
   ) => {
     const p = new URLSearchParams()
     if (params?.page)  p.set('page', String(params.page))
     if (params?.limit) p.set('limit', String(params.limit))
-    const q = p.toString() ? `?${p}` : ''
+    if (params?.q)     p.set('q', params.q)
+    const qs = p.toString() ? `?${p}` : ''
     return api.get<PaginatedResponse<StudentListItem>>(
-      `/organizations/${orgId}/branches/${branchId}/students${q}`
+      `/organizations/${orgId}/branches/${branchId}/students${qs}`
     )
   },
 

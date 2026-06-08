@@ -482,6 +482,12 @@ export interface ClassSessionDetail {
   instructor: ClassSessionInstructor | null
   capacity: ClassSessionCapacity
   attendance: ClassSessionAttendanceCounts
+  /**
+   * Resumen inline de attendance suggestions de esta sesión (API-CONTRACT
+   * §"Get class session" → `suggestions`). Es solo un summary: para la lista
+   * completa usar el endpoint dedicado (`GET .../attendance/suggestions`).
+   */
+  suggestions: AttendanceSuggestionSummary
   cancellationReason: string | null
   cancelledAt: string | null
   cancelledByMembershipId: string | null
@@ -712,9 +718,20 @@ export interface UpdateAttendanceBody {
 // ── QR check-in token (POST .../attendance/qr-token) ───────────
 
 export interface IssueQRTokenBody {
-  /** Minutos hasta expiración. El backend puede capear este valor. */
-  expiresInMinutes: number
+  /**
+   * (Legacy/opcional) TTL hint en minutos, rango 1–15. El backend YA NO lo
+   * necesita: la ventana operativa se deriva de `validFrom`/`validUntil`. No
+   * enviarlo — si se manda > 15 el backend responde `QR_TOKEN_EXPIRATION_TOO_LONG`.
+   */
+  expiresInMinutes?: number
 }
+
+/**
+ * Estado de la ventana operativa del QR en el momento de emisión:
+ * - `SCHEDULED`: `now < validFrom` (token generado pero ventana no abierta).
+ * - `ACTIVE`: `validFrom <= now <= validUntil` (alumnos ya pueden hacer check-in).
+ */
+export type QRCurrentStatus = 'SCHEDULED' | 'ACTIVE'
 
 /**
  * Token QR emitido por el instructor/staff. El alumno lo escanea desde la app
@@ -732,6 +749,16 @@ export interface QRTokenResponse {
   revokedAt: string | null
   createdAt: string
   token: string
+  /** Payload crudo del QR (no loguear, no persistir, no exponer en analytics). */
+  qrCodeData: string
+  /** Inicio de la ventana operativa (45 min antes del inicio de la clase). */
+  validFrom: string
+  /** Fin de la ventana operativa (30 min después del fin de la clase). */
+  validUntil: string
+  /** Estado de la ventana al emitir (SCHEDULED | ACTIVE). */
+  currentStatus: QRCurrentStatus
+  /** TTL efectivo en minutos hasta `expiresAt`, calculado por el backend. */
+  expiresInMinutes: number
 }
 
 // ── Attendance suggestions (POST .../attendance/suggestions) ───
@@ -749,10 +776,14 @@ export interface SuggestAttendanceBody {
   message?: string
 }
 
+// Enum canónico del backend (API-CONTRACT §"Enums" → AttendanceSuggestionStatus).
+// PENDING (enviada) · ACCEPTED (alumno aceptó) · DECLINED (alumno rechazó) ·
+// CANCELED (operador canceló) · EXPIRED (venció).
 export type AttendanceSuggestionStatus =
   | 'PENDING'
   | 'ACCEPTED'
-  | 'DISMISSED'
+  | 'DECLINED'
+  | 'CANCELED'
   | 'EXPIRED'
 
 /** Motivo por el que un alumno no pudo ser sugerido. */
@@ -783,6 +814,69 @@ export interface SuggestAttendanceResponse {
   alreadySuggested: number
   invalidStudents: SuggestAttendanceInvalidStudent[]
   items: SuggestAttendanceItem[]
+}
+
+/**
+ * Resumen de suggestions de una sesión. Viene inline en el detail
+ * (`ClassSessionDetail.suggestions`) y también como `summary` en el response
+ * del listado dedicado (GET .../attendance/suggestions).
+ */
+export interface AttendanceSuggestionSummary {
+  total: number
+  pending: number
+  accepted: number
+  declined: number
+  canceled: number
+}
+
+/** Alumno embebido en cada suggestion del listado. */
+export interface AttendanceSuggestionStudent {
+  id: string
+  primaryBranchId: string | null
+  firstName: string
+  lastName: string
+  email: string | null
+  phone: string | null
+  status: string
+  currentBelt: PromotionRank | string | null
+  currentStripes: number | null
+}
+
+/**
+ * Suggestion completa (GET .../attendance/suggestions → items[]).
+ * Source of truth: API-CONTRACT §"List class-session attendance suggestions".
+ */
+export interface AttendanceSuggestionListItem {
+  id: string
+  organizationId: string
+  branchId: string
+  targetType: string
+  classSessionId: string
+  studentId: string
+  suggestedByMembershipId: string
+  status: AttendanceSuggestionStatus
+  message: string | null
+  notificationId: string | null
+  respondedAt: string | null
+  canceledAt: string | null
+  expiresAt: string | null
+  createdAt: string
+  updatedAt: string
+  student: AttendanceSuggestionStudent
+}
+
+/** Response del listado dedicado de suggestions. */
+export interface SuggestionsListResponse {
+  classSessionId: string
+  summary: AttendanceSuggestionSummary
+  items: AttendanceSuggestionListItem[]
+}
+
+/** Response del cancel de una suggestion (POST .../suggestions/:id/cancel). */
+export interface CancelSuggestionResponse {
+  id: string
+  status: AttendanceSuggestionStatus
+  canceledAt: string | null
 }
 
 // ── Instructor candidates (GET .../instructors/candidates) ─────
