@@ -12,6 +12,8 @@ import { STALE, kuroRetry } from './_shared'
 export interface UseBranchStudentsParams {
   page?: number
   limit?: number
+  /** Search server-side (firstName/lastName/email/phone). Vacío = sin filtro. */
+  q?: string
 }
 
 export function useBranchStudents(
@@ -21,10 +23,11 @@ export function useBranchStudents(
 ) {
   const page = params?.page ?? 1
   const limit = params?.limit ?? 25
+  const q = params?.q?.trim() || undefined
 
   return useQuery({
-    queryKey: ['students', orgId, branchId, { page, limit }],
-    queryFn: () => studentsApi.listByBranch(orgId, branchId, { page, limit }),
+    queryKey: ['students', orgId, branchId, { page, limit, q }],
+    queryFn: () => studentsApi.listByBranch(orgId, branchId, { page, limit, q }),
     staleTime: STALE.resource,
     retry: kuroRetry,
     enabled: Boolean(orgId && branchId),
