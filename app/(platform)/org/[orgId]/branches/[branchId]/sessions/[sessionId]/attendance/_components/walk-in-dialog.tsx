@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { AlertTriangle, Search } from 'lucide-react'
+import { Loader2, Search } from 'lucide-react'
 
 import {
   Dialog,
@@ -14,20 +14,15 @@ import {
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { ErrorState } from '@/components/shared'
-import { useBranchStudents } from '@/lib/hooks'
+import { useBranchStudents, useDebouncedValue } from '@/lib/hooks'
 import { usePromotionRankResolver } from '@/lib/hooks/use-catalogs'
 import { BeltBadge } from '@/components/kuro'
 import type { StudentListItem } from '@/lib/api/types'
 
-// Tope de alumnos que se traen del padrón para el autocomplete. El backend
-// no expone search server-side en este endpoint, así que el filtro es
-// client-side sobre esta página. Si la filial supera este tope, los alumnos
-// fuera de la primera página quedan inbuscables → se avisa con un banner.
-// TODO(backend-search): cuando el backend exponga search en
-// GET /branches/:id/students?q=, eliminar este tope client-side y el banner.
-// Ver docs/AUDIT-REPORT.md Sprint 1.
-const STUDENTS_FETCH_LIMIT = 100
-const RESULTS_RENDER_LIMIT = 50
+// Tamaño de página para el autocomplete. El backend hace la búsqueda
+// server-side (?q=), así que con un límite chico alcanza: sin search muestra
+// los primeros N del padrón; con search devuelve los matches relevantes.
+const WALK_IN_LIMIT = 20
 
 export interface WalkInDialogProps {
   open: boolean
@@ -50,40 +45,34 @@ export function WalkInDialog({
   pending,
 }: WalkInDialogProps) {
   const t = useTranslations('attendance.walkIn')
-  const tWarn = useTranslations('attendance.warnings')
   const [query, setQuery] = useState('')
+  const debouncedQuery = useDebouncedValue(query, 300)
 
-  // Lista del padrón de la filial (paginada). El filtro de búsqueda es
-  // client-side: el backend no expone search en este endpoint todavía.
+  // Búsqueda server-side: el backend filtra por firstName/lastName/email/phone.
   const studentsQuery = useBranchStudents(orgId, branchId, {
-    limit: STUDENTS_FETCH_LIMIT,
+    q: debouncedQuery,
+    limit: WALK_IN_LIMIT,
   })
-
-  // El padrón completo de la filial supera lo que trajimos → hay alumnos
-  // inbuscables silenciosamente. Se avisa con un banner sobrio.
-  const total = studentsQuery.data?.meta?.total
-  const isTruncated =
-    typeof total === 'number' && total > STUDENTS_FETCH_LIMIT
 
   const excluded = useMemo(
     () => new Set(rosterStudentIds),
     [rosterStudentIds],
   )
 
-  const results = useMemo<StudentListItem[]>(() => {
-    const items = studentsQuery.data?.items ?? []
-    const q = query.trim().toLowerCase()
-    return items
-      .filter((s) => !excluded.has(s.id))
-      .filter((s) => {
-        if (!q) return true
-        const hay = `${s.firstName} ${s.lastName} ${s.email}`.toLowerCase()
-        return hay.includes(q)
-      })
-      .slice(0, RESULTS_RENDER_LIMIT)
-  }, [studentsQuery.data, query, excluded])
+  // Solo se excluyen los ya presentes en el roster (client-side, set chico).
+  // El filtro por texto lo resuelve el backend.
+  const results = useMemo<StudentListItem[]>(
+    () =>
+      (studentsQuery.data?.items ?? []).filter((s) => !excluded.has(s.id)),
+    [studentsQuery.data, excluded],
+  )
 
   const resolveRank = usePromotionRankResolver()
+
+  // Spinner sutil mientras el debounce/fetch está en vuelo (no en el primer load).
+  const searching =
+    studentsQuery.isFetching && !studentsQuery.isLoading
+  const trimmedQuery = debouncedQuery.trim()
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -94,7 +83,11 @@ export function WalkInDialog({
         </DialogHeader>
 
         <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          {searching ? (
+            <Loader2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+          ) : (
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          )}
           <Input
             autoFocus
             value={query}
@@ -104,21 +97,6 @@ export function WalkInDialog({
             aria-label={t('searchPlaceholder')}
           />
         </div>
-
-        {isTruncated && (
-          <div className="flex items-start gap-2 rounded-lg border px-3 py-2 text-xs surface-warning">
-            <AlertTriangle
-              className="mt-0.5 h-3.5 w-3.5 flex-shrink-0"
-              aria-hidden
-            />
-            <p>
-              {tWarn('searchTruncated', {
-                shown: STUDENTS_FETCH_LIMIT,
-                total: total ?? STUDENTS_FETCH_LIMIT,
-              })}
-            </p>
-          </div>
-        )}
 
         <ScrollArea className="max-h-72">
           {studentsQuery.isError ? (
@@ -139,7 +117,9 @@ export function WalkInDialog({
             </div>
           ) : results.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
-              {t('noResults')}
+              {trimmedQuery
+                ? t('noResultsQuery', { query: trimmedQuery })
+                : t('noResults')}
             </p>
           ) : (
             <ul className="space-y-1">
