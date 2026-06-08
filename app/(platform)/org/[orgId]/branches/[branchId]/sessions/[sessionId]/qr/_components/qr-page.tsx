@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl'
 import { ArrowLeft, CalendarDays } from 'lucide-react'
 
 import { ApiError } from '@/lib/api/client'
+import { parseQRError, type QRErrorInfo } from '@/lib/api/error-parsers'
 import {
   useCapabilities,
   useIssueQRToken,
@@ -30,16 +31,6 @@ export interface QRPageProps {
   sessionId: string
 }
 
-/**
- * Validez del token QR, en minutos.
- *
- * El backend impone un cap chico: empíricamente acepta ≤15 y rechaza ≥30 con
- * 400 (15 es además el valor canónico del contrato §"Issue QR token"). El
- * diseño es de tokens de vida corta que se regeneran durante la clase — el
- * countdown + auto-expire + botón "Regenerar" de la UI cubren ese flujo. NO
- * derivar de la duración de la clase: excede el cap y devuelve 400.
- */
-const QR_EXPIRES_MINUTES = 15
 /** Polling del roster para reflejar check-ins ~en vivo. */
 const ROSTER_POLL_MS = 30_000
 
@@ -54,6 +45,7 @@ export function QRPage({ orgId, sessionId }: QRPageProps) {
   const resolveRank = usePromotionRankResolver()
 
   const [token, setToken] = useState<QRTokenResponse | null>(null)
+  const [qrError, setQrError] = useState<QRErrorInfo | null>(null)
 
   const goBack = () => router.push(`/org/${orgId}/calendar`)
 
@@ -64,11 +56,22 @@ export function QRPage({ orgId, sessionId }: QRPageProps) {
   const session = sessionQuery.data
 
   const generate = useCallback(() => {
+    // No enviamos expiresInMinutes: la ventana la define el backend
+    // (validFrom/validUntil). Generación permitida en cualquier momento.
     issue.mutate(
-      { expiresInMinutes: QR_EXPIRES_MINUTES },
+      {},
       {
-        onSuccess: (data) => setToken(data),
+        onSuccess: (data) => {
+          setQrError(null)
+          setToken(data)
+        },
         onError: (error) => {
+          // Errores estructurados de QR → banner contextual (no toast).
+          const qrInfo = parseQRError(error)
+          if (qrInfo) {
+            setToken(null)
+            return setQrError(qrInfo)
+          }
           if (error instanceof ApiError && error.status === 403)
             return notifyError(t('errors.forbidden'))
           notifyError(t('errors.generationFailed'), error)
@@ -146,6 +149,7 @@ export function QRPage({ orgId, sessionId }: QRPageProps) {
             generating={issue.isPending}
             disabled={isCanceled}
             canceledMessage={isCanceled ? t('errors.sessionCanceled') : null}
+            qrError={qrError}
             onGenerate={generate}
             onExpire={onExpire}
           />

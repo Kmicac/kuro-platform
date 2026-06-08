@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { CalendarDays } from 'lucide-react'
@@ -24,6 +24,9 @@ import { TechnicalCurriculumCard } from './technical-curriculum-card'
 import { RegisteredStudentsTable } from './registered-students-table'
 import { ComplianceStrip } from './compliance-strip'
 import { QrModal } from './qr-modal'
+import { SuggestionsSummaryCard } from '@/components/attendance/suggestions-summary-card'
+import { SuggestionsListSheet } from '@/components/attendance/suggestions-list-sheet'
+import { SuggestAttendanceDialog } from '@/components/attendance/suggest-attendance-dialog'
 
 export interface ClassSessionDetailPageProps {
   orgId: string
@@ -44,6 +47,9 @@ export function ClassSessionDetailPage({
   const caps = useCapabilities(orgId)
   const resolveRank = usePromotionRankResolver()
   const record = useRecordAttendance(sessionId)
+
+  const [suggestionsSheetOpen, setSuggestionsSheetOpen] = useState(false)
+  const [suggestOpen, setSuggestOpen] = useState(false)
 
   const goBack = () => router.push(`/org/${orgId}/calendar`)
 
@@ -180,8 +186,42 @@ export function ClassSessionDetailPage({
         onCheckIn={checkIn}
       />
 
+      {/* ÁREA 2.5 — Sugerencias de asistencia (summary inline + lista en sheet) */}
+      <SuggestionsSummaryCard
+        summary={session.suggestions}
+        sessionId={sessionId}
+        canSuggest={canSuggest}
+        onViewAll={() => setSuggestionsSheetOpen(true)}
+        onSuggestMore={() => setSuggestOpen(true)}
+      />
+
       {/* ÁREA 3 — Compliance (provider-aware, sin backend aún) */}
       <ComplianceStrip />
+
+      {/* Sheet con la lista completa + cancelar (gateado por canSuggest) */}
+      {canSuggest && (
+        <SuggestionsListSheet
+          open={suggestionsSheetOpen}
+          onOpenChange={setSuggestionsSheetOpen}
+          orgId={orgId}
+          branchId={branchId}
+          sessionId={sessionId}
+          sessionTitle={session.title}
+          sessionStartAt={session.startAt}
+        />
+      )}
+
+      {/* Dialog para sugerir más alumnos desde la summary card */}
+      {canSuggest && (
+        <SuggestAttendanceDialog
+          open={suggestOpen}
+          onOpenChange={setSuggestOpen}
+          sessionId={sessionId}
+          branchId={branchId}
+          orgId={orgId}
+          excludeStudentIds={[]}
+        />
+      )}
 
       {/* QR como modal (FAB esquina inferior derecha) */}
       {canValidate && !isCanceled && (

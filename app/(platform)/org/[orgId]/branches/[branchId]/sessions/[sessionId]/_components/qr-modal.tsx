@@ -1,10 +1,10 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useState } from 'react'
 import Link from 'next/link'
-import { useTranslations } from 'next-intl'
+import { useFormatter, useTranslations } from 'next-intl'
 import { QRCodeSVG } from 'qrcode.react'
-import { Maximize2, QrCode, RefreshCw } from 'lucide-react'
+import { AlertTriangle, Clock, Maximize2, QrCode, RefreshCw } from 'lucide-react'
 
 import {
   Dialog,
@@ -15,12 +15,12 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { ApiError } from '@/lib/api/client'
+import { parseQRError, type QRErrorInfo } from '@/lib/api/error-parsers'
 import { useIssueQRToken } from '@/lib/hooks'
+import { useQrWindow } from '@/lib/hooks/use-qr-window'
 import { notifyError } from '@/lib/utils/toast'
 import type { QRTokenResponse } from '@/lib/api/types'
 
-/** Cap del backend para expiresInMinutes (acepta ≤15, ver use-attendance). */
-const QR_EXPIRES_MINUTES = 15
 const WARNING_THRESHOLD_SEC = 300
 
 export interface QrModalProps {
@@ -31,19 +31,32 @@ export interface QrModalProps {
 
 export function QrModal({ sessionId, orgId, branchId }: QrModalProps) {
   const t = useTranslations('class-detail.qr')
+  const format = useFormatter()
   const issue = useIssueQRToken(sessionId)
 
   const [open, setOpen] = useState(false)
   const [token, setToken] = useState<QRTokenResponse | null>(null)
-  const [remainingSec, setRemainingSec] = useState(0)
-  const expiredRef = useRef(false)
+  const [qrError, setQrError] = useState<QRErrorInfo | null>(null)
+
+  // Al expirar la ventana del token, limpiamos para volver al estado idle.
+  const onExpire = useCallback(() => setToken(null), [])
+  const { status, remainingSec } = useQrWindow(token, onExpire)
 
   const generate = useCallback(() => {
+    // Sin expiresInMinutes: la ventana la define el backend (validFrom/validUntil).
     issue.mutate(
-      { expiresInMinutes: QR_EXPIRES_MINUTES },
+      {},
       {
-        onSuccess: (data) => setToken(data),
+        onSuccess: (data) => {
+          setQrError(null)
+          setToken(data)
+        },
         onError: (error) => {
+          const qrInfo = parseQRError(error)
+          if (qrInfo) {
+            setToken(null)
+            return setQrError(qrInfo)
+          }
           if (error instanceof ApiError && error.status === 403)
             return notifyError(t('forbidden'))
           notifyError(t('generationFailed'), error)
@@ -52,37 +65,21 @@ export function QrModal({ sessionId, orgId, branchId }: QrModalProps) {
     )
   }, [issue, t])
 
-  // Countdown contra expiresAt (setTimeout(0) evita setState sincrónico en effect).
-  useEffect(() => {
-    if (!token) return
-    const expiresMs = new Date(token.expiresAt).getTime()
-    expiredRef.current = false
-    const tick = () => {
-      const rem = Math.max(0, Math.round((expiresMs - Date.now()) / 1000))
-      setRemainingSec(rem)
-      if (rem <= 0 && !expiredRef.current) {
-        expiredRef.current = true
-        setToken(null)
-      }
-    }
-    const first = setTimeout(tick, 0)
-    const id = setInterval(tick, 1000)
-    return () => {
-      clearTimeout(first)
-      clearInterval(id)
-    }
-  }, [token])
-
   const openModal = () => {
     setOpen(true)
+    setQrError(null)
     generate()
   }
   const closeModal = () => {
     setOpen(false)
     setToken(null)
+    setQrError(null)
   }
 
-  const expiring = token != null && remainingSec <= WARNING_THRESHOLD_SEC
+  const expiring = status === 'ACTIVE' && remainingSec <= WARNING_THRESHOLD_SEC
+  const windowExpired = qrError?.type === 'WINDOW_EXPIRED'
+  const sessionCanceled = qrError?.type === 'SESSION_CANCELED'
+  const showQr = token != null && status !== 'EXPIRED'
 
   return (
     <>
@@ -105,13 +102,26 @@ export function QrModal({ sessionId, orgId, branchId }: QrModalProps) {
           </DialogHeader>
 
           <div className="flex flex-col items-center gap-4 py-2">
-            {issue.isPending && !token ? (
+            {windowExpired || sessionCanceled ? (
+              <Banner
+                title={
+                  windowExpired
+                    ? t('status.expiredWindow.title')
+                    : t('status.sessionCanceled.title')
+                }
+                description={
+                  windowExpired
+                    ? t('status.expiredWindow.description')
+                    : t('status.sessionCanceled.description')
+                }
+              />
+            ) : issue.isPending && !token ? (
               <div className="flex h-[244px] w-[244px] items-center justify-center rounded bg-muted/40">
                 <span className="text-sm text-muted-foreground">
                   {t('generating')}
                 </span>
               </div>
-            ) : token ? (
+            ) : showQr ? (
               <>
                 <div className="rounded-xl bg-[#F7F7F2] p-4">
                   <QRCodeSVG
@@ -122,18 +132,39 @@ export function QrModal({ sessionId, orgId, branchId }: QrModalProps) {
                     fgColor="#121113"
                   />
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  {t('scanInstructions')}
-                </p>
-                <p
-                  className={
-                    expiring
-                      ? 'font-mono text-sm tabular-nums text-[var(--kuro-warning)]'
-                      : 'font-mono text-sm tabular-nums text-foreground'
-                  }
-                >
-                  {t('expiresIn', { time: formatMMSS(remainingSec) })}
-                </p>
+                {status === 'SCHEDULED' ? (
+                  <div className="flex flex-col items-center gap-1 text-center">
+                    <span className="label-mono inline-flex items-center gap-1.5 text-muted-foreground">
+                      <Clock className="h-3.5 w-3.5 stroke-[1.5]" />
+                      {t('status.scheduled.title')}
+                    </span>
+                    <p className="text-sm text-foreground">
+                      {t('status.scheduled.description', {
+                        date: safeDateTime(format, token.validFrom),
+                      })}
+                    </p>
+                    <p className="text-xs text-[var(--text-tertiary)]">
+                      {t('status.scheduled.subtext')}
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-sm text-muted-foreground">
+                      {t('scanInstructions')}
+                    </p>
+                    <p
+                      className={
+                        expiring
+                          ? 'font-mono text-sm tabular-nums text-[var(--kuro-warning)]'
+                          : 'font-mono text-sm tabular-nums text-foreground'
+                      }
+                    >
+                      {t('status.active.expiresIn', {
+                        time: formatMMSS(remainingSec),
+                      })}
+                    </p>
+                  </>
+                )}
               </>
             ) : (
               <div className="flex h-[244px] w-[244px] flex-col items-center justify-center gap-3 rounded border border-border bg-muted/30 text-center">
@@ -147,7 +178,7 @@ export function QrModal({ sessionId, orgId, branchId }: QrModalProps) {
                 variant="outline"
                 size="sm"
                 onClick={generate}
-                disabled={issue.isPending}
+                disabled={issue.isPending || windowExpired || sessionCanceled}
               >
                 <RefreshCw className="h-3.5 w-3.5" />
                 {token ? t('regenerate') : t('generate')}
@@ -168,8 +199,43 @@ export function QrModal({ sessionId, orgId, branchId }: QrModalProps) {
   )
 }
 
+function Banner({
+  title,
+  description,
+}: {
+  title: string
+  description: string
+}) {
+  return (
+    <div
+      role="alert"
+      className="flex h-[244px] w-[244px] flex-col items-center justify-center gap-2 rounded border border-destructive/30 bg-destructive/5 p-4 text-center"
+    >
+      <AlertTriangle className="h-7 w-7 text-destructive" />
+      <span className="text-sm font-medium text-foreground">{title}</span>
+      <span className="text-xs text-muted-foreground">{description}</span>
+    </div>
+  )
+}
+
 function formatMMSS(totalSec: number): string {
   const m = Math.floor(totalSec / 60)
   const s = totalSec % 60
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+}
+
+type Formatter = ReturnType<typeof useFormatter>
+
+function safeDateTime(format: Formatter, iso: string): string {
+  try {
+    return format.dateTime(new Date(iso), {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  } catch {
+    return '—'
+  }
 }
