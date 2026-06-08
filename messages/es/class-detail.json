@@ -59,6 +59,51 @@
     "unavailable": "No integrado",
     "externalDep": "Depende de integración externa"
   },
+  "suggestions": {
+    "summaryCard": {
+      "title": "SUGERENCIAS DE ASISTENCIA",
+      "counters": {
+        "pending": "Pendientes",
+        "accepted": "Aceptadas",
+        "declined": "Rechazadas",
+        "canceled": "Canceladas"
+      },
+      "actions": {
+        "viewAll": "Ver todas",
+        "suggestMore": "Sugerir más"
+      },
+      "empty": "No hay sugerencias enviadas para esta clase.",
+      "suggestFirst": "Sugerir asistencia"
+    },
+    "listSheet": {
+      "title": "Sugerencias de asistencia",
+      "subheader": "Para {sessionTitle} el {date}",
+      "empty": "No hay sugerencias enviadas para esta clase.",
+      "errorTitle": "No se pudieron cargar las sugerencias",
+      "cancelSuccess": "Sugerencia cancelada",
+      "cancelForbidden": "No tienes permiso para cancelar sugerencias",
+      "cancelError": "No se pudo cancelar la sugerencia. Intenta de nuevo.",
+      "actions": {
+        "cancel": "Cancelar",
+        "confirmCancel": {
+          "title": "Cancelar sugerencia",
+          "message": "¿Cancelar esta sugerencia? El alumno no la verá más en la app.",
+          "confirm": "Sí, cancelar",
+          "back": "Volver"
+        }
+      },
+      "status": {
+        "PENDING": "Pendiente",
+        "ACCEPTED": "Aceptada",
+        "DECLINED": "Rechazada",
+        "CANCELED": "Cancelada",
+        "EXPIRED": "Expirada"
+      },
+      "respondedAt": "Respondida {time}",
+      "canceledAt": "Cancelada {time}",
+      "sentAgo": "Enviada {time}"
+    }
+  },
   "qr": {
     "expand": "Expandir QR",
     "title": "Check-in con QR",
@@ -71,7 +116,25 @@
     "expired": "El código expiró",
     "fullscreen": "Abrir en pantalla completa",
     "generationFailed": "No se pudo generar el QR. Intenta de nuevo.",
-    "forbidden": "No tienes permiso para generar QR"
+    "forbidden": "No tienes permiso para generar QR",
+    "status": {
+      "scheduled": {
+        "title": "QR preparado",
+        "description": "El QR se activará el {date}.",
+        "subtext": "Los alumnos podrán hacer check-in desde esa hora."
+      },
+      "active": {
+        "expiresIn": "Expira en {time}"
+      },
+      "expiredWindow": {
+        "title": "Ventana cerrada",
+        "description": "La ventana de check-in de esta clase ya expiró."
+      },
+      "sessionCanceled": {
+        "title": "Clase cancelada",
+        "description": "Esta clase está cancelada. No se puede generar QR."
+      }
+    }
   },
   "errors": {
     "forbidden": "No tienes permiso para marcar asistencia",

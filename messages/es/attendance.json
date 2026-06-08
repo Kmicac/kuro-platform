@@ -60,6 +60,7 @@
     "description": "Buscar alumno de la filial",
     "searchPlaceholder": "Nombre o email del alumno...",
     "noResults": "No hay resultados",
+    "noResultsQuery": "No encontramos alumnos que coincidan con \"{query}\".",
     "loadError": "No se pudo cargar el padrón",
     "addAsPresent": "Marcar presente"
   },
@@ -103,8 +104,7 @@
   "warnings": {
     "outsideWindow": "Estás corrigiendo asistencia fuera de la ventana estándar.",
     "windowClosed": "La asistencia solo puede registrarse cerca del horario de la clase. La ventana de registro aún no está abierta o ya se cerró.",
-    "windowRange": "Ventana de registro: {start} – {end}",
-    "searchTruncated": "Mostrando {shown} de {total} alumnos. Si no encuentras al alumno, refina tu búsqueda."
+    "windowRange": "Ventana de registro: {start} – {end}"
   },
   "success": {
     "marked": "Asistencia registrada",

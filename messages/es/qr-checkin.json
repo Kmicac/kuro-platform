@@ -21,7 +21,27 @@
     "expiringWarning": "El código está por expirar",
     "generating": "Generando...",
     "idleTitle": "Listo para generar",
-    "idleDescription": "Genera un código QR para que los alumnos marquen asistencia."
+    "idleDescription": "Genera un código QR para que los alumnos marquen asistencia.",
+    "status": {
+      "scheduled": {
+        "title": "QR preparado",
+        "description": "El QR se activará el {date}.",
+        "subtext": "Los alumnos podrán hacer check-in desde esa hora.",
+        "validFromLabel": "Activación programada"
+      },
+      "active": {
+        "title": "QR activo",
+        "expiresIn": "Expira en {time}"
+      },
+      "expiredWindow": {
+        "title": "Ventana cerrada",
+        "description": "La ventana de check-in de esta clase ya expiró."
+      },
+      "sessionCanceled": {
+        "title": "Clase cancelada",
+        "description": "Esta clase está cancelada. No se puede generar QR."
+      }
+    }
   },
   "capacity": {
     "title": "Capacidad",
