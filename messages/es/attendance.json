@@ -68,7 +68,7 @@
     "title": "Sugerir asistencia",
     "description": "Recomendá esta clase a uno o más alumnos. Recibirán una notificación para que decidan si confirman su asistencia.",
     "fields": {
-      "search": "Buscar alumnos...",
+      "search": "Buscar por nombre, email o teléfono",
       "message": "Mensaje (opcional)",
       "messagePlaceholder": "Te recomendamos esta clase porque...",
       "messageHelp": "Si lo dejas vacío, se enviará el mensaje por defecto."
@@ -93,7 +93,8 @@
       "noStudentsSelected": "Selecciona al menos un alumno",
       "generic": "No se pudo enviar la recomendación. Intentá de nuevo."
     },
-    "emptyResults": "No se encontraron alumnos con ese nombre"
+    "emptyResults": "No se encontraron alumnos con ese nombre",
+    "noResultsQuery": "No encontramos alumnos que coincidan con \"{query}\"."
   },
   "noteDialog": {
     "title": "Nota de asistencia",
@@ -120,7 +121,16 @@
     "notFoundTitle": "Clase no encontrada",
     "notFoundDescription": "La clase no existe o pertenece a otra organización.",
     "sessionCanceled": "Esta clase está cancelada",
-    "outOfWindow": "Fuera de la ventana horaria: la asistencia solo se registra cerca del horario de la clase."
+    "outOfWindow": "Fuera de la ventana horaria: la asistencia solo se registra cerca del horario de la clase.",
+    "outsideWindow": {
+      "title": "Operación fuera de horario",
+      "description": "Solo puedes registrar asistencia entre {start} y {end}."
+    },
+    "correctionWindowClosed": {
+      "title": "Ventana de corrección cerrada",
+      "description": "La corrección de asistencia solo está disponible hasta {end}.",
+      "adminNote": "Tu rol cuenta con una ventana de corrección extendida, que también finalizó para esta clase."
+    }
   },
   "emptyState": {
     "title": "Sin alumnos esperados",
