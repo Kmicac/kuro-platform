@@ -715,6 +715,29 @@ export interface UpdateAttendanceBody {
   correctionNote?: string
 }
 
+/**
+ * Código estructurado de los 409 de ventana de asistencia del backend
+ * (API-CONTRACT §10 Attendance):
+ *  - `ATTENDANCE_OUTSIDE_WINDOW`: staff intenta registrar asistencia
+ *    (`POST .../attendance`) fuera de la ventana operativa STAFF_MANUAL.
+ *  - `ATTENDANCE_CORRECTION_WINDOW_CLOSED`: corrección/borrado
+ *    (`PATCH`/`DELETE .../attendance/:studentId`) después de cerrada la
+ *    ventana de corrección. Liderazgo/admin conservan una ventana extendida.
+ *
+ * `windowStart`/`windowEnd` son ISO-8601 UTC; el formateo a hora local se
+ * hace en el UI vía `useFormatter()`.
+ */
+export type AttendanceWindowErrorCode =
+  | 'ATTENDANCE_OUTSIDE_WINDOW'
+  | 'ATTENDANCE_CORRECTION_WINDOW_CLOSED'
+
+export interface AttendanceWindowError {
+  code: AttendanceWindowErrorCode
+  message: string
+  windowStart: string
+  windowEnd: string
+}
+
 // ── QR check-in token (POST .../attendance/qr-token) ───────────
 
 export interface IssueQRTokenBody {
