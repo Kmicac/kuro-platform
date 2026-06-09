@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { Search, X } from 'lucide-react'
+import { Loader2, Search, X } from 'lucide-react'
 
 import {
   Dialog,
@@ -17,8 +17,13 @@ import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { ErrorState } from '@/components/shared'
 import { ApiError } from '@/lib/api/client'
-import { useBranchStudents, useSuggestAttendance } from '@/lib/hooks'
+import {
+  useBranchStudents,
+  useDebouncedValue,
+  useSuggestAttendance,
+} from '@/lib/hooks'
 import { usePromotionRankResolver } from '@/lib/hooks/use-catalogs'
 import { BeltBadge } from '@/components/kuro'
 import { notifyError, notifySuccess } from '@/lib/utils/toast'
@@ -30,6 +35,11 @@ import type {
 
 /** Límite de mensaje del backend (API-CONTRACT §suggestions). */
 const MESSAGE_MAX = 280
+
+// Tamaño de página del autocomplete. El backend busca server-side (?q=), así
+// que con un límite chico alcanza: sin search muestra los primeros N del
+// padrón; con search devuelve los matches relevantes (mismo patrón que walk-in).
+const SUGGEST_LIMIT = 20
 
 export interface SuggestAttendanceDialogProps {
   open: boolean
@@ -53,20 +63,29 @@ export function SuggestAttendanceDialog({
 }: SuggestAttendanceDialogProps) {
   const t = useTranslations('attendance.suggest')
   const [query, setQuery] = useState('')
-  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const debouncedQuery = useDebouncedValue(query, 300)
+  // La selección vive como Map id → alumno: es independiente de los resultados
+  // renderizados, así sobrevive a los cambios de query (un alumno seleccionado
+  // sigue contando aunque desaparezca de la búsqueda actual).
+  const [selected, setSelected] = useState<Map<string, StudentListItem>>(
+    new Map(),
+  )
   const [message, setMessage] = useState('')
 
   const suggest = useSuggestAttendance(sessionId, branchId)
 
-  // Padrón de la filial (paginado). Filtro de búsqueda client-side.
-  const studentsQuery = useBranchStudents(orgId, branchId, { limit: 100 })
+  // Búsqueda server-side: el backend filtra por firstName/lastName/email/phone.
+  const studentsQuery = useBranchStudents(orgId, branchId, {
+    q: debouncedQuery,
+    limit: SUGGEST_LIMIT,
+  })
   const resolveRank = usePromotionRankResolver()
 
   // Reset de los campos. Se invoca al cerrar (cancelar / backdrop / éxito),
   // así el próximo open arranca limpio sin usar setState dentro de un effect.
   const reset = () => {
     setQuery('')
-    setSelected(new Set())
+    setSelected(new Map())
     setMessage('')
   }
   const close = () => {
@@ -79,36 +98,35 @@ export function SuggestAttendanceDialog({
     [excludeStudentIds],
   )
 
-  const allStudents = useMemo<StudentListItem[]>(
-    () => (studentsQuery.data?.items ?? []).filter((s) => !excluded.has(s.id)),
+  // Solo se excluyen los ya presentes en el roster (set chico, client-side).
+  // El filtro por texto lo resuelve el backend vía `q`.
+  const results = useMemo<StudentListItem[]>(
+    () =>
+      (studentsQuery.data?.items ?? []).filter((s) => !excluded.has(s.id)),
     [studentsQuery.data, excluded],
   )
 
-  const results = useMemo<StudentListItem[]>(() => {
-    const q = query.trim().toLowerCase()
-    if (!q) return allStudents
-    return allStudents.filter((s) => {
-      const hay = `${s.firstName} ${s.lastName} ${s.email}`.toLowerCase()
-      return hay.includes(q)
-    })
-  }, [allStudents, query])
-
-  // Map id → alumno para renderizar los chips de seleccionados.
-  const byId = useMemo(() => {
-    const m = new Map<string, StudentListItem>()
-    for (const s of allStudents) m.set(s.id, s)
-    return m
-  }, [allStudents])
-
-  const toggle = (id: string) =>
+  const toggle = (student: StudentListItem) =>
     setSelected((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
+      const next = new Map(prev)
+      if (next.has(student.id)) next.delete(student.id)
+      else next.set(student.id, student)
       return next
     })
 
-  const selectedIds = useMemo(() => [...selected], [selected])
+  const removeSelected = (id: string) =>
+    setSelected((prev) => {
+      const next = new Map(prev)
+      next.delete(id)
+      return next
+    })
+
+  const selectedIds = useMemo(() => [...selected.keys()], [selected])
+  const selectedStudents = useMemo(() => [...selected.values()], [selected])
+
+  // Spinner sutil mientras el debounce/fetch está en vuelo (no en el primer load).
+  const searching = studentsQuery.isFetching && !studentsQuery.isLoading
+  const trimmedQuery = debouncedQuery.trim()
 
   const onSubmit = () => {
     if (selectedIds.length === 0) return
@@ -144,7 +162,11 @@ export function SuggestAttendanceDialog({
 
         {/* Búsqueda */}
         <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          {searching ? (
+            <Loader2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+          ) : (
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          )}
           <Input
             autoFocus
             value={query}
@@ -157,7 +179,13 @@ export function SuggestAttendanceDialog({
 
         {/* Lista multi-select */}
         <ScrollArea className="max-h-[300px]">
-          {studentsQuery.isLoading ? (
+          {studentsQuery.isError ? (
+            <ErrorState
+              dense
+              error={studentsQuery.error}
+              onRetry={() => studentsQuery.refetch()}
+            />
+          ) : studentsQuery.isLoading ? (
             <div className="space-y-2 py-1">
               {[0, 1, 2].map((i) => (
                 <div
@@ -168,7 +196,9 @@ export function SuggestAttendanceDialog({
             </div>
           ) : results.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
-              {t('emptyResults')}
+              {trimmedQuery
+                ? t('noResultsQuery', { query: trimmedQuery })
+                : t('emptyResults')}
             </p>
           ) : (
             <ul className="space-y-1">
@@ -186,7 +216,7 @@ export function SuggestAttendanceDialog({
                     >
                       <Checkbox
                         checked={checked}
-                        onCheckedChange={() => toggle(s.id)}
+                        onCheckedChange={() => toggle(s)}
                         aria-label={`${s.firstName} ${s.lastName}`}
                       />
                       <span
@@ -224,24 +254,23 @@ export function SuggestAttendanceDialog({
         </ScrollArea>
 
         {/* Chips de seleccionados */}
-        {selectedIds.length > 0 && (
+        {selectedStudents.length > 0 && (
           <div className="space-y-1.5">
             <p className="text-xs tabular-nums text-muted-foreground">
-              {t('counter', { count: selectedIds.length })}
+              {t('counter', { count: selectedStudents.length })}
             </p>
             <div className="flex flex-wrap gap-1.5">
-              {selectedIds.map((id) => {
-                const s = byId.get(id)
-                const label = s ? `${s.firstName} ${s.lastName}` : id
+              {selectedStudents.map((s) => {
+                const label = `${s.firstName} ${s.lastName}`
                 return (
                   <span
-                    key={id}
+                    key={s.id}
                     className="inline-flex items-center gap-1 rounded-md border border-primary/40 bg-primary/10 py-0.5 pl-2 pr-1 text-xs text-foreground"
                   >
                     {label}
                     <button
                       type="button"
-                      onClick={() => toggle(id)}
+                      onClick={() => removeSelected(s.id)}
                       aria-label={`${t('actions.cancel')} ${label}`}
                       className="rounded-sm p-0.5 text-muted-foreground transition-colors hover:text-foreground"
                     >
