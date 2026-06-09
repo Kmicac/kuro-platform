@@ -89,27 +89,6 @@ Registro vivo de problemas, gaps técnicos y mejoras identificadas durante el de
 - **Descripción:** El badge de notificaciones en topbar muestra `"3"` hardcodeado. Viola regla #9 (no hardcoded). Backend tiene endpoint `/notifications/unread-count`.
 - **Plan:** Cuando se trabaje Fase 8 (Comunicaciones), reemplazar con dato real.
 
-#### F-009 — suggest-attendance-dialog usa filter client-side
-- **Severidad:** Baja
-- **Estado:** 🔴 Detectado
-- **Detectado:** Cierre del Sprint Eliminación de Workarounds (2026-06-08), fuera de scope
-- **Descripción:** `suggest-attendance-dialog.tsx` trae el padrón con `useBranchStudents` (limit: 100) y filtra client-side. Es el mismo patrón que `walk-in-dialog` tenía antes de migrar a search server-side; afecta academias con >100 alumnos (los que quedan fuera de la primera página son inbuscables).
-- **Plan:** Migrar a `useBranchStudents({ q, limit: 20 })` con debounce —ahora que el hook soporta `q`— y eliminar el filter local.
-
-#### F-010 — Parser 409 no maneja `ATTENDANCE_OUTSIDE_WINDOW`
-- **Severidad:** Media
-- **Estado:** 🔴 Detectado
-- **Detectado:** Sincronización API-CONTRACT 2026-05-28
-- **Descripción:** El backend devuelve `409` con `code: ATTENDANCE_OUTSIDE_WINDOW` + `windowStart` + `windowEnd` cuando staff intenta marcar asistencia fuera de la ventana operativa (`POST .../attendance`). El parser unificado (`lib/api/error-parsers.ts`) no conoce este code, así que la UI cae al mensaje genérico de 409. No rompe data, solo UX.
-- **Plan:** Extender `parseAttendanceError` para mapear el code, exponer `windowStart`/`windowEnd` al UI y agregar copy en i18n (ES/PT).
-
-#### F-011 — Parser 409 no maneja `ATTENDANCE_CORRECTION_WINDOW_CLOSED`
-- **Severidad:** Media
-- **Estado:** 🔴 Detectado
-- **Detectado:** Sincronización API-CONTRACT 2026-05-28
-- **Descripción:** El backend devuelve `409` con `code: ATTENDANCE_CORRECTION_WINDOW_CLOSED` + `windowStart` + `windowEnd` al corregir/borrar attendance después de la ventana de corrección (`PATCH` y `DELETE .../attendance/:studentId`). Liderazgo/admin conservan una ventana extendida. El parser no conoce este code → la UI cae al mensaje genérico, igual que F-010.
-- **Plan:** Mapear el code en el parser, exponer la ventana al UI y agregar copy en i18n. Considerar diferenciar el mensaje según rol (operador normal vs liderazgo/admin) si se puede inferir client-side.
-
 #### F-012 — Implementar UI de forgot/reset password
 - **Severidad:** Media
 - **Estado:** 🔴 Detectado
@@ -120,6 +99,17 @@ Registro vivo de problemas, gaps técnicos y mejoras identificadas durante el de
   - Pantalla `/reset-password?token=...`: form con `newPassword` (validación min 12 caracteres), llamada al endpoint, manejo del error `PASSWORD_RESET_TOKEN_INVALID` con copy claro, y redirección a login al éxito.
   - Link "¿Olvidaste tu contraseña?" en la pantalla de login.
   - Copy en i18n (ES/PT/EN).
+
+#### F-013 — Check-in de class-detail no usa el handler de ventana unificado
+- **Severidad:** Baja
+- **Estado:** 🔴 Detectado
+- **Detectado:** Sprint Eliminación de Workarounds 2 (2026-06-09)
+- **Descripción:** class-session-detail-page.tsx tiene un handler de
+  check-in inline (handleCheckInError) que usa isAttendanceWindowError
+  pero muestra errors.outOfWindow (mensaje genérico sin rango horario),
+  en vez del handler central useAttendanceErrorHandler que ya formatea
+  windowStart/windowEnd.
+- **Plan:** Sprint de higiene — unificar con el handler central.
 
 ---
 
@@ -224,6 +214,41 @@ no los consume este frontend (informativo, no requiere acción inmediata):
 ---
 
 ## Resueltos
+
+### Sprint de Eliminación de Workarounds 2 (2026-06-09)
+
+> Commit hash: `_pendiente — completar al commitear_`
+
+#### F-009 — suggest-attendance-dialog usa filter client-side ✅
+- **Resuelto:** 2026-06-09 (workaround frontend eliminado)
+- Frontend: `suggest-attendance-dialog.tsx` migró a `useBranchStudents({ q, limit: 20 })`
+  con debounce de 300 ms (mismo patrón que `walk-in-dialog`). Se eliminó el filter
+  client-side de texto (queda solo la exclusión de IDs ya en roster). La selección
+  multi-select pasó de `Set<string>` a `Map<string, StudentListItem>`, independiente
+  del array renderizado, así sobrevive a los cambios de query (nombre + contador +
+  submit). Empty states análogos a walk-in, spinner sutil y `ErrorState`.
+
+#### F-010 — Parser 409 no maneja `ATTENDANCE_OUTSIDE_WINDOW` ✅
+- **Resuelto:** 2026-06-09
+- Backend: el contrato (2026-05-28) confirma `code: ATTENDANCE_OUTSIDE_WINDOW` +
+  `windowStart`/`windowEnd` estructurados en `POST .../attendance`.
+- Frontend: `parseAttendanceWindowError` (en `lib/api/error-parsers.ts`) reescrito
+  con detección por `body.code` (mismo patrón que `parseQRError`) y el tipo
+  discriminado `AttendanceWindowError` (`lib/api/types.ts`). Se eliminó el fallback
+  de regex legacy (`only allowed between`) y el helper `toDate`. El handler central
+  `useAttendanceErrorHandler` muestra un toast con el rango horario formateado en
+  hora local (`useFormatter`). Copy i18n en `errors.outsideWindow.*`.
+
+#### F-011 — Parser 409 no maneja `ATTENDANCE_CORRECTION_WINDOW_CLOSED` ✅
+- **Resuelto:** 2026-06-09
+- Backend: el contrato (2026-05-28) confirma `code: ATTENDANCE_CORRECTION_WINDOW_CLOSED`
+  + `windowStart`/`windowEnd` en `PATCH` y `DELETE .../attendance/:studentId`.
+- Frontend: mismo parser unificado que F-010 (el code se agregó al set). El handler
+  diferencia el copy por rol inferido client-side desde capabilities: liderazgo/admin
+  (`attendance.canCorrectAttendanceAsAdmin`) recibe una nota adicional aclarando que
+  su ventana de corrección extendida también finalizó; el operador normal recibe el
+  copy base. Copy i18n en `errors.correctionWindowClosed.*` (incl. `adminNote`).
+- **Seguimiento:** ver F-013 en Gaps activos.
 
 ### Sprint de Eliminación de Workarounds (2026-06-08)
 
