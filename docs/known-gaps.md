@@ -51,21 +51,6 @@ Registro vivo de problemas, gaps técnicos y mejoras identificadas durante el de
 - **Descripción:** El backend devuelve el motivo del 409 como string libre en `message`. El frontend debe parsear con regex frágil para extraer las fechas de ventana válida. Pedido: agregar `code: "ATTENDANCE_OUTSIDE_WINDOW"` con campos estructurados `windowStart` y `windowEnd`.
 - **Avance backend (Junio 2026):** PARCIAL. El backend resolvió la parte de QR (agregó 4 codes estructurados: `QR_SESSION_CANCELED`, `QR_ATTENDANCE_WINDOW_EXPIRED`, `QR_TOKEN_EXPIRATION_TOO_LONG`, `QR_OUTSIDE_CHECK_IN_WINDOW`), pero **NO** para la asistencia general (POST/PATCH/DELETE de attendance fuera de ventana siguen devolviendo string libre). El pedido B-001 sigue abierto para el caso general.
 
-#### B-006 — Domain de waitlist
-- **Severidad:** Baja
-- **Estado:** 🔴 Detectado
-- **Detectado:** Auditoría 2026-06
-- **Workaround:** `waitlist: 0` siempre en responses
-- **Pedido:** Pendiente
-- **Descripción:** El backend no tiene dominio de waitlist (lista de espera). Cuando una clase llega al cap, no hay manejo de waitlist. Pedido: definir si se necesita, en qué fase del producto.
-
-#### B-007 — Endpoint forgot-password
-- **Severidad:** Baja
-- **Estado:** 🔴 Detectado
-- **Workaround:** Botón "Olvidé contraseña" muestra `alert()` "próximamente"
-- **Pedido:** Pendiente
-- **Descripción:** No existe endpoint para recuperación de contraseña. Aceptable en pre-launch, bloqueante para producción.
-
 ---
 
 ### UX / FRONTEND
@@ -124,6 +109,17 @@ Registro vivo de problemas, gaps técnicos y mejoras identificadas durante el de
 - **Detectado:** Sincronización API-CONTRACT 2026-05-28
 - **Descripción:** El backend devuelve `409` con `code: ATTENDANCE_CORRECTION_WINDOW_CLOSED` + `windowStart` + `windowEnd` al corregir/borrar attendance después de la ventana de corrección (`PATCH` y `DELETE .../attendance/:studentId`). Liderazgo/admin conservan una ventana extendida. El parser no conoce este code → la UI cae al mensaje genérico, igual que F-010.
 - **Plan:** Mapear el code en el parser, exponer la ventana al UI y agregar copy en i18n. Considerar diferenciar el mensaje según rol (operador normal vs liderazgo/admin) si se puede inferir client-side.
+
+#### F-012 — Implementar UI de forgot/reset password
+- **Severidad:** Media
+- **Estado:** 🔴 Detectado
+- **Detectado:** Resolución de B-007 por backend (2026-06-08)
+- **Descripción:** El backend cerró B-007 (`POST /auth/forgot-password` y `POST /auth/reset-password`) pero falta la UI en el frontend para usar los nuevos endpoints. Es trabajo nuevo, no deuda del sprint cerrado. No bloquea la operación actual, pero bloquea la recuperación de cuenta para usuarios reales en producción.
+- **Plan:**
+  - Pantalla `/forgot-password`: form con email, llamada al endpoint y mensaje genérico de "si existe te enviamos instrucciones".
+  - Pantalla `/reset-password?token=...`: form con `newPassword` (validación min 12 caracteres), llamada al endpoint, manejo del error `PASSWORD_RESET_TOKEN_INVALID` con copy claro, y redirección a login al éxito.
+  - Link "¿Olvidaste tu contraseña?" en la pantalla de login.
+  - Copy en i18n (ES/PT/EN).
 
 ---
 
@@ -263,6 +259,16 @@ no los consume este frontend (informativo, no requiere acción inmediata):
   se priorice (el gap de contrato quedó cerrado; el workaround toggle `isActive`
   deja de ser la única opción).
 
+#### B-007 — Endpoint forgot-password ✅
+- **Resuelto:** 2026-06-08 (documentado por backend en el contrato regenerado 2026-06-08)
+- Backend: `POST /auth/forgot-password` y `POST /auth/reset-password`. Con
+  anti-enumeration (siempre `202` genérico), token random hashed-only single-use,
+  TTL configurable (default 30 min vía `PASSWORD_RESET_TOKEN_TTL_MINUTES`),
+  revocación global de `UserSession` y `RefreshToken` al resetear, invalidación
+  de tokens pendientes previos, y auditoría `auth.password_reset.requested` /
+  `auth.password_reset.completed`. Error code `PASSWORD_RESET_TOKEN_INVALID` (`400`).
+- Frontend: pendiente construir la UI que consume estos endpoints (ver F-012).
+
 ---
 
 Ninguno aún (Sprint 1 + Sprint 2 cerraron items grandes pero todavía no se commitearon).
@@ -307,3 +313,21 @@ staging/producción, eliminar los siguientes workarounds del frontend:
 - **QR:** bloqueo pre-ventana → mostrar QR con `currentStatus` (B-002).
 - **QR:** hardcode `expiresInMinutes=15` → leer de `validFrom` / `validUntil` / `expiresAt` (B-004).
 - **Parser de errores QR:** agregar handling de los 4 codes nuevos (`QR_SESSION_CANCELED`, `QR_ATTENDANCE_WINDOW_EXPIRED`, `QR_TOKEN_EXPIRATION_TOO_LONG`, `QR_OUTSIDE_CHECK_IN_WINDOW`) (B-001 parcial / B-002).
+
+---
+
+## Postergado / Out of scope V1
+
+Items que NO fueron resueltos sino **descartados** para V1 (no son deuda ni gap
+activo). Se reevalúan si aparece una necesidad real de cliente.
+
+#### ⏸️ B-006 — Dominio de waitlist para class sessions
+- **Postergado:** 2026-06-08
+- **Razón:** Las academias BJJ en LATAM (target del producto) no usan reservas con
+  waitlist. La cultura de asistencia es presencial-walk-in; si una clase está cerca
+  de capacidad, la academia ajusta el `capacity` en lugar de armar una cola virtual.
+  `AttendanceIntent` en KURO no es una reserva bloqueante sino una intención. El
+  campo `capacity.waitlist` queda como reserva del contrato devolviendo `0`, sin
+  necesidad de implementar el dominio.
+- **Reevaluación:** cuando una academia cliente real solicite el flujo de reserva
+  con cola virtual.
