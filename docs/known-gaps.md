@@ -51,14 +51,6 @@ Registro vivo de problemas, gaps técnicos y mejoras identificadas durante el de
 - **Descripción:** El backend devuelve el motivo del 409 como string libre en `message`. El frontend debe parsear con regex frágil para extraer las fechas de ventana válida. Pedido: agregar `code: "ATTENDANCE_OUTSIDE_WINDOW"` con campos estructurados `windowStart` y `windowEnd`.
 - **Avance backend (Junio 2026):** PARCIAL. El backend resolvió la parte de QR (agregó 4 codes estructurados: `QR_SESSION_CANCELED`, `QR_ATTENDANCE_WINDOW_EXPIRED`, `QR_TOKEN_EXPIRATION_TOO_LONG`, `QR_OUTSIDE_CHECK_IN_WINDOW`), pero **NO** para la asistencia general (POST/PATCH/DELETE de attendance fuera de ventana siguen devolviendo string libre). El pedido B-001 sigue abierto para el caso general.
 
-#### B-005 — Endpoint DELETE para class-schedules
-- **Severidad:** Media
-- **Estado:** 🔴 Detectado
-- **Detectado:** Auditoría 2026-06
-- **Workaround:** Solo se puede activar/desactivar (toggle isActive), no eliminar
-- **Pedido:** Pendiente de crear
-- **Descripción:** No existe endpoint `DELETE /class-schedules/:id`. Esquema de horarios obsoletos queda persistiendo en la base de datos para siempre. Pedido: agregar soft-delete o hard-delete según política de retención.
-
 #### B-006 — Domain de waitlist
 - **Severidad:** Baja
 - **Estado:** 🔴 Detectado
@@ -111,6 +103,27 @@ Registro vivo de problemas, gaps técnicos y mejoras identificadas durante el de
 - **Detectado:** Auditoría 2026-06
 - **Descripción:** El badge de notificaciones en topbar muestra `"3"` hardcodeado. Viola regla #9 (no hardcoded). Backend tiene endpoint `/notifications/unread-count`.
 - **Plan:** Cuando se trabaje Fase 8 (Comunicaciones), reemplazar con dato real.
+
+#### F-009 — suggest-attendance-dialog usa filter client-side
+- **Severidad:** Baja
+- **Estado:** 🔴 Detectado
+- **Detectado:** Cierre del Sprint Eliminación de Workarounds (2026-06-08), fuera de scope
+- **Descripción:** `suggest-attendance-dialog.tsx` trae el padrón con `useBranchStudents` (limit: 100) y filtra client-side. Es el mismo patrón que `walk-in-dialog` tenía antes de migrar a search server-side; afecta academias con >100 alumnos (los que quedan fuera de la primera página son inbuscables).
+- **Plan:** Migrar a `useBranchStudents({ q, limit: 20 })` con debounce —ahora que el hook soporta `q`— y eliminar el filter local.
+
+#### F-010 — Parser 409 no maneja `ATTENDANCE_OUTSIDE_WINDOW`
+- **Severidad:** Media
+- **Estado:** 🔴 Detectado
+- **Detectado:** Sincronización API-CONTRACT 2026-05-28
+- **Descripción:** El backend devuelve `409` con `code: ATTENDANCE_OUTSIDE_WINDOW` + `windowStart` + `windowEnd` cuando staff intenta marcar asistencia fuera de la ventana operativa (`POST .../attendance`). El parser unificado (`lib/api/error-parsers.ts`) no conoce este code, así que la UI cae al mensaje genérico de 409. No rompe data, solo UX.
+- **Plan:** Extender `parseAttendanceError` para mapear el code, exponer `windowStart`/`windowEnd` al UI y agregar copy en i18n (ES/PT).
+
+#### F-011 — Parser 409 no maneja `ATTENDANCE_CORRECTION_WINDOW_CLOSED`
+- **Severidad:** Media
+- **Estado:** 🔴 Detectado
+- **Detectado:** Sincronización API-CONTRACT 2026-05-28
+- **Descripción:** El backend devuelve `409` con `code: ATTENDANCE_CORRECTION_WINDOW_CLOSED` + `windowStart` + `windowEnd` al corregir/borrar attendance después de la ventana de corrección (`PATCH` y `DELETE .../attendance/:studentId`). Liderazgo/admin conservan una ventana extendida. El parser no conoce este code → la UI cae al mensaje genérico, igual que F-010.
+- **Plan:** Mapear el code en el parser, exponer la ventana al UI y agregar copy en i18n. Considerar diferenciar el mensaje según rol (operador normal vs liderazgo/admin) si se puede inferir client-side.
 
 ---
 
@@ -240,6 +253,15 @@ no los consume este frontend (informativo, no requiere acción inmediata):
 - Frontend: ya no se envía `expiresInMinutes` en el request del QR token; el
   backend define la ventana. La constante `QR_EXPIRES_MINUTES = 15` se eliminó
   de `qr-page.tsx` y `qr-modal.tsx`.
+
+#### B-005 — Endpoint DELETE para class-schedules ✅
+- **Resuelto:** 2026-06-08 (documentado por backend en el contrato 2026-05-28)
+- Backend: `DELETE /organizations/.../class-schedules/:scheduleId`. Es soft
+  delete (setea `deletedAt`, no toca sessions ya materializadas, devuelve `204`).
+  Capability `classes.canManageSchedules`.
+- Frontend: pendiente cablear la acción de borrado en la UI de schedules cuando
+  se priorice (el gap de contrato quedó cerrado; el workaround toggle `isActive`
+  deja de ser la única opción).
 
 ---
 

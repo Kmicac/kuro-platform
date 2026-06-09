@@ -1,6 +1,6 @@
 # API Contract
 
-- Generated at: 2026-05-28
+- Generated at: 2026-06-08
 - Backend version: `0.0.1`
 - Source basis: current backend code in this repository
 - API version: `v1`
@@ -8,6 +8,36 @@
 - Base URL development: `http://localhost:3001/api/v1`
 - Auth model: Bearer access token + refresh cookie + CSRF for cookie-backed session csrf/refresh/logout flows
 - Note: this document reflects the backend source in this workspace. If Render differs, the backend and this contract are out of sync and the contract must be updated.
+
+
+## Frontend Scope Notes
+
+This contract mirrors the backend API in full. The KURO web frontend consumes
+only the operator-facing surface:
+
+- All endpoints under `/organizations/:organizationId/...` operating on
+  branches, students, classes, attendance (staff/instructor perspective),
+  intake, promotions, billing, communications, analytics, audit.
+- All `/auth/*` endpoints.
+- All `/public/*` endpoints (Fase 3 anonymous discovery).
+- `/me/intake-requests` (post-signup student follow-up screen, only intake).
+
+The web frontend does NOT consume student-facing endpoints. These are documented
+for completeness and are consumed by the KURO mobile app (Flutter, separate repo):
+
+- `GET /organizations/:organizationId/students/me/home`
+- `GET /organizations/:organizationId/students/me/profile`
+- `GET /organizations/:organizationId/students/me/calendar`
+- `GET /organizations/:organizationId/students/me/attendance`
+- `GET /organizations/:organizationId/students/me/attendance-suggestions`
+- `GET /organizations/:organizationId/students/me/training-itinerary`
+- `GET /organizations/:organizationId/students/me/notes`
+- `POST /organizations/:organizationId/students/me/check-ins/qr`
+- `POST /organizations/:organizationId/students/me/attendance-suggestions/:id/accept`
+- `POST /organizations/:organizationId/students/me/attendance-suggestions/:id/decline`
+- The deprecated `POST .../self-check-in` endpoint (never to be surfaced).
+
+Last synced with backend: 2026-05-28 (backend version 0.0.1).
 
 ## 1. Introducción
 
@@ -166,6 +196,7 @@ Controller-verified on 2026-05-28. This index is the parity list used to keep th
 - `POST /organizations/:organizationId/students/me/check-ins/qr`
 - `GET /organizations/:organizationId/students/me/home`
 - `GET /organizations/:organizationId/students/me/notes`
+- `GET /organizations/:organizationId/students/me/profile`
 - `GET /organizations/:organizationId/students/me/training-itinerary`
 - `GET /organizations/:organizationId/training-calendar`
 - `GET /organizations/:organizationId/training-calendar/class-sessions/:sessionId`
@@ -197,10 +228,12 @@ Controller-verified on 2026-05-28. This index is the parity list used to keep th
 - `POST /auth/accept-invitation`
 - `POST /auth/accept-student-claim`
 - `POST /auth/bootstrap`
+- `POST /auth/forgot-password`
 - `POST /auth/login`
 - `POST /auth/logout`
 - `POST /auth/logout-all`
 - `POST /auth/refresh`
+- `POST /auth/reset-password`
 - `POST /auth/signup`
 - `POST /auth/step-up`
 - `POST /integrations/webhooks/mercado-pago`
@@ -530,6 +563,92 @@ Public user without active membership response:
 | Status | Caso                | Mensaje             |
 | ------ | ------------------- | ------------------- |
 | 401    | invalid credentials | Invalid credentials |
+
+### Forgot password
+
+`POST /auth/forgot-password`
+
+**Roles permitidos**: público
+**Capability requerida**: no aplica
+**Step-up requerido**: no
+**Scope**: no aplica
+
+#### Request body
+
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+#### Response 202
+
+```json
+{
+  "ok": true,
+  "message": "If an account exists, password reset instructions will be sent."
+}
+```
+
+**Side effects**
+
+- Always returns the same public response whether the email exists or not.
+- When the user exists and is active, issues a single-use password reset token.
+- Stores only `PasswordResetToken.tokenHash`, never the plain token.
+- Invalidates older pending password reset tokens for the same user by setting `usedAt`.
+- Sends a transactional email through the configured provider.
+- Does not create a session.
+- Does not return any token in the response.
+
+#### Errores específicos
+
+| Status | Caso                  | Mensaje             |
+| ------ | --------------------- | ------------------- |
+| 422    | validation            | Invalid payload     |
+| 429    | auth route rate limit | Too Many Requests   |
+
+### Reset password
+
+`POST /auth/reset-password`
+
+**Roles permitidos**: público
+**Capability requerida**: no aplica
+**Step-up requerido**: no
+**Scope**: no aplica
+
+#### Request body
+
+```json
+{
+  "token": "plain-token-from-link",
+  "newPassword": "NewPassword123!"
+}
+```
+
+#### Response 200
+
+```json
+{
+  "ok": true
+}
+```
+
+**Side effects**
+
+- Validates that the reset token exists, is unexpired, and was not used before.
+- Hashes the new password with `argon2id`.
+- Marks the current reset token as used.
+- Invalidates any remaining pending reset tokens for the same user.
+- Revokes all active `UserSession` and `RefreshToken` records for that `userId`.
+
+#### Errores específicos
+
+| Status | Caso                        | Mensaje                              |
+| ------ | --------------------------- | ------------------------------------ |
+| 400    | invalid/expired/used token  | Password reset token not available   |
+| 400    | invalid token error code    | `PASSWORD_RESET_TOKEN_INVALID`       |
+| 422    | validation                  | Invalid payload                      |
+| 429    | auth route rate limit       | Too Many Requests                    |
 
 ### CSRF bootstrap
 
@@ -1107,7 +1226,7 @@ The backend exposes capabilities as a read model. Use these as route-family guid
 | `students.canInviteExistingStudent`                    | student claim invite                                                                                                                         |
 | `students.canBulkInviteStudents`                       | bulk claim invite                                                                                                                            |
 | `classes.canReadClasses`                               | class schedules/sessions reads                                                                                                               |
-| `classes.canManageSchedules`                           | class schedule create/update and session generation                                                                                          |
+| `classes.canManageSchedules`                           | class schedule create/update/delete and session generation                                                                                   |
 | `classes.canAssignInstructor`                          | instructor assignment on class schedules/sessions                                                                                            |
 | `classes.canExecuteAssignedClass`                      | instructor execution views and assigned session operations                                                                                   |
 | `classes.canReadAssignedSessions`                      | assigned sessions list                                                                                                                       |
@@ -2371,14 +2490,22 @@ Returns the student admin view with private data.
 
 #### Query params
 
-| Param   | Tipo   | Default | Descripción |
-| ------- | ------ | ------- | ----------- |
-| `page`  | number | `1`     | Página      |
-| `limit` | number | `20`    | Tamaño      |
+| Param   | Tipo   | Default | Descripción                                                                                                                                                                                                                                              |
+| ------- | ------ | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `page`  | number | `1`     | Página                                                                                                                                                                                                                                                   |
+| `limit` | number | `20`    | Tamaño                                                                                                                                                                                                                                                   |
+| `q`     | string | -       | Basic server-side search across `firstName`, `lastName`, `email`, and `phone`. Trimmed; blank values are ignored. Case-insensitive partial matching. Multi-word input matches tokens across the same exposed fields, supporting names like `juan perez`. |
 
 #### Response
 
 `{ items: [...], meta: { page, limit, total } }`
+
+#### Frontend contract note
+
+- `q` is the V1 server-side search for branch-local student lookup, intended for attendance/check-in walk-ins and large academies.
+- Search remains scoped to the requested organization and branch primary assignment. It does not search other branches in the organization.
+- The endpoint keeps the existing `page`/`limit` pagination and response shape; do not use `offset`.
+- Frontend should stop fetching the first 100 students for local filtering when a search term is available. Send `q` with a small `limit` instead.
 
 ### Get student detail
 
@@ -3040,6 +3167,27 @@ Same as create, all optional, `capacity` can be `null`.
 #### Response
 
 Same as schedule item.
+
+### Delete class schedule
+
+`DELETE /organizations/:organizationId/branches/:branchId/class-schedules/:scheduleId`
+
+**Roles permitted**: authenticated member
+**Capability requerida**: `classes.canManageSchedules`
+**Step-up requerido**: no
+**Scope**: BRANCH_SCOPED
+
+#### Response
+
+`204 No Content`
+
+#### Contract rules
+
+- This is a soft delete: backend sets `ClassSchedule.deletedAt`.
+- Existing `ClassSession` rows are not deleted, canceled, or detached.
+- Deleted schedules are excluded from class schedule list/detail and from schedule-based session generation.
+- Deleting a schedule that does not exist in the requested organization/branch returns `404`.
+- Deleting a schedule that is already soft-deleted returns `404`.
 
 ### Create class session
 
@@ -3714,6 +3862,24 @@ Uses the same `CLASS_SESSION_CONFLICT` response shape documented under create cl
 }
 ```
 
+#### Window conflict
+
+When staff attendance is attempted outside the staff attendance operation window, the API returns `409` with a stable code and window metadata while preserving the legacy `message`:
+
+```json
+{
+  "statusCode": 409,
+  "error": "Conflict",
+  "code": "ATTENDANCE_OUTSIDE_WINDOW",
+  "message": "Staff attendance operation is only allowed between 2026-06-01T17:00:00.000Z and 2026-06-01T21:00:00.000Z",
+  "windowStart": "2026-06-01T17:00:00.000Z",
+  "windowEnd": "2026-06-01T21:00:00.000Z",
+  "path": "/api/v1/organizations/org_1/branches/branch_1/class-sessions/session_1/attendance",
+  "requestId": "request_1",
+  "timestamp": "2026-06-01T12:00:00.000Z"
+}
+```
+
 ### Self check-in (DEPRECATED — legacy, not recommended)
 
 > **DEPRECATED / LEGACY — DO NOT USE FOR NEW CLIENTS.**
@@ -3749,6 +3915,10 @@ Uses the same `CLASS_SESSION_CONFLICT` response shape documented under create cl
 }
 ```
 
+Request `expiresInMinutes` is optional and kept for backward compatibility as a technical token TTL hint. When present it must be between `1` and `15` minutes. The QR attendance operational window is not derived from this value; clients must use `validFrom` and `validUntil` from the response.
+
+Response `expiresInMinutes` is the effective number of minutes from issuance time until `expiresAt`. It can be greater than the request max of 15 when a token is generated before `validFrom` and `expiresAt` is aligned to `validUntil`.
+
 #### Response
 
 ```json
@@ -3762,9 +3932,37 @@ Uses the same `CLASS_SESSION_CONFLICT` response shape documented under create cl
   "expiresAt": "2026-05-26T10:45:00.000Z",
   "revokedAt": null,
   "createdAt": "2026-05-26T10:30:00.000Z",
-  "token": "string"
+  "token": "string",
+  "qrCodeData": "string",
+  "validFrom": "2026-05-26T10:15:00.000Z",
+  "validUntil": "2026-05-26T12:30:00.000Z",
+  "currentStatus": "SCHEDULED",
+  "expiresInMinutes": 120
 }
 ```
+
+#### Contract rules
+
+- QR generation is allowed before the attendance QR window so staff can prepare a screen, tablet, or print material in advance.
+- QR usage remains server-side restricted to the QR attendance window: 45 minutes before class start through 30 minutes after class end.
+- `currentStatus` is `SCHEDULED` when `now < validFrom` and `ACTIVE` when `validFrom <= now <= validUntil`.
+- If generation happens before `validFrom`, the issued token is allowed to live until `validUntil` so it can become usable later. Check-in still fails before `validFrom`.
+- If generation happens inside the active window and `expiresInMinutes` is provided, `expiresAt` is capped to `min(now + expiresInMinutes, validUntil)`.
+- Request `expiresInMinutes` and response `expiresInMinutes` are not the same semantic field: request is a legacy TTL hint capped at 15; response is the effective TTL until `expiresAt`.
+- Canceled sessions never issue QR tokens.
+- Sessions whose QR attendance window already ended do not issue new QR tokens.
+- `token` and `qrCodeData` contain the raw QR secret and must not be logged, persisted in frontend storage, or exposed in analytics.
+
+#### Structured errors
+
+| HTTP | Code                           | Notes                                                               |
+| ---- | ------------------------------ | ------------------------------------------------------------------- |
+| 409  | `QR_SESSION_CANCELED`          | Session is canceled and cannot issue or accept QR attendance.       |
+| 409  | `QR_ATTENDANCE_WINDOW_EXPIRED` | QR generation requested after the QR attendance window ended.       |
+| 409  | `QR_TOKEN_EXPIRATION_TOO_LONG` | Requested `expiresInMinutes` exceeds the current max of 15 minutes. |
+| 409  | `QR_OUTSIDE_CHECK_IN_WINDOW`   | QR check-in attempted before `validFrom` or after `validUntil`.     |
+
+Structured QR window errors keep the legacy `message` field and include `validFrom`, `validUntil`, and `currentStatus` when the session window is available.
 
 ### QR check-in (session-scoped — LEGACY/compatibility)
 
@@ -3832,7 +4030,7 @@ Uses the same `CLASS_SESSION_CONFLICT` response shape documented under create cl
 
 - `403`: tenant mismatch, missing linked student, or the linked student is not allowed to operate in the session branch.
 - `404`: QR code/token does not exist in the organization.
-- `409`: QR token expired, QR token revoked, session is no longer inside the check-in window, session canceled, or attendance is blocked by billing restrictions.
+- `409`: QR token expired, QR token revoked, session is no longer inside the check-in window (`QR_OUTSIDE_CHECK_IN_WINDOW`), session canceled (`QR_SESSION_CANCELED`), or attendance is blocked by billing restrictions.
 
 ### Kiosk check-in
 
@@ -4234,6 +4432,24 @@ Declines a pending suggestion owned by the authenticated student. It does not cr
 }
 ```
 
+#### Correction window conflict
+
+When an authorized attendance operator attempts a correction after the correction window has closed, the API returns `409` with `ATTENDANCE_CORRECTION_WINDOW_CLOSED`, `windowStart`, and `windowEnd`. Branch leadership/admin correction roles keep the existing extended correction behavior.
+
+```json
+{
+  "statusCode": 409,
+  "error": "Conflict",
+  "code": "ATTENDANCE_CORRECTION_WINDOW_CLOSED",
+  "message": "Attendance correction window is closed for this class session",
+  "windowStart": "2026-06-01T18:00:00.000Z",
+  "windowEnd": "2026-06-02T19:00:00.000Z",
+  "path": "/api/v1/organizations/org_1/branches/branch_1/class-sessions/session_1/attendance/student_1",
+  "requestId": "request_1",
+  "timestamp": "2026-06-03T12:00:00.000Z"
+}
+```
+
 ### Delete attendance record
 
 `DELETE /organizations/:organizationId/branches/:branchId/class-sessions/:sessionId/attendance/:studentId`
@@ -4252,6 +4468,8 @@ Declines a pending suggestion owned by the authenticated student. It does not cr
   "correctionReasonCode": "MANUAL_OVERRIDE"
 }
 ```
+
+Uses the same `ATTENDANCE_CORRECTION_WINDOW_CLOSED` response shape documented under update attendance record when the correction window is closed for an authorized attendance operator.
 
 ### Attendance follow-up queue
 
@@ -4529,6 +4747,118 @@ Declines a pending suggestion owned by the authenticated student. It does not cr
   "links": {}
 }
 ```
+
+### Student Profile Screen read model
+
+`GET /organizations/:organizationId/students/me/profile`
+
+**Roles permitted**: authenticated tenant user linked to a `Student` in the organization
+**Capability required**: self student access; no `studentId` route param is accepted
+**Step-up required**: no
+**Scope**: own linked student only
+
+This endpoint is a read-only composite model for the mobile/web Profile screen. It does not replace operational billing, competition, promotion, or student admin endpoints.
+
+Security rules:
+
+- Resolves the student from `Student.userId === principal.sub` inside `organizationId`.
+- Returns `404` when the authenticated tenant user has no linked student in the organization.
+- Returns `403` for cross-organization access if a token for another organization attempts to read a profile.
+- Does not expose `technicalNotes`, parent/tutor fields, private notes, billing notes, external payment references, raw provider payloads, import envelopes, or private branch data.
+- Billing summary is branch-local to the student's current `primaryBranchId`; it is not a cross-branch financial history view.
+
+Response:
+
+```json
+{
+  "user": {
+    "id": "user_123",
+    "fullName": "Ana Silva",
+    "firstName": "Ana",
+    "lastName": "Silva",
+    "email": "ana@example.com",
+    "phone": "+5511999999999",
+    "photoUrl": null,
+    "roleLabel": "Student",
+    "status": "ACTIVE"
+  },
+  "student": {
+    "id": "student_123",
+    "memberSince": "2025-02-15",
+    "status": "ACTIVE"
+  },
+  "academy": {
+    "organizationId": "org_123",
+    "organizationName": "Alliance",
+    "organizationSlug": "alliance",
+    "branchId": "branch_123",
+    "branchName": "Alliance Matrix",
+    "branchCity": "Sao Paulo",
+    "branchCountryCode": "BR"
+  },
+  "rank": {
+    "rank": "ADULT_BLUE",
+    "color": "BLUE",
+    "track": "ADULT",
+    "label": "Adult Blue",
+    "stripes": 2,
+    "maxStripes": 4,
+    "lastBeltPromotionDate": "2025-08-20"
+  },
+  "billing": {
+    "status": "ACTIVE",
+    "nextPaymentDueDate": "2026-06-10",
+    "nextPaymentAmount": {
+      "amount": 35000,
+      "currency": "BRL",
+      "formatted": "R$ 350,00"
+    },
+    "lastPayment": {
+      "date": "2026-05-10",
+      "amount": {
+        "amount": 35000,
+        "currency": "BRL",
+        "formatted": "R$ 350,00"
+      },
+      "method": "MANUAL",
+      "status": "PAID"
+    },
+    "recentPayments": []
+  },
+  "competitions": {
+    "smoothcomp": {
+      "linked": true,
+      "verified": true,
+      "externalId": "7788",
+      "lastSyncAt": "2026-05-20"
+    },
+    "summary": {
+      "totalMatches": 10,
+      "winLossRatio": 70,
+      "medals": null,
+      "methods": null,
+      "worldRank": null
+    },
+    "recentCompetitions": []
+  },
+  "links": {
+    "billingDetail": "/organizations/org_123/students/me/billing",
+    "competitionsDetail": "/organizations/org_123/students/me/competitions"
+  }
+}
+```
+
+Current null/degraded fields:
+
+- `user.photoUrl` is always `null` in this version because neither `User` nor `Student` has a photo/avatar/image URL column.
+- `student.memberSince` comes from `Student.joinedOrganizationAt`; it is `null` when that field is not set.
+- `rank.lastBeltPromotionDate` comes only from the latest approved `PromotionRequest` with `type=BELT` and a non-null `effectiveDate`; stripe-only promotions are ignored.
+- `billing.status` is `UNKNOWN` with null amount/date fields when there is no branch-local membership, charge, or payment data for the current primary branch.
+- `billing.nextPaymentDueDate` comes from the next open charge when present; otherwise from `StudentMembership.nextBillingDate` when an active membership exists. There is no frontend hardcoded day-of-month rule.
+- `billing.nextPaymentAmount` comes from open charge outstanding amount; otherwise from the linked billing plan amount when only `nextBillingDate` is available.
+- Payment methods are normalized for student display: `CASH`, `CARD`, or `MANUAL`. PIX is not a separate backend enum yet.
+- `competitions.summary.medals`, `competitions.summary.methods`, `competitions.summary.worldRank`, and `competitions.recentCompetitions` are `null`/empty because current Smoothcomp phase 1 stores profiles, imported matches, and win/loss snapshots, but not medals, method percentages, rankings, tournament placements, or competition-level result records.
+- `competitions.smoothcomp.verified` is true only when there is an active link and the last sync status is `SUCCEEDED`; there is no separate verification lifecycle field yet.
 
 ### Student self calendar
 
