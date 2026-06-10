@@ -78,7 +78,7 @@ interface BillingPlanResponse {
   description: string | null;
   amount: DecimalJsonString;   // ej: "350.00" — no minor units, no object
   currency: string;            // ej: "ARS"
-  enrollmentFeeAmount: DecimalJsonString;
+  enrollmentFeeAmount: DecimalJsonString | null;
   billingFrequency: BillingFrequency;
   isActive: boolean;
   createdAt: string;

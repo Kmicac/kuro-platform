@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl'
 import { useTheme } from 'next-themes'
 import {
   LayoutDashboard, Network, Users, UserPlus, ClipboardList, Calendar,
-  CalendarClock, ChevronLeft, ChevronRight, LogOut,
+  CalendarClock, ChevronLeft, ChevronRight, CreditCard, LogOut,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -76,6 +76,7 @@ const NAV: NavSection[] = [
       { id: 'students',  labelKey: 'students',    icon: Users,         scope: 'branch', path: '/students' },
       { id: 'schedules', labelKey: 'schedules',   icon: CalendarClock, scope: 'branch', path: '/schedules' },
       { id: 'intake',    labelKey: 'intake',      icon: ClipboardList, scope: 'branch', path: '/intake' },
+      { id: 'billing',   labelKey: 'billing',     icon: CreditCard,    scope: 'branch', path: '/billing/dashboard' },
     ],
   },
 ]

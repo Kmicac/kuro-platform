@@ -36,6 +36,13 @@ import type {
   StudentDetail,
   Weekday,
 } from './types'
+import type {
+  BillingPlanResponse,
+  BranchBillingSummaryQuery,
+  BranchBillingSummaryResponse,
+  BranchStudentFinancialStatusesQuery,
+  BranchStudentFinancialStatusesResponse,
+} from './billing.types'
 
 // ── Public catalogs (sin tenant scope) ───────────────────────
 
@@ -151,6 +158,68 @@ export const analyticsApi = {
     const q = p.toString() ? `?${p}` : ''
     return api.get<RiskRoster>(
       `/organizations/${orgId}/analytics/branches/${branchId}/risk-roster${q}`
+    )
+  },
+}
+
+// ── Billing ───────────────────────────────────────────────────
+
+function billingQuery(params?: Record<string, string | number | undefined>) {
+  const p = new URLSearchParams()
+  Object.entries(params ?? {}).forEach(([key, value]) => {
+    if (value !== undefined && value !== '') p.set(key, String(value))
+  })
+  const q = p.toString()
+  return q ? `?${q}` : ''
+}
+
+export const billingApi = {
+  /**
+   * GET /organizations/:orgId/branches/:branchId/billing-plans
+   *
+   * Response is a direct BillingPlanResponse[]; no pagination envelope.
+   */
+  plans: (orgId: string, branchId: string) =>
+    api.get<BillingPlanResponse[]>(
+      `/organizations/${orgId}/branches/${branchId}/billing-plans`
+    ),
+
+  /**
+   * GET /organizations/:orgId/branches/:branchId/billing-summary
+   *
+   * Backend returns decimal JSON strings for money totals. Do not treat them
+   * as minor units; rendering belongs in lib/billing adapters.
+   */
+  branchSummary: (
+    orgId: string,
+    branchId: string,
+    params?: BranchBillingSummaryQuery
+  ) => {
+    const q = billingQuery({
+      dateFrom: params?.dateFrom,
+      dateTo: params?.dateTo,
+      currency: params?.currency?.trim().toUpperCase(),
+    })
+    return api.get<BranchBillingSummaryResponse>(
+      `/organizations/${orgId}/branches/${branchId}/billing-summary${q}`
+    )
+  },
+
+  /**
+   * GET /organizations/:orgId/branches/:branchId/student-financial-statuses
+   */
+  studentFinancialStatuses: (
+    orgId: string,
+    branchId: string,
+    params?: BranchStudentFinancialStatusesQuery
+  ) => {
+    const q = billingQuery({
+      page: params?.page,
+      limit: params?.limit,
+      financialStatus: params?.financialStatus,
+    })
+    return api.get<BranchStudentFinancialStatusesResponse>(
+      `/organizations/${orgId}/branches/${branchId}/student-financial-statuses${q}`
     )
   },
 }

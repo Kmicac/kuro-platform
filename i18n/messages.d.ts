@@ -17,6 +17,7 @@ import type schedules from '../messages/es/schedules.json'
 import type students from '../messages/es/students.json'
 import type intake from '../messages/es/intake.json'
 import type claims from '../messages/es/claims.json'
+import type billing from '../messages/es/billing.json'
 import type attendance from '../messages/es/attendance.json'
 import type qrCheckin from '../messages/es/qr-checkin.json'
 import type classDetail from '../messages/es/class-detail.json'
@@ -37,6 +38,7 @@ declare module 'next-intl' {
       students: typeof students
       intake: typeof intake
       claims: typeof claims
+      billing: typeof billing
       attendance: typeof attendance
       'qr-checkin': typeof qrCheckin
       'class-detail': typeof classDetail

@@ -1,0 +1,218 @@
+{
+  "currency": {
+    "unknown": "Pesos ARG"
+  },
+  "financialStatus": {
+    "CURRENT": "Al día",
+    "DUE_SOON": "Por vencer",
+    "OVERDUE": "Vencido",
+    "RESTRICTED": "Restringido",
+    "FROZEN": "Congelado"
+  },
+  "membershipStatus": {
+    "ACTIVE": "Activa",
+    "PAUSED": "Pausada",
+    "FROZEN": "Congelada",
+    "CANCELED": "Cancelada",
+    "ENDED": "Finalizada"
+  },
+  "billingFrequency": {
+    "WEEKLY": "Semanal",
+    "MONTHLY": "Mensual",
+    "QUARTERLY": "Trimestral",
+    "YEARLY": "Anual",
+    "ONE_TIME": "Única vez"
+  },
+  "chargeStatus": {
+    "PENDING": "Pendiente",
+    "PARTIALLY_PAID": "Parcialmente pagado",
+    "PAID": "Pagado",
+    "OVERDUE": "Vencido",
+    "CANCELED": "Cancelado",
+    "VOID": "Anulado"
+  },
+  "paymentStatus": {
+    "PENDING": "Pendiente",
+    "APPROVED": "Aprobado",
+    "REJECTED": "Rechazado",
+    "CANCELED": "Cancelado",
+    "FAILED": "Fallido",
+    "REFUNDED": "Reembolsado",
+    "CHARGED_BACK": "Contracargado"
+  },
+  "nav": {
+    "aria": "Secciones de facturación",
+    "dashboard": "Panel",
+    "plans": "Planes",
+    "charges": "Cargos",
+    "payments": "Pagos",
+    "financialStatuses": "Estados financieros",
+    "policy": "Política",
+    "integrations": "Integraciones"
+  },
+  "dashboard": {
+    "metaTitle": "Billing",
+    "title": "Billing",
+    "subtitle": "Cobranza operativa de la filial",
+    "actions": {
+      "refresh": "Actualizar",
+      "createCharge": "Crear cargo"
+    },
+    "filters": {
+      "period": "Período",
+      "currency": "Moneda",
+      "allStatuses": "Todos"
+    },
+    "metrics": {
+      "grossTotal": "Bruto del periodo",
+      "netTotal": "Neto del periodo",
+      "approvedPayments": "Pagos aprobados",
+      "pendingPayments": "Pagos pendientes",
+      "pendingCharges": "Cargos pendientes",
+      "overdueCharges": "Cargos vencidos",
+      "paidCharges": "Cargos pagados",
+      "possibleDuplicates": "Posibles duplicados"
+    },
+    "sections": {
+      "financialStatus": "Estado financiero de alumnos",
+      "financialStatusSubtitle": "Distribución por estado financiero confirmado por backend",
+      "operationalRestrictions": "Restricciones operativas",
+      "students": "Alumnos por estado financiero",
+      "studentsSubtitle": "Primeros alumnos del listado financiero de la filial",
+      "snapshot": "Snapshot: {date}",
+      "snapshotLoading": "Snapshot pendiente"
+    },
+    "restrictions": {
+      "overdueStudents": "Vencidos",
+      "dueSoonStudents": "Por vencer",
+      "restrictedStudents": "Restringidos",
+      "attendance": "Asistencia",
+      "app": "App",
+      "both": "Asistencia y app",
+      "none": "Ninguna"
+    },
+    "table": {
+      "student": "Alumno",
+      "status": "Estado",
+      "totalDue": "Total debe",
+      "nextDueDate": "Próximo vencimiento",
+      "restriction": "Restricción",
+      "daysOverdue": "Días vencido",
+      "total": "{count, plural, =0 {Sin alumnos} =1 {1 alumno} other {# alumnos}}"
+    },
+    "states": {
+      "forbiddenTitle": "No tienes acceso a billing",
+      "forbiddenDescription": "El backend restringe esta vista a usuarios con permisos para gestionar la facturación de la filial.",
+      "emptyTitle": "Sin actividad de billing",
+      "emptyDescription": "Todavía no hay cargos ni pagos para el período seleccionado."
+    }
+  },
+  "sections": {
+    "plans": {
+      "metaTitle": "Planes de billing",
+      "title": "Planes",
+      "subtitle": "Plantillas de cobro de la filial",
+      "emptyTitle": "Base de planes preparada",
+      "emptyDescription": "Esta ruta queda reservada para listar, crear y editar planes cuando avancemos con la sub-fase 5.2."
+    },
+    "charges": {
+      "metaTitle": "Cargos de billing",
+      "title": "Cargos",
+      "subtitle": "Cargos emitidos a alumnos de la filial",
+      "emptyTitle": "Base de cargos preparada",
+      "emptyDescription": "Esta ruta queda reservada para el listado de cargos, filtros y detalle lateral cuando avancemos con la sub-fase 5.3."
+    },
+    "payments": {
+      "metaTitle": "Pagos de billing",
+      "title": "Pagos",
+      "subtitle": "Pagos manuales y conciliados por provider",
+      "emptyTitle": "Base de pagos preparada",
+      "emptyDescription": "Esta ruta queda reservada para historial de pagos, ingresos generales y revisión operativa cuando avancemos con la sub-fase 5.3."
+    },
+    "financialStatuses": {
+      "metaTitle": "Estados financieros",
+      "title": "Estados financieros",
+      "subtitle": "Listado dedicado de estado financiero por alumno",
+      "emptyTitle": "Vista dedicada preparada",
+      "emptyDescription": "El dashboard ya consume el endpoint confirmado. Esta ruta queda reservada para tabla completa con filtros y paginación."
+    },
+    "policy": {
+      "metaTitle": "Política de billing",
+      "title": "Política",
+      "subtitle": "Reglas de mora, congelamientos y restricciones operativas",
+      "emptyTitle": "Base de política preparada",
+      "emptyDescription": "Esta ruta queda reservada para leer y editar la política de billing de la filial cuando avancemos con la sub-fase 5.6."
+    },
+    "integrations": {
+      "metaTitle": "Integraciones de pago",
+      "title": "Integraciones",
+      "subtitle": "Providers de pago y estado operativo",
+      "emptyTitle": "Base de integraciones preparada",
+      "emptyDescription": "Esta ruta queda reservada para Mercado Pago y futuros providers. No se exponen credenciales ni se confirma checkout desde el cliente."
+    }
+  },
+  "plans": {
+    "name": "Plan",
+    "frequency": "Frecuencia",
+    "amount": "Monto",
+    "enrollmentFee": "Matrícula",
+    "statusLabel": "Estado",
+    "updatedAt": "Actualizado",
+    "total": "{count, plural, =0 {Sin planes} =1 {1 plan} other {# planes}}",
+    "emptyTitle": "Sin planes de billing",
+    "emptyDescription": "Todavía no hay planes configurados para esta filial.",
+    "status": {
+      "active": "Activo",
+      "inactive": "Inactivo"
+    }
+  },
+  "financialStatuses": {
+    "student": "Alumno",
+    "status": "Estado",
+    "membership": "Membresía",
+    "totalDue": "Total debe",
+    "nextDueDate": "Próximo vencimiento",
+    "restriction": "Restricción",
+    "daysOverdue": "Días vencido",
+    "withoutMembership": "Sin membresía",
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "page": "Página {page} de {totalPages}",
+    "total": "{count, plural, =0 {Sin alumnos} =1 {1 alumno} other {# alumnos}}",
+    "emptyTitle": "Sin alumnos para este filtro",
+    "emptyDescription": "No hay alumnos con este estado financiero en la filial."
+  },
+  "chargeDetail": {
+    "title": "Cargo",
+    "sections": {
+      "student": "Alumno",
+      "amount": "Importe",
+      "actions": "Acciones",
+      "payments": "Pagos aplicados",
+      "reconciliation": "Conciliación",
+      "audit": "Auditoría"
+    },
+    "fields": {
+      "total": "Total",
+      "paid": "Pagado",
+      "balance": "Saldo",
+      "dueDate": "Vencimiento",
+      "provider": "Proveedor",
+      "backendStatus": "Estado backend",
+      "createdAt": "Creado",
+      "updatedAt": "Actualizado",
+      "chargeId": "Charge ID"
+    },
+    "actions": {
+      "recordManualPayment": "Registrar pago manual",
+      "chargeWithProvider": "Cobrar con {provider}",
+      "void": "Anular cargo",
+      "close": "Cerrar"
+    },
+    "states": {
+      "emptyPayments": "Sin pagos aplicados",
+      "providerUnavailable": "La integración de pagos no está configurada para esta filial.",
+      "pendingPaymentNote": "El redirect del provider no confirma el pago. El backend sigue siendo la fuente de verdad."
+    }
+  }
+}

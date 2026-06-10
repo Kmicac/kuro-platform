@@ -17,6 +17,7 @@ const NAMESPACES = [
   'students',
   'intake',
   'claims',
+  'billing',
   'attendance',
   'qr-checkin',
   'class-detail',

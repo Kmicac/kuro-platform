@@ -8,6 +8,7 @@
     "students": "Alumnos",
     "schedules": "Grilla semanal",
     "intake": "Captación",
+    "billing": "Facturación",
     "selectBranchHint": "Selecciona una filial para ver esta sección",
     "disabledItem": "{label} — {hint}",
     "logout": "Cerrar sesión",
