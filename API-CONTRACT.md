@@ -1,6 +1,6 @@
 # API Contract
 
-- Generated at: 2026-06-08
+- Generated at: 2026-06-09
 - Backend version: `0.0.1`
 - Source basis: current backend code in this repository
 - API version: `v1`
@@ -37,7 +37,6 @@ for completeness and are consumed by the KURO mobile app (Flutter, separate repo
 - `POST /organizations/:organizationId/students/me/attendance-suggestions/:id/decline`
 - The deprecated `POST .../self-check-in` endpoint (never to be surfaced).
 
-Last synced with backend: 2026-05-28 (backend version 0.0.1).
 
 ## 1. Introducción
 
@@ -192,6 +191,8 @@ Controller-verified on 2026-05-28. This index is the parity list used to keep th
 - `GET /organizations/:organizationId/students/:studentId/training-notes`
 - `GET /organizations/:organizationId/students/me`
 - `GET /organizations/:organizationId/students/me/attendance`
+- `GET /organizations/:organizationId/students/me/billing`
+- `GET /organizations/:organizationId/students/me/billing-charges/:chargeId`
 - `GET /organizations/:organizationId/students/me/calendar`
 - `POST /organizations/:organizationId/students/me/check-ins/qr`
 - `GET /organizations/:organizationId/students/me/home`
@@ -307,6 +308,7 @@ Controller-verified on 2026-05-28. This index is the parity list used to keep th
 - `POST /organizations/:organizationId/students/:studentId/promotions`
 - `POST /organizations/:organizationId/students/:studentId/training-notes`
 - `POST /organizations/:organizationId/students/bulk-invite`
+- `POST /organizations/:organizationId/students/me/billing-charges/:chargeId/mercado-pago/preference`
 - `POST /organizations/:organizationId/students/me/notes`
 - `POST /organizations/:organizationId/training-notes/:noteId/archive`
 - `POST /organizations/:organizationId/training-notes/:noteId/void`
@@ -602,10 +604,10 @@ Public user without active membership response:
 
 #### Errores específicos
 
-| Status | Caso                  | Mensaje             |
-| ------ | --------------------- | ------------------- |
-| 422    | validation            | Invalid payload     |
-| 429    | auth route rate limit | Too Many Requests   |
+| Status | Caso                  | Mensaje           |
+| ------ | --------------------- | ----------------- |
+| 422    | validation            | Invalid payload   |
+| 429    | auth route rate limit | Too Many Requests |
 
 ### Reset password
 
@@ -643,12 +645,12 @@ Public user without active membership response:
 
 #### Errores específicos
 
-| Status | Caso                        | Mensaje                              |
-| ------ | --------------------------- | ------------------------------------ |
-| 400    | invalid/expired/used token  | Password reset token not available   |
-| 400    | invalid token error code    | `PASSWORD_RESET_TOKEN_INVALID`       |
-| 422    | validation                  | Invalid payload                      |
-| 429    | auth route rate limit       | Too Many Requests                    |
+| Status | Caso                       | Mensaje                            |
+| ------ | -------------------------- | ---------------------------------- |
+| 400    | invalid/expired/used token | Password reset token not available |
+| 400    | invalid token error code   | `PASSWORD_RESET_TOKEN_INVALID`     |
+| 422    | validation                 | Invalid payload                    |
+| 429    | auth route rate limit      | Too Many Requests                  |
 
 ### CSRF bootstrap
 
@@ -6611,10 +6613,213 @@ Same as create, plus:
   "externalReference": "string",
   "initPoint": "string",
   "sandboxInitPoint": "string",
+  "amount": 100,
+  "currency": "BRL",
+  "status": "READY",
   "environment": "production",
   "reused": false
 }
 ```
+
+Notes:
+
+- Backward-compatible addition: `amount`, `currency`, and `status` are now included.
+- Backend calculates `amount` from the current `BillingCharge` outstanding balance; clients must not send amount or currency.
+- Returns `503` when Mercado Pago is not configured for the branch.
+
+### Student self billing summary
+
+`GET /organizations/:organizationId/students/me/billing`
+
+**Roles permitted**: authenticated TENANT student with linked `Student`
+**Capability required**: self-service, no operator billing capability required
+**Step-up required**: no
+**Scope**: SELF, branch-local to `Student.primaryBranchId`
+
+This is the mobile-safe billing read model for Flutter. The backend resolves the student from the current principal and never accepts `studentId` in the path.
+
+#### Response
+
+```json
+{
+  "summary": {
+    "status": "CURRENT",
+    "nextPaymentDueDate": "2026-06-10",
+    "nextPaymentAmount": {
+      "amount": 100,
+      "currency": "BRL",
+      "formatted": "R$ 100,00"
+    },
+    "openBalance": {
+      "amount": 100,
+      "currency": "BRL",
+      "formatted": "R$ 100,00"
+    }
+  },
+  "membership": {
+    "studentId": "student_123",
+    "branchId": "branch_123",
+    "branchName": "SNP Centro",
+    "planName": "Mensal",
+    "nextBillingDate": "2026-06-10"
+  },
+  "openCharges": [
+    {
+      "id": "charge_123",
+      "description": "June membership",
+      "status": "OPEN",
+      "dueDate": "2026-06-10",
+      "amount": {
+        "amount": 100,
+        "currency": "BRL",
+        "formatted": "R$ 100,00"
+      },
+      "amountPaid": {
+        "amount": 0,
+        "currency": "BRL",
+        "formatted": "R$ 0,00"
+      },
+      "outstandingAmount": {
+        "amount": 100,
+        "currency": "BRL",
+        "formatted": "R$ 100,00"
+      },
+      "canPayWithMercadoPago": true
+    }
+  ],
+  "recentPayments": [
+    {
+      "id": "payment_123",
+      "date": "2026-06-09",
+      "status": "PAID",
+      "method": "MERCADO_PAGO",
+      "amount": {
+        "amount": 100,
+        "currency": "BRL",
+        "formatted": "R$ 100,00"
+      },
+      "chargeId": "charge_123"
+    }
+  ],
+  "paymentMethods": {
+    "mercadoPago": {
+      "available": true,
+      "environment": "test",
+      "publicKey": "APP_USR-public"
+    }
+  },
+  "links": {
+    "profile": "/organizations/org_123/students/me/profile"
+  }
+}
+```
+
+Empty state:
+
+- If no real billing exists for the current primary branch, `summary.status` is `UNKNOWN`, amounts/dates are `null`, arrays are empty, and no amounts are invented.
+
+Security:
+
+- `studentId` is resolved from `Student.userId === principal.sub`.
+- Financial reads are limited to the student's current `primaryBranchId`.
+- The response never exposes Mercado Pago access token, webhook secret, raw provider payloads, private billing notes, or external provider raw references.
+
+### Student self billing charge detail
+
+`GET /organizations/:organizationId/students/me/billing-charges/:chargeId`
+
+**Roles permitted**: authenticated TENANT student with linked `Student`
+**Capability required**: self-service, no operator billing capability required
+**Step-up required**: no
+**Scope**: SELF, branch-local to `Student.primaryBranchId`
+
+Used by Flutter after returning from Mercado Pago `success`, `failure`, or `pending` redirects to refresh backend state.
+
+#### Response
+
+```json
+{
+  "id": "charge_123",
+  "status": "OPEN",
+  "description": "June membership",
+  "dueDate": "2026-06-10",
+  "amount": {
+    "amount": 100,
+    "currency": "BRL",
+    "formatted": "R$ 100,00"
+  },
+  "amountPaid": {
+    "amount": 0,
+    "currency": "BRL",
+    "formatted": "R$ 0,00"
+  },
+  "outstandingAmount": {
+    "amount": 100,
+    "currency": "BRL",
+    "formatted": "R$ 100,00"
+  },
+  "payments": [
+    {
+      "id": "payment_123",
+      "status": "PENDING",
+      "provider": "MERCADO_PAGO",
+      "method": "MERCADO_PAGO",
+      "date": "2026-06-09",
+      "amount": {
+        "amount": 100,
+        "currency": "BRL",
+        "formatted": "R$ 100,00"
+      }
+    }
+  ],
+  "checkout": {
+    "canCreatePreference": true,
+    "lastPreferenceId": "pref_123"
+  }
+}
+```
+
+Errors:
+
+- `404` when the charge does not exist or does not belong to the authenticated student's current branch-local billing context.
+- `403` for cross-organization access according to the standard auth context checks.
+
+### Student self Mercado Pago preference
+
+`POST /organizations/:organizationId/students/me/billing-charges/:chargeId/mercado-pago/preference`
+
+**Roles permitted**: authenticated TENANT student with linked `Student`
+**Capability required**: self-service, no operator billing capability required
+**Step-up required**: no
+**Scope**: SELF, branch-local to `Student.primaryBranchId`
+
+#### Response
+
+```json
+{
+  "chargeId": "charge_123",
+  "provider": "MERCADO_PAGO",
+  "preferenceId": "pref_123",
+  "externalReference": "billing_charge:charge_123",
+  "initPoint": "https://www.mercadopago.com/checkout/...",
+  "sandboxInitPoint": "https://sandbox.mercadopago.com/checkout/...",
+  "publicKey": "APP_USR-public",
+  "amount": 100,
+  "currency": "BRL",
+  "status": "READY",
+  "environment": "test",
+  "reused": false
+}
+```
+
+Rules:
+
+- Backend calculates `amount` and `currency` from the `BillingCharge`; Flutter must not send these fields.
+- `404` when the charge does not belong to the authenticated student.
+- `409` when the charge is paid, canceled, void, already linked to a different provider, or has no outstanding balance.
+- `503` when Mercado Pago is not configured for the student's current branch.
+- `environment !== "production"` plus non-null `sandboxInitPoint` means Flutter should open `sandboxInitPoint`; production should open `initPoint`.
+- Success, failure, or pending redirect is not payment confirmation. Flutter must call the charge-detail endpoint after redirect; webhook/reconciliation remains the source of truth.
 
 ### List student billing charges
 
