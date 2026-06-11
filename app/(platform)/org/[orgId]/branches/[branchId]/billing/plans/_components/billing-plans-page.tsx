@@ -1,8 +1,10 @@
 'use client'
 
+import { useState } from 'react'
 import { useFormatter, useTranslations } from 'next-intl'
-import { CheckCircle2, FileText, XCircle } from 'lucide-react'
+import { CheckCircle2, FileText, Pencil, Plus, XCircle } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   TextureCard,
   TextureCardContent,
@@ -14,9 +16,13 @@ import {
   PageHeader,
 } from '@/components/shared'
 import { ApiError } from '@/lib/api/client'
-import type { BillingFrequency } from '@/lib/api/billing.types'
+import type {
+  BillingFrequency,
+  BillingPlanResponse,
+} from '@/lib/api/billing.types'
 import { toBillingPlansVM } from '@/lib/billing'
 import { useBillingPlans, useBranch, useCapabilities } from '@/lib/hooks'
+import { BillingPlanDialog } from './billing-plan-dialog'
 
 interface BillingPlansPageProps {
   orgId: string
@@ -40,11 +46,17 @@ export function BillingPlansPage({ orgId, branchId }: BillingPlansPageProps) {
   const capabilitiesQuery = useCapabilities(orgId)
   const canReadBilling =
     capabilitiesQuery.data?.capabilities.billing?.canReadBilling ?? false
+  const canWriteBilling =
+    capabilitiesQuery.data?.capabilities.billing?.canWriteBilling ?? false
   const hasCapabilities = Boolean(capabilitiesQuery.data)
   const billingEnabled = hasCapabilities && canReadBilling
   const plansQuery = useBillingPlans(orgId, branchId, {
     enabled: billingEnabled,
   })
+  const [createOpen, setCreateOpen] = useState(false)
+  const [editingPlan, setEditingPlan] = useState<BillingPlanResponse | null>(
+    null
+  )
 
   const forbiddenByCapabilities = hasCapabilities && !canReadBilling
   const forbiddenByBackend =
@@ -68,6 +80,14 @@ export function BillingPlansPage({ orgId, branchId }: BillingPlansPageProps) {
       ]}
       title={t('sections.plans.title')}
       subtitle={t('sections.plans.subtitle')}
+      actions={
+        canWriteBilling ? (
+          <Button size="sm" onClick={() => setCreateOpen(true)}>
+            <Plus className="h-4 w-4" />
+            {t('plans.actions.create')}
+          </Button>
+        ) : null
+      }
     />
   )
 
@@ -106,6 +126,8 @@ export function BillingPlansPage({ orgId, branchId }: BillingPlansPageProps) {
           <PlansTable
             isLoading={isLoading}
             rows={rows}
+            canWriteBilling={canWriteBilling}
+            onEdit={setEditingPlan}
             labelFrequency={(frequency) =>
               t(FREQUENCY_LABEL_KEYS[frequency] as Parameters<typeof t>[0])
             }
@@ -119,6 +141,27 @@ export function BillingPlansPage({ orgId, branchId }: BillingPlansPageProps) {
           />
         </TextureCardContent>
       </TextureCard>
+
+      <BillingPlanDialog
+        mode="create"
+        orgId={orgId}
+        branchId={branchId}
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+      />
+
+      {editingPlan && (
+        <BillingPlanDialog
+          mode="edit"
+          orgId={orgId}
+          branchId={branchId}
+          open={Boolean(editingPlan)}
+          onOpenChange={(open) => {
+            if (!open) setEditingPlan(null)
+          }}
+          plan={editingPlan}
+        />
+      )}
     </div>
   )
 }
@@ -126,11 +169,15 @@ export function BillingPlansPage({ orgId, branchId }: BillingPlansPageProps) {
 function PlansTable({
   isLoading,
   rows,
+  canWriteBilling,
+  onEdit,
   labelFrequency,
   formatDate,
 }: {
   isLoading: boolean
   rows: ReturnType<typeof toBillingPlansVM>
+  canWriteBilling: boolean
+  onEdit: (plan: BillingPlanResponse) => void
   labelFrequency: (frequency: BillingFrequency) => string
   formatDate: (value: string) => string
 }) {
@@ -172,6 +219,11 @@ function PlansTable({
               <th className="font-medium pb-2">{t('enrollmentFee')}</th>
               <th className="font-medium pb-2">{t('statusLabel')}</th>
               <th className="font-medium pb-2">{t('updatedAt')}</th>
+              {canWriteBilling && (
+                <th className="font-medium pb-2 text-right">
+                  {t('actions.label')}
+                </th>
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -203,6 +255,19 @@ function PlansTable({
                 <td className="py-2.5 tabular-nums text-muted-foreground">
                   {formatDate(plan.updatedAt)}
                 </td>
+                {canWriteBilling && (
+                  <td className="py-2.5 text-right">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="xs"
+                      onClick={() => onEdit(plan)}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      {t('actions.edit')}
+                    </Button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
