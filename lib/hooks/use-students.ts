@@ -14,6 +14,7 @@ export interface UseBranchStudentsParams {
   limit?: number
   /** Search server-side (firstName/lastName/email/phone). Vacío = sin filtro. */
   q?: string
+  enabled?: boolean
 }
 
 export function useBranchStudents(
@@ -30,7 +31,7 @@ export function useBranchStudents(
     queryFn: () => studentsApi.listByBranch(orgId, branchId, { page, limit, q }),
     staleTime: STALE.resource,
     retry: kuroRetry,
-    enabled: Boolean(orgId && branchId),
+    enabled: Boolean(orgId && branchId && (params?.enabled ?? true)),
     placeholderData: keepPreviousData,
   })
 }

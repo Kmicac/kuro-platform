@@ -14,6 +14,16 @@ export type BillingFrequency =
   | 'YEARLY'
   | 'ONE_TIME'
 
+export const BILLING_FREQUENCY_VALUES = [
+  'WEEKLY',
+  'MONTHLY',
+  'QUARTERLY',
+  'YEARLY',
+  'ONE_TIME',
+] as const satisfies readonly BillingFrequency[]
+
+export type BillingPlanMutationAmount = number | `${number}`
+
 export type StudentMembershipStatus =
   | 'ACTIVE'
   | 'PAUSED'
@@ -31,6 +41,13 @@ export type BillingChargeType =
   | 'ADJUSTMENT'
   | 'MANUAL'
 
+export const BILLING_CHARGE_TYPES = [
+  'MEMBERSHIP',
+  'ENROLLMENT',
+  'ADJUSTMENT',
+  'MANUAL',
+] as const satisfies readonly BillingChargeType[]
+
 export type BillingChargeStatus =
   | 'PENDING'
   | 'PARTIALLY_PAID'
@@ -39,7 +56,21 @@ export type BillingChargeStatus =
   | 'CANCELED'
   | 'VOID'
 
+export const BILLING_CHARGE_STATUSES = [
+  'PENDING',
+  'PARTIALLY_PAID',
+  'PAID',
+  'OVERDUE',
+  'CANCELED',
+  'VOID',
+] as const satisfies readonly BillingChargeStatus[]
+
 export type PaymentKind = 'STUDENT_PAYMENT' | 'GENERAL_INCOME'
+
+export const PAYMENT_KINDS = [
+  'STUDENT_PAYMENT',
+  'GENERAL_INCOME',
+] as const satisfies readonly PaymentKind[]
 
 export type PaymentMethod =
   | 'CASH'
@@ -50,6 +81,16 @@ export type PaymentMethod =
   | 'TAKENOS'
   | 'OTHER'
 
+export const PAYMENT_METHODS = [
+  'CASH',
+  'BANK_TRANSFER',
+  'DEBIT_CARD',
+  'CREDIT_CARD',
+  'MERCADO_PAGO',
+  'TAKENOS',
+  'OTHER',
+] as const satisfies readonly PaymentMethod[]
+
 export type PaymentStatus =
   | 'PENDING'
   | 'APPROVED'
@@ -58,6 +99,19 @@ export type PaymentStatus =
   | 'FAILED'
   | 'REFUNDED'
   | 'CHARGED_BACK'
+
+export const PAYMENT_STATUSES = [
+  'PENDING',
+  'APPROVED',
+  'REJECTED',
+  'CANCELED',
+  'FAILED',
+  'REFUNDED',
+  'CHARGED_BACK',
+] as const satisfies readonly PaymentStatus[]
+
+export type BillingChargeMutationAmount = number | `${number}`
+export type PaymentMutationAmount = number | `${number}`
 
 export type StudentFinancialStatus =
   | 'CURRENT'
@@ -155,6 +209,18 @@ export interface BillingPlanResponse {
   updatedAt: string
 }
 
+export interface CreateBillingPlanRequest {
+  name: string
+  description?: string
+  billingFrequency: BillingFrequency
+  amount: BillingPlanMutationAmount
+  currency: string
+  enrollmentFeeAmount?: BillingPlanMutationAmount
+  isActive?: boolean
+}
+
+export type UpdateBillingPlanRequest = Partial<CreateBillingPlanRequest>
+
 export interface StudentMembershipResponse {
   id: string
   organizationId: string
@@ -175,7 +241,44 @@ export interface StudentMembershipResponse {
   updatedAt: string
 }
 
-export interface BillingChargeResponse {
+export interface BillingChargeListQuery {
+  page?: number
+  limit?: number
+  studentId?: string
+  billingPlanId?: string
+  chargeType?: BillingChargeType
+  status?: BillingChargeStatus
+  currency?: string
+  dateFrom?: string
+  dateTo?: string
+}
+
+export type StudentBillingChargesQuery = Omit<
+  BillingChargeListQuery,
+  'studentId'
+>
+
+export interface BillingChargeStudentSummary {
+  id: string
+  firstName: string
+  lastName: string
+}
+
+export interface BillingChargeStudentMembershipSummary {
+  id: string
+  status: string
+  nextBillingDate: string | null
+}
+
+export interface BillingChargePlanSummary {
+  id: string
+  name: string
+  billingFrequency: BillingFrequency
+  amount: DecimalJsonString
+  currency: string
+}
+
+export interface BillingChargeListItem {
   id: string
   organizationId: string
   branchId: string
@@ -187,16 +290,85 @@ export interface BillingChargeResponse {
   periodEnd: string | null
   dueDate: string
   amount: DecimalJsonString
-  amountPaid?: DecimalJsonString
-  outstandingAmount?: DecimalJsonString
+  amountPaid: DecimalJsonString
+  outstandingAmount: DecimalJsonString
   currency: string
-  description: string
-  externalProvider?: string | null
-  externalReference?: string | null
   status: BillingChargeStatus
-  payments?: PaymentResponse[]
+  effectiveStatus: BillingChargeStatus
+  description: string | null
+  externalProvider: string | null
+  externalReference: string | null
+  student: BillingChargeStudentSummary
+  studentMembership: BillingChargeStudentMembershipSummary | null
+  billingPlan: BillingChargePlanSummary | null
   createdAt: string
   updatedAt: string
+}
+
+export interface BillingChargesResponse {
+  items: BillingChargeListItem[]
+  meta: {
+    page: number
+    limit: number
+    total: number
+  }
+}
+
+export interface CreateBillingChargeRequest {
+  studentMembershipId?: string | null
+  billingPlanId?: string | null
+  chargeType: BillingChargeType
+  periodStart?: string | null
+  periodEnd?: string | null
+  dueDate: string
+  amount: BillingChargeMutationAmount
+  currency: string
+  description?: string
+  externalProvider?: string
+  externalReference?: string
+}
+
+export type CreatedBillingChargeResponse = Omit<
+  BillingChargeListItem,
+  'effectiveStatus' | 'outstandingAmount'
+>
+
+export interface PaymentChargeSummary {
+  id: string
+  chargeType: BillingChargeType
+  dueDate: string
+  amount: DecimalJsonString
+  currency: string
+  status: string
+}
+
+export interface PaymentListQuery {
+  page?: number
+  limit?: number
+  studentId?: string
+  method?: PaymentMethod
+  status?: PaymentStatus
+  paymentKind?: PaymentKind
+  currency?: string
+  dateFrom?: string
+  dateTo?: string
+}
+
+export type StudentPaymentsQuery = Omit<
+  PaymentListQuery,
+  'studentId' | 'paymentKind'
+>
+
+export interface PossibleDuplicatePaymentsQuery {
+  dateFrom?: string
+  dateTo?: string
+  method?: PaymentMethod
+  status?: PaymentStatus
+  paymentKind?: PaymentKind
+  currency?: string
+  studentId?: string
+  windowDays?: number
+  limit?: number
 }
 
 export interface PaymentResponse {
@@ -208,15 +380,124 @@ export interface PaymentResponse {
   paymentKind: PaymentKind
   grossAmount: DecimalJsonString
   netAmount: DecimalJsonString
+  reversedAmount: DecimalJsonString
+  currency: string
+  method: PaymentMethod
+  status: PaymentStatus
+  description: string | null
+  externalProvider: string | null
+  externalReference: string | null
+  lastExternalStatus: string | null
+  lastExternalStatusDetail: string | null
+  lastExternalObservedAt: string | null
+  recordedByMembershipId: string | null
+  recordedAt: string
+  notes: string | null
+  createdAt: string
+  updatedAt: string
+  student: BillingChargeStudentSummary | null
+  billingCharge: PaymentChargeSummary | null
+}
+
+export interface PaymentsResponse {
+  items: PaymentResponse[]
+  meta: {
+    page: number
+    limit: number
+    total: number
+  }
+}
+
+export interface RecordManualStudentPaymentRequest {
+  billingChargeId?: string | null
+  grossAmount: PaymentMutationAmount
+  netAmount: PaymentMutationAmount
+  currency: string
+  method: PaymentMethod
+  status?: PaymentStatus
+  description?: string
+  externalProvider?: string
+  externalReference?: string
+  recordedAt?: string
+  notes?: string
+}
+
+export type ManualStudentPaymentResponse = PaymentResponse & {
+  paymentKind: 'STUDENT_PAYMENT'
+  student: BillingChargeStudentSummary
+}
+
+export interface RecordGeneralIncomeRequest {
+  grossAmount: PaymentMutationAmount
+  netAmount?: PaymentMutationAmount
+  currency: string
+  method: PaymentMethod
+  status?: PaymentStatus
+  description?: string
+  externalProvider?: string
+  externalReference?: string
+  recordedAt?: string
+  notes?: string
+}
+
+export type GeneralIncomeResponse = PaymentResponse & {
+  paymentKind: 'GENERAL_INCOME'
+  studentId: null
+  billingChargeId: null
+  student: null
+  billingCharge: null
+}
+
+export type PossibleDuplicateReason =
+  | 'same_external_reference'
+  | 'same_student_amount_method_window'
+
+export interface PossibleDuplicatePaymentItem {
+  id: string
+  paymentKind: PaymentKind
+  studentId: string | null
+  grossAmount: DecimalJsonString
   currency: string
   method: PaymentMethod
   status: PaymentStatus
   externalProvider: string | null
   externalReference: string | null
   recordedAt: string
-  notes: string | null
-  createdAt: string
-  updatedAt?: string
+  description: string | null
+  student: BillingChargeStudentSummary | null
+}
+
+export interface PossibleDuplicatePaymentsGroup {
+  reason: PossibleDuplicateReason
+  payments: PossibleDuplicatePaymentItem[]
+}
+
+export interface PossibleDuplicatePaymentsResponse {
+  items: PossibleDuplicatePaymentsGroup[]
+  meta: {
+    inspectedPayments: number
+    totalGroups: number
+    windowDays: number
+    period: {
+      dateFrom: string
+      dateTo: string
+    }
+  }
+}
+
+export interface MercadoPagoPreferenceResponse {
+  chargeId: string
+  provider: 'MERCADO_PAGO'
+  publicKey: string
+  preferenceId: string
+  externalReference: string
+  initPoint: string
+  sandboxInitPoint?: string
+  amount: number
+  currency: string
+  status: 'READY'
+  environment: 'test' | 'production'
+  reused: boolean
 }
 
 export interface BillingPolicyResponse {

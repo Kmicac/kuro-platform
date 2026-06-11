@@ -31,6 +31,12 @@
     "CANCELED": "Cancelado",
     "VOID": "Anulado"
   },
+  "chargeType": {
+    "MEMBERSHIP": "Membresía",
+    "ENROLLMENT": "Matrícula",
+    "ADJUSTMENT": "Ajuste",
+    "MANUAL": "Manual"
+  },
   "paymentStatus": {
     "PENDING": "Pendiente",
     "APPROVED": "Aprobado",
@@ -39,6 +45,15 @@
     "FAILED": "Fallido",
     "REFUNDED": "Reembolsado",
     "CHARGED_BACK": "Contracargado"
+  },
+  "paymentMethod": {
+    "CASH": "Efectivo",
+    "BANK_TRANSFER": "Transferencia",
+    "DEBIT_CARD": "Débito",
+    "CREDIT_CARD": "Crédito",
+    "MERCADO_PAGO": "Mercado Pago",
+    "TAKENOS": "Takenos",
+    "OTHER": "Otro"
   },
   "nav": {
     "aria": "Secciones de facturación",
@@ -161,6 +176,48 @@
     "total": "{count, plural, =0 {Sin planes} =1 {1 plan} other {# planes}}",
     "emptyTitle": "Sin planes de billing",
     "emptyDescription": "Todavía no hay planes configurados para esta filial.",
+    "actions": {
+      "label": "Acciones",
+      "create": "Nuevo plan",
+      "edit": "Editar"
+    },
+    "dialog": {
+      "createTitle": "Nuevo plan",
+      "createDescription": "Define la frecuencia, moneda e importes del plan de cobro.",
+      "editTitle": "Editar plan",
+      "editDescription": "Actualiza los datos operativos del plan de cobro.",
+      "fields": {
+        "name": "Nombre",
+        "namePlaceholder": "Mensualidad adultos",
+        "description": "Descripción",
+        "descriptionPlaceholder": "Detalle interno del plan",
+        "frequency": "Frecuencia",
+        "frequencyPlaceholder": "Selecciona frecuencia",
+        "currency": "Moneda",
+        "currencyPlaceholder": "ARS",
+        "amount": "Monto",
+        "amountPlaceholder": "100.00",
+        "enrollmentFee": "Matrícula",
+        "enrollmentFeePlaceholder": "0",
+        "isActive": "Activo"
+      },
+      "actions": {
+        "create": "Crear plan",
+        "update": "Guardar cambios",
+        "submitting": "Guardando..."
+      },
+      "success": {
+        "created": "Plan creado correctamente",
+        "updated": "Plan actualizado correctamente"
+      },
+      "errors": {
+        "nameRequired": "El nombre debe tener al menos 3 caracteres.",
+        "amountInvalid": "Ingresa un monto mayor o igual a 0, con hasta 2 decimales.",
+        "currencyInvalid": "La moneda debe tener 3 letras mayúsculas.",
+        "enrollmentFeeInvalid": "Ingresa una matrícula mayor o igual a 0, con hasta 2 decimales.",
+        "forbidden": "No tienes permiso para modificar planes de billing."
+      }
+    },
     "status": {
       "active": "Activo",
       "inactive": "Inactivo"
@@ -181,6 +238,179 @@
     "total": "{count, plural, =0 {Sin alumnos} =1 {1 alumno} other {# alumnos}}",
     "emptyTitle": "Sin alumnos para este filtro",
     "emptyDescription": "No hay alumnos con este estado financiero en la filial."
+  },
+  "charges": {
+    "description": "Cargo",
+    "student": "Alumno",
+    "plan": "Plan",
+    "type": "Tipo",
+    "dueDate": "Vencimiento",
+    "amount": "Total",
+    "paid": "Pagado",
+    "outstanding": "Saldo",
+    "status": "Estado",
+    "withoutPlan": "Sin plan",
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "page": "Página {page} de {totalPages}",
+    "total": "{count, plural, =0 {Sin cargos} =1 {1 cargo} other {# cargos}}",
+    "emptyTitle": "Sin cargos para este filtro",
+    "emptyDescription": "No hay cargos emitidos en la filial con los filtros actuales.",
+    "filters": {
+      "allStatuses": "Todos los estados",
+      "allTypes": "Todos los tipos"
+    },
+    "actions": {
+      "label": "Acciones",
+      "open": "Abrir",
+      "create": "Cargo",
+      "recordManualPayment": "Registrar pago manual"
+    },
+    "createManual": {
+      "title": "Crear cargo manual",
+      "description": "Emite un cargo único para un alumno de esta filial.",
+      "fields": {
+        "student": "Alumno",
+        "studentSearchPlaceholder": "Buscar por nombre, email o teléfono",
+        "studentNoContact": "Sin contacto registrado",
+        "amount": "Monto",
+        "currency": "Moneda",
+        "dueDate": "Vencimiento",
+        "periodStart": "Inicio del período",
+        "periodEnd": "Fin del período",
+        "description": "Descripción",
+        "descriptionPlaceholder": "Detalle del cargo manual"
+      },
+      "states": {
+        "emptyStudents": "No hay alumnos para seleccionar en esta filial.",
+        "noResultsQuery": "No hay alumnos para “{query}”.",
+        "selected": "Seleccionado"
+      },
+      "actions": {
+        "submit": "Crear cargo",
+        "submitting": "Creando..."
+      },
+      "success": "Cargo manual creado correctamente",
+      "errors": {
+        "studentRequired": "Selecciona un alumno.",
+        "dueDateInvalid": "Ingresa una fecha de vencimiento válida.",
+        "amountInvalid": "Ingresa un monto mayor o igual a 0, con hasta 2 decimales.",
+        "currencyInvalid": "La moneda debe tener 3 letras mayúsculas.",
+        "periodDateInvalid": "Ingresa una fecha de período válida.",
+        "forbidden": "No tienes permiso para crear cargos de billing."
+      }
+    },
+    "detail": {
+      "title": "Detalle del cargo",
+      "sections": {
+        "student": "Alumno",
+        "amount": "Importe",
+        "actions": "Acciones",
+        "metadata": "Metadatos",
+        "payments": "Pagos aplicados"
+      },
+      "fields": {
+        "membership": "Membresía",
+        "chargeId": "Charge ID",
+        "provider": "Proveedor",
+        "externalReference": "Referencia externa",
+        "createdAt": "Creado",
+        "updatedAt": "Actualizado"
+      },
+      "states": {
+        "emptyPayments": "El endpoint operador de listado no incluye pagos aplicados.",
+        "noOperatorDetail": "Backend aún no expone detail operador por cargo."
+      }
+    },
+    "manualPayment": {
+      "title": "Registrar pago manual",
+      "description": "Registra un pago aprobado contra este cargo. El backend actualiza el saldo del cargo.",
+      "fields": {
+        "grossAmount": "Monto bruto",
+        "netAmount": "Monto neto",
+        "currency": "Moneda",
+        "method": "Método",
+        "description": "Descripción",
+        "descriptionPlaceholder": "Pago recibido en recepción",
+        "notes": "Notas",
+        "notesPlaceholder": "Detalle interno del pago"
+      },
+      "actions": {
+        "submit": "Registrar pago",
+        "submitting": "Registrando..."
+      },
+      "success": "Pago registrado correctamente",
+      "errors": {
+        "grossAmountInvalid": "Ingresa un monto bruto mayor o igual a 0, con hasta 2 decimales.",
+        "netAmountInvalid": "Ingresa un monto neto mayor o igual a 0, con hasta 2 decimales.",
+        "forbidden": "No tienes permiso para registrar pagos manuales."
+      }
+    }
+  },
+  "payments": {
+    "recordedAt": "Registrado",
+    "student": "Alumno",
+    "kindLabel": "Tipo",
+    "method": "Método",
+    "grossAmount": "Bruto",
+    "netAmount": "Neto",
+    "statusLabel": "Estado",
+    "description": "Descripción",
+    "generalIncomeStudent": "Ingreso general",
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "page": "Página {page} de {totalPages}",
+    "total": "{count, plural, =0 {Sin pagos} =1 {1 pago} other {# pagos}}",
+    "emptyTitle": "Sin pagos para este filtro",
+    "emptyDescription": "No hay pagos registrados en la filial con los filtros actuales.",
+    "actions": {
+      "generalIncome": "Registrar ingreso"
+    },
+    "filters": {
+      "allStatuses": "Todos los estados",
+      "allMethods": "Todos los métodos",
+      "allKinds": "Todos los tipos"
+    },
+    "kind": {
+      "STUDENT_PAYMENT": "Pago de alumno",
+      "GENERAL_INCOME": "Ingreso general"
+    },
+    "duplicates": {
+      "title": "Posibles duplicados",
+      "summary": "{groups, plural, =0 {Sin grupos} =1 {1 grupo} other {# grupos}} sobre {payments, plural, =0 {0 pagos inspeccionados} =1 {1 pago inspeccionado} other {# pagos inspeccionados}}",
+      "empty": "No se detectaron posibles duplicados con los filtros actuales.",
+      "generalIncome": "Ingreso general",
+      "reason": {
+        "sameExternalReference": "Misma referencia externa",
+        "sameStudentAmountMethodWindow": "Mismo alumno, monto, método y ventana"
+      }
+    },
+    "generalIncome": {
+      "title": "Registrar ingreso general",
+      "description": "Registra un ingreso no asociado a un alumno ni a un cargo.",
+      "fields": {
+        "grossAmount": "Monto bruto",
+        "netAmount": "Monto neto",
+        "currency": "Moneda",
+        "method": "Método",
+        "status": "Estado",
+        "description": "Descripción",
+        "descriptionPlaceholder": "Venta de uniforme, evento o ingreso operativo",
+        "notes": "Notas",
+        "notesPlaceholder": "Detalle interno del ingreso"
+      },
+      "actions": {
+        "submit": "Registrar ingreso",
+        "submitting": "Registrando..."
+      },
+      "success": "Ingreso registrado correctamente",
+      "errors": {
+        "grossAmountInvalid": "Ingresa un monto bruto mayor o igual a 0, con hasta 2 decimales.",
+        "netAmountInvalid": "Ingresa un monto neto mayor o igual a 0, con hasta 2 decimales.",
+        "currencyInvalid": "La moneda debe tener 3 letras mayúsculas.",
+        "forbidden": "No tienes permiso para registrar ingresos generales."
+      }
+    }
   },
   "chargeDetail": {
     "title": "Cargo",

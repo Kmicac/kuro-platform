@@ -1,9 +1,13 @@
 import type {
+  BillingChargeListItem,
   BillingPlanResponse,
   BranchBillingSummaryResponse,
   BranchStudentFinancialStatusItem,
   BranchStudentFinancialStatusesResponse,
   DecimalJsonString,
+  PaymentResponse,
+  PossibleDuplicatePaymentsGroup,
+  PossibleDuplicatePaymentsResponse,
   StudentFinancialStatus,
 } from '@/lib/api/billing.types'
 import { STUDENT_FINANCIAL_STATUSES } from '@/lib/api/billing.types'
@@ -45,6 +49,59 @@ export interface FinancialStatusListVM {
 export interface BillingPlanVM extends BillingPlanResponse {
   amountFormatted: string
   enrollmentFeeAmountFormatted: string | null
+}
+
+export interface BillingChargeListItemVM extends BillingChargeListItem {
+  studentName: string
+  planName: string | null
+  amountFormatted: string
+  amountPaidFormatted: string
+  outstandingAmountFormatted: string
+  dueDateFormatted: string
+  periodStartFormatted: string | null
+  periodEndFormatted: string | null
+}
+
+export interface BillingChargesListVM {
+  items: BillingChargeListItemVM[]
+  meta: {
+    page: number
+    limit: number
+    total: number
+  }
+}
+
+export interface PaymentVM extends PaymentResponse {
+  studentName: string | null
+  grossAmountFormatted: string
+  netAmountFormatted: string
+  reversedAmountFormatted: string
+  recordedAtFormatted: string
+}
+
+export interface PaymentsListVM {
+  items: PaymentVM[]
+  meta: {
+    page: number
+    limit: number
+    total: number
+  }
+}
+
+export interface PossibleDuplicatePaymentsGroupVM
+  extends PossibleDuplicatePaymentsGroup {
+  payments: Array<
+    PossibleDuplicatePaymentsGroup['payments'][number] & {
+      studentName: string | null
+      grossAmountFormatted: string
+      recordedAtFormatted: string
+    }
+  >
+}
+
+export interface PossibleDuplicatePaymentsVM
+  extends PossibleDuplicatePaymentsResponse {
+  items: PossibleDuplicatePaymentsGroupVM[]
 }
 
 function normalizeCurrency(value?: string | null) {
@@ -112,6 +169,139 @@ export function toBillingPlansVM(
   options: Pick<MoneyAdapterOptions, 'locale' | 'unknownCurrencyLabel'>
 ) {
   return plans.map((plan) => toBillingPlanVM(plan, options))
+}
+
+export function toBillingChargeListItemVM(
+  charge: BillingChargeListItem,
+  options: Pick<MoneyAdapterOptions, 'locale' | 'unknownCurrencyLabel'> & {
+    formatDateTime: (value: string) => string
+  }
+): BillingChargeListItemVM {
+  const displayCurrency = normalizeCurrency(charge.currency)
+
+  return {
+    ...charge,
+    studentName: [charge.student.firstName, charge.student.lastName]
+      .filter(Boolean)
+      .join(' '),
+    planName: charge.billingPlan?.name ?? null,
+    amountFormatted: formatBillingDecimal(
+      charge.amount,
+      displayCurrency,
+      options
+    ),
+    amountPaidFormatted: formatBillingDecimal(
+      charge.amountPaid,
+      displayCurrency,
+      options
+    ),
+    outstandingAmountFormatted: formatBillingDecimal(
+      charge.outstandingAmount,
+      displayCurrency,
+      options
+    ),
+    dueDateFormatted: options.formatDateTime(charge.dueDate),
+    periodStartFormatted: charge.periodStart
+      ? options.formatDateTime(charge.periodStart)
+      : null,
+    periodEndFormatted: charge.periodEnd
+      ? options.formatDateTime(charge.periodEnd)
+      : null,
+  }
+}
+
+export function toBillingChargesListVM(
+  response: {
+    items: BillingChargeListItem[]
+    meta: BillingChargesListVM['meta']
+  },
+  options: Pick<MoneyAdapterOptions, 'locale' | 'unknownCurrencyLabel'> & {
+    formatDateTime: (value: string) => string
+  }
+): BillingChargesListVM {
+  return {
+    items: response.items.map((charge) =>
+      toBillingChargeListItemVM(charge, options)
+    ),
+    meta: response.meta,
+  }
+}
+
+export function toPaymentVM(
+  payment: PaymentResponse,
+  options: Pick<MoneyAdapterOptions, 'locale' | 'unknownCurrencyLabel'> & {
+    formatDateTime: (value: string) => string
+  }
+): PaymentVM {
+  const displayCurrency = normalizeCurrency(payment.currency)
+
+  return {
+    ...payment,
+    studentName: payment.student
+      ? [payment.student.firstName, payment.student.lastName]
+          .filter(Boolean)
+          .join(' ')
+      : null,
+    grossAmountFormatted: formatBillingDecimal(
+      payment.grossAmount,
+      displayCurrency,
+      options
+    ),
+    netAmountFormatted: formatBillingDecimal(
+      payment.netAmount,
+      displayCurrency,
+      options
+    ),
+    reversedAmountFormatted: formatBillingDecimal(
+      payment.reversedAmount,
+      displayCurrency,
+      options
+    ),
+    recordedAtFormatted: options.formatDateTime(payment.recordedAt),
+  }
+}
+
+export function toPaymentsListVM(
+  response: {
+    items: PaymentResponse[]
+    meta: PaymentsListVM['meta']
+  },
+  options: Pick<MoneyAdapterOptions, 'locale' | 'unknownCurrencyLabel'> & {
+    formatDateTime: (value: string) => string
+  }
+): PaymentsListVM {
+  return {
+    items: response.items.map((payment) => toPaymentVM(payment, options)),
+    meta: response.meta,
+  }
+}
+
+export function toPossibleDuplicatePaymentsVM(
+  response: PossibleDuplicatePaymentsResponse,
+  options: Pick<MoneyAdapterOptions, 'locale' | 'unknownCurrencyLabel'> & {
+    formatDateTime: (value: string) => string
+  }
+): PossibleDuplicatePaymentsVM {
+  return {
+    ...response,
+    items: response.items.map((group) => ({
+      ...group,
+      payments: group.payments.map((payment) => ({
+        ...payment,
+        studentName: payment.student
+          ? [payment.student.firstName, payment.student.lastName]
+              .filter(Boolean)
+              .join(' ')
+          : null,
+        grossAmountFormatted: formatBillingDecimal(
+          payment.grossAmount,
+          normalizeCurrency(payment.currency),
+          options
+        ),
+        recordedAtFormatted: options.formatDateTime(payment.recordedAt),
+      })),
+    })),
+  }
 }
 
 export function toBranchBillingSummaryVM(

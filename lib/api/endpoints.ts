@@ -38,10 +38,27 @@ import type {
 } from './types'
 import type {
   BillingPlanResponse,
+  BillingChargeListQuery,
+  BillingChargesResponse,
   BranchBillingSummaryQuery,
   BranchBillingSummaryResponse,
   BranchStudentFinancialStatusesQuery,
   BranchStudentFinancialStatusesResponse,
+  CreateBillingChargeRequest,
+  CreateBillingPlanRequest,
+  CreatedBillingChargeResponse,
+  ManualStudentPaymentResponse,
+  GeneralIncomeResponse,
+  MercadoPagoPreferenceResponse,
+  PaymentListQuery,
+  PaymentsResponse,
+  PossibleDuplicatePaymentsQuery,
+  PossibleDuplicatePaymentsResponse,
+  RecordManualStudentPaymentRequest,
+  RecordGeneralIncomeRequest,
+  StudentPaymentsQuery,
+  StudentBillingChargesQuery,
+  UpdateBillingPlanRequest,
 } from './billing.types'
 
 // ── Public catalogs (sin tenant scope) ───────────────────────
@@ -182,6 +199,179 @@ export const billingApi = {
   plans: (orgId: string, branchId: string) =>
     api.get<BillingPlanResponse[]>(
       `/organizations/${orgId}/branches/${branchId}/billing-plans`
+    ),
+
+  createPlan: (
+    orgId: string,
+    branchId: string,
+    body: CreateBillingPlanRequest
+  ) =>
+    api.post<BillingPlanResponse>(
+      `/organizations/${orgId}/branches/${branchId}/billing-plans`,
+      body
+    ),
+
+  updatePlan: (
+    orgId: string,
+    branchId: string,
+    planId: string,
+    body: UpdateBillingPlanRequest
+  ) =>
+    api.patch<BillingPlanResponse>(
+      `/organizations/${orgId}/branches/${branchId}/billing-plans/${planId}`,
+      body
+    ),
+
+  /**
+   * GET /organizations/:orgId/branches/:branchId/billing-charges
+   *
+   * Uses dueDate ascending + createdAt descending by backend default.
+   */
+  branchCharges: (
+    orgId: string,
+    branchId: string,
+    params?: BillingChargeListQuery
+  ) => {
+    const q = billingQuery({
+      page: params?.page,
+      limit: params?.limit,
+      studentId: params?.studentId,
+      billingPlanId: params?.billingPlanId,
+      chargeType: params?.chargeType,
+      status: params?.status,
+      currency: params?.currency?.trim().toUpperCase(),
+      dateFrom: params?.dateFrom,
+      dateTo: params?.dateTo,
+    })
+    return api.get<BillingChargesResponse>(
+      `/organizations/${orgId}/branches/${branchId}/billing-charges${q}`
+    )
+  },
+
+  /**
+   * GET /organizations/:orgId/students/:studentId/billing-charges
+   *
+   * Same envelope and item shape as branchCharges. The backend ignores
+   * query.studentId here; the path studentId is authoritative.
+   */
+  studentCharges: (
+    orgId: string,
+    studentId: string,
+    params?: StudentBillingChargesQuery
+  ) => {
+    const q = billingQuery({
+      page: params?.page,
+      limit: params?.limit,
+      billingPlanId: params?.billingPlanId,
+      chargeType: params?.chargeType,
+      status: params?.status,
+      currency: params?.currency?.trim().toUpperCase(),
+      dateFrom: params?.dateFrom,
+      dateTo: params?.dateTo,
+    })
+    return api.get<BillingChargesResponse>(
+      `/organizations/${orgId}/students/${studentId}/billing-charges${q}`
+    )
+  },
+
+  createCharge: (
+    orgId: string,
+    studentId: string,
+    body: CreateBillingChargeRequest
+  ) =>
+    api.post<CreatedBillingChargeResponse>(
+      `/organizations/${orgId}/students/${studentId}/billing-charges`,
+      body
+    ),
+
+  recordManualStudentPayment: (
+    orgId: string,
+    studentId: string,
+    body: RecordManualStudentPaymentRequest
+  ) =>
+    api.post<ManualStudentPaymentResponse>(
+      `/organizations/${orgId}/students/${studentId}/payments/manual`,
+      body
+    ),
+
+  branchPayments: (
+    orgId: string,
+    branchId: string,
+    params?: PaymentListQuery
+  ) => {
+    const q = billingQuery({
+      page: params?.page,
+      limit: params?.limit,
+      studentId: params?.studentId,
+      method: params?.method,
+      status: params?.status,
+      paymentKind: params?.paymentKind,
+      currency: params?.currency?.trim().toUpperCase(),
+      dateFrom: params?.dateFrom,
+      dateTo: params?.dateTo,
+    })
+    return api.get<PaymentsResponse>(
+      `/organizations/${orgId}/branches/${branchId}/payments${q}`
+    )
+  },
+
+  studentPayments: (
+    orgId: string,
+    studentId: string,
+    params?: StudentPaymentsQuery
+  ) => {
+    const q = billingQuery({
+      page: params?.page,
+      limit: params?.limit,
+      method: params?.method,
+      status: params?.status,
+      currency: params?.currency?.trim().toUpperCase(),
+      dateFrom: params?.dateFrom,
+      dateTo: params?.dateTo,
+    })
+    return api.get<PaymentsResponse>(
+      `/organizations/${orgId}/students/${studentId}/payments${q}`
+    )
+  },
+
+  possibleDuplicatePayments: (
+    orgId: string,
+    branchId: string,
+    params?: PossibleDuplicatePaymentsQuery
+  ) => {
+    const q = billingQuery({
+      dateFrom: params?.dateFrom,
+      dateTo: params?.dateTo,
+      method: params?.method,
+      status: params?.status,
+      paymentKind: params?.paymentKind,
+      currency: params?.currency?.trim().toUpperCase(),
+      studentId: params?.studentId,
+      windowDays: params?.windowDays,
+      limit: params?.limit,
+    })
+    return api.get<PossibleDuplicatePaymentsResponse>(
+      `/organizations/${orgId}/branches/${branchId}/payments/possible-duplicates${q}`
+    )
+  },
+
+  recordGeneralIncome: (
+    orgId: string,
+    branchId: string,
+    body: RecordGeneralIncomeRequest
+  ) =>
+    api.post<GeneralIncomeResponse>(
+      `/organizations/${orgId}/branches/${branchId}/general-income`,
+      body
+    ),
+
+  createMercadoPagoPreference: (
+    orgId: string,
+    studentId: string,
+    chargeId: string
+  ) =>
+    api.post<MercadoPagoPreferenceResponse>(
+      `/organizations/${orgId}/students/${studentId}/billing-charges/${chargeId}/mercado-pago/preference`
     ),
 
   /**
