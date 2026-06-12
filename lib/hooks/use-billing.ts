@@ -13,15 +13,20 @@ import type {
   BranchBillingSummaryQuery,
   BranchStudentFinancialStatusesQuery,
   CreateBillingChargeRequest,
+  CreatePaymentIntegrationRequest,
   CreateStudentMembershipRequest,
+  IntegrationWebhookEventsQuery,
   PaymentListQuery,
+  PaymentIntegrationsQuery,
   PossibleDuplicatePaymentsQuery,
   RecordGeneralIncomeRequest,
   RecordManualStudentPaymentRequest,
+  SyncPaymentIntegrationRequest,
   StudentMembershipResponse,
   StudentBillingChargesQuery,
   StudentPaymentsQuery,
   CreateBillingPlanRequest,
+  UpdatePaymentIntegrationRequest,
   UpdateStudentMembershipRequest,
   UpdateBillingPlanRequest,
 } from '@/lib/api/billing.types'
@@ -118,6 +123,33 @@ function possibleDuplicatePaymentsFilter(orgId: string, branchId: string) {
   }
 }
 
+function integrationsKey(
+  orgId: string,
+  params: Required<Pick<PaymentIntegrationsQuery, 'page' | 'limit'>> &
+    Omit<PaymentIntegrationsQuery, 'page' | 'limit'>
+) {
+  return ['payment-integrations', orgId, params] as const
+}
+
+function integrationsFilter(orgId: string) {
+  return { queryKey: ['payment-integrations', orgId] as const }
+}
+
+function integrationWebhookEventsKey(
+  orgId: string,
+  integrationId: string,
+  params: Required<Pick<IntegrationWebhookEventsQuery, 'page' | 'limit'>> &
+    Omit<IntegrationWebhookEventsQuery, 'page' | 'limit'>
+) {
+  return ['integration-webhook-events', orgId, integrationId, params] as const
+}
+
+function integrationWebhookEventsFilter(orgId: string, integrationId: string) {
+  return {
+    queryKey: ['integration-webhook-events', orgId, integrationId] as const,
+  }
+}
+
 function invalidateMembershipRelatedQueries(
   queryClient: ReturnType<typeof useQueryClient>,
   orgId: string,
@@ -203,6 +235,33 @@ function normalizePossibleDuplicatePaymentParams(
     studentId: params?.studentId || undefined,
     windowDays: params?.windowDays ?? 3,
     limit: params?.limit ?? 100,
+  }
+}
+
+function normalizeIntegrationsParams(params?: PaymentIntegrationsQuery) {
+  return {
+    page: params?.page ?? 1,
+    limit: params?.limit ?? 20,
+    branchId: params?.branchId || undefined,
+    provider: params?.provider,
+    status: params?.status,
+    scopeType: params?.scopeType,
+  }
+}
+
+function normalizeIntegrationWebhookEventsParams(
+  params?: IntegrationWebhookEventsQuery
+) {
+  return {
+    page: params?.page ?? 1,
+    limit: params?.limit ?? 20,
+    validationStatus: params?.validationStatus,
+    processingStatus: params?.processingStatus,
+    notificationType: params?.notificationType || undefined,
+    dateFrom: params?.dateFrom || undefined,
+    dateTo: params?.dateTo || undefined,
+    onlyRecoverable: params?.onlyRecoverable,
+    externalResourceId: params?.externalResourceId || undefined,
   }
 }
 
@@ -507,6 +566,141 @@ export function useRecordGeneralIncome(orgId: string, branchId: string) {
       )
       queryClient.invalidateQueries({
         queryKey: ['billing-summary', orgId, payment.branchId],
+      })
+    },
+  })
+}
+
+export function useOrganizationIntegrations(
+  orgId: string,
+  params?: PaymentIntegrationsQuery,
+  options?: BillingQueryOptions
+) {
+  const normalized = normalizeIntegrationsParams(params)
+
+  return useQuery({
+    queryKey: integrationsKey(orgId, normalized),
+    queryFn: () => billingApi.integrations(orgId, normalized),
+    staleTime: STALE.resource,
+    retry: kuroRetry,
+    enabled: Boolean(orgId && (options?.enabled ?? true)),
+    placeholderData: keepPreviousData,
+  })
+}
+
+export function useBranchIntegrations(
+  orgId: string,
+  branchId: string,
+  params?: Omit<PaymentIntegrationsQuery, 'branchId'>,
+  options?: BillingQueryOptions
+) {
+  return useOrganizationIntegrations(
+    orgId,
+    { ...params, branchId },
+    { enabled: Boolean(branchId && (options?.enabled ?? true)) }
+  )
+}
+
+export function useCreateIntegration(orgId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (body: CreatePaymentIntegrationRequest) =>
+      billingApi.createIntegration(orgId, body),
+    onSuccess: () => {
+      queryClient.invalidateQueries(integrationsFilter(orgId))
+    },
+  })
+}
+
+export function useUpdateIntegration(orgId: string, integrationId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (body: UpdatePaymentIntegrationRequest) =>
+      billingApi.updateIntegration(orgId, integrationId, body),
+    onSuccess: () => {
+      queryClient.invalidateQueries(integrationsFilter(orgId))
+    },
+  })
+}
+
+export function useTestIntegration(orgId: string, integrationId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: () => billingApi.testIntegration(orgId, integrationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries(integrationsFilter(orgId))
+    },
+  })
+}
+
+export function useSyncIntegration(orgId: string, integrationId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (body: SyncPaymentIntegrationRequest) =>
+      billingApi.syncIntegration(orgId, integrationId, body),
+    onSuccess: () => {
+      queryClient.invalidateQueries(integrationsFilter(orgId))
+    },
+  })
+}
+
+export function useIntegrationWebhookEvents(
+  orgId: string,
+  integrationId: string,
+  params?: IntegrationWebhookEventsQuery,
+  options?: BillingQueryOptions
+) {
+  const normalized = normalizeIntegrationWebhookEventsParams(params)
+
+  return useQuery({
+    queryKey: integrationWebhookEventsKey(orgId, integrationId, normalized),
+    queryFn: () =>
+      billingApi.integrationWebhookEvents(orgId, integrationId, normalized),
+    staleTime: STALE.resource,
+    retry: kuroRetry,
+    enabled: Boolean(orgId && integrationId && (options?.enabled ?? true)),
+    placeholderData: keepPreviousData,
+  })
+}
+
+export function useIntegrationWebhookEvent(
+  orgId: string,
+  integrationId: string,
+  eventId: string,
+  options?: BillingQueryOptions
+) {
+  return useQuery({
+    queryKey: ['integration-webhook-event', orgId, integrationId, eventId],
+    queryFn: () =>
+      billingApi.integrationWebhookEvent(orgId, integrationId, eventId),
+    staleTime: STALE.resource,
+    retry: kuroRetry,
+    enabled: Boolean(
+      orgId && integrationId && eventId && (options?.enabled ?? true)
+    ),
+  })
+}
+
+export function useReprocessWebhookEvent(
+  orgId: string,
+  integrationId: string,
+  eventId: string
+) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: () =>
+      billingApi.reprocessWebhookEvent(orgId, integrationId, eventId),
+    onSuccess: () => {
+      queryClient.invalidateQueries(
+        integrationWebhookEventsFilter(orgId, integrationId)
+      )
+      queryClient.invalidateQueries({
+        queryKey: ['integration-webhook-event', orgId, integrationId, eventId],
       })
     },
   })

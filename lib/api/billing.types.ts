@@ -123,6 +123,184 @@ export const PAYMENT_STATUSES = [
   'CHARGED_BACK',
 ] as const satisfies readonly PaymentStatus[]
 
+export type PaymentProviderCode = 'MERCADO_PAGO'
+
+export const PAYMENT_PROVIDER_CODES = [
+  'MERCADO_PAGO',
+] as const satisfies readonly PaymentProviderCode[]
+
+export type PaymentIntegrationProvider =
+  | PaymentProviderCode
+  | 'TAKENOS'
+  | 'SMOOTHCOMP'
+
+export type PaymentIntegrationStatus =
+  | 'ACTIVE'
+  | 'INACTIVE'
+  | 'ERROR'
+  | 'DISCONNECTED'
+
+export const PAYMENT_INTEGRATION_STATUSES = [
+  'ACTIVE',
+  'INACTIVE',
+  'ERROR',
+  'DISCONNECTED',
+] as const satisfies readonly PaymentIntegrationStatus[]
+
+export type PaymentIntegrationEnvironment = 'test' | 'production'
+
+export type IntegrationScopeType = 'ORGANIZATION' | 'BRANCH'
+
+export type IntegrationSyncKind =
+  | 'TEST_CONNECTION'
+  | 'IMPORT_STUDENT_COMPETITIONS'
+  | 'SYNC_PAYMENT_STATUS'
+  | 'IMPORT_EXTERNAL_TRANSACTIONS'
+
+export type IntegrationSyncStatus =
+  | 'PENDING'
+  | 'RUNNING'
+  | 'SUCCEEDED'
+  | 'FAILED'
+  | 'PARTIALLY_SUCCEEDED'
+
+export type IntegrationWebhookValidationStatus = 'VALID' | 'INVALID'
+
+export type IntegrationWebhookProcessingStatus =
+  | 'RECEIVED'
+  | 'PROCESSING'
+  | 'PROCESSED'
+  | 'IGNORED'
+  | 'FAILED'
+
+export interface PaymentIntegrationResponse {
+  id: string
+  organizationId: string
+  branchId: string | null
+  provider: PaymentIntegrationProvider
+  status: PaymentIntegrationStatus
+  scopeType: IntegrationScopeType
+  displayName: string
+  lastSyncAt: string | null
+  lastSyncStatus: IntegrationSyncStatus | null
+  lastSyncError: string | null
+  createdByMembershipId: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface PaymentIntegrationsQuery {
+  page?: number
+  limit?: number
+  branchId?: string
+  provider?: PaymentIntegrationProvider
+  status?: PaymentIntegrationStatus
+  scopeType?: IntegrationScopeType
+}
+
+export interface PaymentIntegrationsResponse {
+  items: PaymentIntegrationResponse[]
+  meta: {
+    page: number
+    limit: number
+    total: number
+  }
+}
+
+export interface CreatePaymentIntegrationRequest {
+  provider: PaymentIntegrationProvider
+  scopeType: IntegrationScopeType
+  branchId?: string
+  displayName?: string
+  status?: PaymentIntegrationStatus
+  configJson?: Record<string, unknown>
+}
+
+export interface UpdatePaymentIntegrationRequest {
+  displayName?: string
+  status?: PaymentIntegrationStatus
+  configJson?: Record<string, unknown>
+}
+
+export type TestPaymentIntegrationResponse = PaymentIntegrationResponse
+
+export interface SyncPaymentIntegrationRequest {
+  syncKind: IntegrationSyncKind
+}
+
+export interface IntegrationSyncJobResponse {
+  id: string
+  organizationId: string
+  integrationId: string
+  syncKind: IntegrationSyncKind
+  status: IntegrationSyncStatus
+  startedAt: string | null
+  finishedAt: string | null
+  errorSummary: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type SyncPaymentIntegrationResponse =
+  | PaymentIntegrationResponse
+  | IntegrationSyncJobResponse
+
+export interface IntegrationWebhookEventResponse {
+  id: string
+  provider: PaymentIntegrationProvider
+  notificationType: string | null
+  action: string | null
+  externalEventId: string | null
+  externalResourceId: string | null
+  requestId: string | null
+  validationStatus: IntegrationWebhookValidationStatus
+  processingStatus: IntegrationWebhookProcessingStatus
+  errorSummary: string | null
+  isRecoverable: boolean
+  recoverabilityReason: string | null
+  reprocessCount: number
+  lastReprocessedAt: string | null
+  receivedAt: string
+  processedAt: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface IntegrationWebhookEventDetailResponse
+  extends IntegrationWebhookEventResponse {
+  validationError: unknown | null
+  processingError: unknown | null
+  wasReprocessed: boolean
+  payload: unknown | null
+  query: unknown | null
+  resource: unknown | null
+}
+
+export interface IntegrationWebhookEventsQuery {
+  page?: number
+  limit?: number
+  validationStatus?: IntegrationWebhookValidationStatus
+  processingStatus?: IntegrationWebhookProcessingStatus
+  notificationType?: string
+  dateFrom?: string
+  dateTo?: string
+  onlyRecoverable?: boolean
+  externalResourceId?: string
+}
+
+export interface IntegrationWebhookEventsResponse {
+  items: IntegrationWebhookEventResponse[]
+  meta: {
+    page: number
+    limit: number
+    total: number
+  }
+}
+
+export type ReprocessWebhookEventResponse =
+  | IntegrationWebhookEventDetailResponse
+  | IntegrationWebhookEventResponse
+
 export type BillingChargeMutationAmount = number | `${number}`
 export type PaymentMutationAmount = number | `${number}`
 

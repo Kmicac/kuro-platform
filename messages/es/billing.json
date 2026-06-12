@@ -27,6 +27,40 @@
     "YEARLY": "Anual",
     "ONE_TIME": "Única vez"
   },
+  "providers": {
+    "mercadoPago": {
+      "name": "Mercado Pago",
+      "description": "Provider de pagos online para generar preferencias de cobro y recibir actualizaciones por webhooks."
+    }
+  },
+  "integrationStatus": {
+    "ACTIVE": "Activa",
+    "INACTIVE": "Inactiva",
+    "ERROR": "Con error",
+    "DISCONNECTED": "Desconectada"
+  },
+  "integrationScopeType": {
+    "ORGANIZATION": "Organización",
+    "BRANCH": "Filial"
+  },
+  "integrationSyncStatus": {
+    "PENDING": "Pendiente",
+    "RUNNING": "En ejecución",
+    "SUCCEEDED": "Completada",
+    "FAILED": "Fallida",
+    "PARTIALLY_SUCCEEDED": "Completada con observaciones"
+  },
+  "webhookValidationStatus": {
+    "VALID": "Válido",
+    "INVALID": "Inválido"
+  },
+  "webhookProcessingStatus": {
+    "RECEIVED": "Recibido",
+    "PROCESSING": "Procesando",
+    "PROCESSED": "Procesado",
+    "IGNORED": "Ignorado",
+    "FAILED": "Fallido"
+  },
   "chargeStatus": {
     "PENDING": "Pendiente",
     "PARTIALLY_PAID": "Parcialmente pagado",
@@ -168,6 +202,55 @@
       "subtitle": "Providers de pago y estado operativo",
       "emptyTitle": "Base de integraciones preparada",
       "emptyDescription": "Esta ruta queda reservada para Mercado Pago y futuros providers. No se exponen credenciales ni se confirma checkout desde el cliente."
+    }
+  },
+  "integrations": {
+    "title": "Integraciones de pago",
+    "description": "Configuración operativa de providers de pago de la organización.",
+    "actions": {
+      "create": "Crear integración",
+      "edit": "Editar integración",
+      "test": "Probar conexión",
+      "sync": "Sincronizar",
+      "viewWebhooks": "Ver webhooks",
+      "reprocessWebhook": "Reprocesar webhook"
+    },
+    "fields": {
+      "provider": "Provider",
+      "displayName": "Nombre interno",
+      "status": "Estado",
+      "scopeType": "Alcance",
+      "branch": "Filial",
+      "lastSyncAt": "Última sincronización",
+      "lastSyncStatus": "Estado de sincronización",
+      "lastSyncError": "Error de sincronización"
+    },
+    "states": {
+      "emptyTitle": "Sin integraciones configuradas",
+      "emptyDescription": "Configura un provider de pago para habilitar flujos online en próximas subfases.",
+      "forbiddenTitle": "Sin acceso a integraciones",
+      "forbiddenDescription": "No tienes permisos para ver o administrar integraciones de pago."
+    }
+  },
+  "webhookEvents": {
+    "title": "Eventos de webhook",
+    "description": "Eventos recibidos desde providers externos y su estado de procesamiento.",
+    "fields": {
+      "notificationType": "Tipo",
+      "action": "Acción",
+      "externalEventId": "Evento externo",
+      "externalResourceId": "Recurso externo",
+      "validationStatus": "Validación",
+      "processingStatus": "Procesamiento",
+      "errorSummary": "Error",
+      "isRecoverable": "Recuperable",
+      "reprocessCount": "Reprocesos",
+      "receivedAt": "Recibido",
+      "processedAt": "Procesado"
+    },
+    "states": {
+      "emptyTitle": "Sin eventos de webhook",
+      "emptyDescription": "Aún no hay eventos registrados para esta integración."
     }
   },
   "plans": {

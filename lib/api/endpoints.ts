@@ -46,20 +46,32 @@ import type {
   BranchStudentFinancialStatusesResponse,
   CreateBillingChargeRequest,
   CreateBillingPlanRequest,
+  CreatePaymentIntegrationRequest,
   CreateStudentMembershipRequest,
   CreatedBillingChargeResponse,
   ManualStudentPaymentResponse,
   GeneralIncomeResponse,
+  IntegrationWebhookEventDetailResponse,
+  IntegrationWebhookEventsQuery,
+  IntegrationWebhookEventsResponse,
   MercadoPagoPreferenceResponse,
   PaymentListQuery,
+  PaymentIntegrationsQuery,
+  PaymentIntegrationsResponse,
+  PaymentIntegrationResponse,
   PaymentsResponse,
   PossibleDuplicatePaymentsQuery,
   PossibleDuplicatePaymentsResponse,
   RecordManualStudentPaymentRequest,
   RecordGeneralIncomeRequest,
+  ReprocessWebhookEventResponse,
   StudentMembershipResponse,
   StudentPaymentsQuery,
   StudentBillingChargesQuery,
+  SyncPaymentIntegrationRequest,
+  SyncPaymentIntegrationResponse,
+  TestPaymentIntegrationResponse,
+  UpdatePaymentIntegrationRequest,
   UpdateStudentMembershipRequest,
   UpdateBillingPlanRequest,
 } from './billing.types'
@@ -184,7 +196,9 @@ export const analyticsApi = {
 
 // ── Billing ───────────────────────────────────────────────────
 
-function billingQuery(params?: Record<string, string | number | undefined>) {
+function billingQuery(
+  params?: Record<string, string | number | boolean | undefined>
+) {
   const p = new URLSearchParams()
   Object.entries(params ?? {}).forEach(([key, value]) => {
     if (value !== undefined && value !== '') p.set(key, String(value))
@@ -400,6 +414,93 @@ export const billingApi = {
   ) =>
     api.post<MercadoPagoPreferenceResponse>(
       `/organizations/${orgId}/students/${studentId}/billing-charges/${chargeId}/mercado-pago/preference`
+    ),
+
+  integrations: (orgId: string, params?: PaymentIntegrationsQuery) => {
+    const q = billingQuery({
+      page: params?.page,
+      limit: params?.limit,
+      branchId: params?.branchId,
+      provider: params?.provider,
+      status: params?.status,
+      scopeType: params?.scopeType,
+    })
+    return api.get<PaymentIntegrationsResponse>(
+      `/organizations/${orgId}/integrations${q}`
+    )
+  },
+
+  createIntegration: (
+    orgId: string,
+    body: CreatePaymentIntegrationRequest
+  ) =>
+    api.post<PaymentIntegrationResponse>(
+      `/organizations/${orgId}/integrations`,
+      body
+    ),
+
+  updateIntegration: (
+    orgId: string,
+    integrationId: string,
+    body: UpdatePaymentIntegrationRequest
+  ) =>
+    api.patch<PaymentIntegrationResponse>(
+      `/organizations/${orgId}/integrations/${integrationId}`,
+      body
+    ),
+
+  testIntegration: (orgId: string, integrationId: string) =>
+    api.post<TestPaymentIntegrationResponse>(
+      `/organizations/${orgId}/integrations/${integrationId}/test`
+    ),
+
+  syncIntegration: (
+    orgId: string,
+    integrationId: string,
+    body: SyncPaymentIntegrationRequest
+  ) =>
+    api.post<SyncPaymentIntegrationResponse>(
+      `/organizations/${orgId}/integrations/${integrationId}/sync`,
+      body
+    ),
+
+  integrationWebhookEvents: (
+    orgId: string,
+    integrationId: string,
+    params?: IntegrationWebhookEventsQuery
+  ) => {
+    const q = billingQuery({
+      page: params?.page,
+      limit: params?.limit,
+      validationStatus: params?.validationStatus,
+      processingStatus: params?.processingStatus,
+      notificationType: params?.notificationType,
+      dateFrom: params?.dateFrom,
+      dateTo: params?.dateTo,
+      onlyRecoverable: params?.onlyRecoverable,
+      externalResourceId: params?.externalResourceId,
+    })
+    return api.get<IntegrationWebhookEventsResponse>(
+      `/organizations/${orgId}/integrations/${integrationId}/webhook-events${q}`
+    )
+  },
+
+  integrationWebhookEvent: (
+    orgId: string,
+    integrationId: string,
+    eventId: string
+  ) =>
+    api.get<IntegrationWebhookEventDetailResponse>(
+      `/organizations/${orgId}/integrations/${integrationId}/webhook-events/${eventId}`
+    ),
+
+  reprocessWebhookEvent: (
+    orgId: string,
+    integrationId: string,
+    eventId: string
+  ) =>
+    api.post<ReprocessWebhookEventResponse>(
+      `/organizations/${orgId}/integrations/${integrationId}/webhook-events/${eventId}/reprocess`
     ),
 
   /**
