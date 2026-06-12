@@ -239,7 +239,8 @@ const AUTH_COOKIE_PATHS = [
 async function request<T>(
   path: string,
   options: RequestInit = {},
-  _isRetry = false
+  _isRetry = false,
+  emptyBodyAsNull = false
 ): Promise<T> {
   const { getAuthHeader, logout } = useAuthStore.getState()
   const isCookiePath = AUTH_COOKIE_PATHS.some(p => path.startsWith(p))
@@ -263,7 +264,7 @@ async function request<T>(
 
     if (newToken) {
       // Reintentar el request original con el token renovado
-      return request<T>(path, options, true)
+      return request<T>(path, options, true, emptyBodyAsNull)
     }
 
     // Refresh falló → sesión inválida
@@ -297,7 +298,9 @@ async function request<T>(
   }
 
   if (res.status === 204) return undefined as T
-  return res.json() as Promise<T>
+  const text = await res.text()
+  if (!text.trim()) return (emptyBodyAsNull ? null : undefined) as T
+  return JSON.parse(text) as T
 }
 
 // ── API shortcuts ─────────────────────────────────────────────
@@ -305,6 +308,8 @@ async function request<T>(
 export const api = {
   get:    <T>(path: string, opts?: RequestInit) =>
     request<T>(path, { method: 'GET', ...opts }),
+  getNullable: <T>(path: string, opts?: RequestInit) =>
+    request<T | null>(path, { method: 'GET', ...opts }, false, true),
   post:   <T>(path: string, body?: unknown, opts?: RequestInit) =>
     request<T>(path, { method: 'POST', body: body != null ? JSON.stringify(body) : undefined, ...opts }),
   patch:  <T>(path: string, body?: unknown, opts?: RequestInit) =>

@@ -13,13 +13,16 @@ import type {
   BranchBillingSummaryQuery,
   BranchStudentFinancialStatusesQuery,
   CreateBillingChargeRequest,
+  CreateStudentMembershipRequest,
   PaymentListQuery,
   PossibleDuplicatePaymentsQuery,
   RecordGeneralIncomeRequest,
   RecordManualStudentPaymentRequest,
+  StudentMembershipResponse,
   StudentBillingChargesQuery,
   StudentPaymentsQuery,
   CreateBillingPlanRequest,
+  UpdateStudentMembershipRequest,
   UpdateBillingPlanRequest,
 } from '@/lib/api/billing.types'
 import { STALE, kuroRetry } from './_shared'
@@ -30,6 +33,16 @@ interface BillingQueryOptions {
 
 function billingPlansKey(orgId: string, branchId: string) {
   return ['billing-plans', orgId, branchId] as const
+}
+
+function studentMembershipKey(orgId: string, studentId: string) {
+  return ['billing-student-membership', orgId, studentId] as const
+}
+
+function studentMembershipFilter(orgId: string, studentId: string) {
+  return {
+    queryKey: ['billing-student-membership', orgId, studentId] as const,
+  }
 }
 
 function branchChargesKey(
@@ -103,6 +116,23 @@ function possibleDuplicatePaymentsFilter(orgId: string, branchId: string) {
   return {
     queryKey: ['billing-possible-duplicate-payments', orgId, branchId] as const,
   }
+}
+
+function invalidateMembershipRelatedQueries(
+  queryClient: ReturnType<typeof useQueryClient>,
+  orgId: string,
+  studentId: string,
+  branchId: string
+) {
+  queryClient.invalidateQueries(studentMembershipFilter(orgId, studentId))
+  queryClient.invalidateQueries(studentChargesFilter(orgId, studentId))
+  queryClient.invalidateQueries(branchChargesFilter(orgId, branchId))
+  queryClient.invalidateQueries({
+    queryKey: ['billing-financial-statuses', orgId, branchId],
+  })
+  queryClient.invalidateQueries({
+    queryKey: ['billing-summary', orgId, branchId],
+  })
 }
 
 function normalizeChargeParams(params?: BillingChargeListQuery) {
@@ -257,6 +287,70 @@ export function useUpdateBillingPlan(
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey })
+    },
+  })
+}
+
+export function useStudentMembership(
+  orgId: string,
+  studentId: string,
+  options?: BillingQueryOptions
+) {
+  return useQuery({
+    queryKey: studentMembershipKey(orgId, studentId),
+    queryFn: () => billingApi.studentMembership(orgId, studentId),
+    staleTime: STALE.resource,
+    retry: kuroRetry,
+    enabled: Boolean(orgId && studentId && (options?.enabled ?? true)),
+  })
+}
+
+export function useCreateStudentMembership(
+  orgId: string,
+  studentId: string
+) {
+  const queryClient = useQueryClient()
+  const queryKey = studentMembershipKey(orgId, studentId)
+
+  return useMutation({
+    mutationFn: (body: CreateStudentMembershipRequest) =>
+      billingApi.createStudentMembership(orgId, studentId, body),
+    onSuccess: (membership) => {
+      queryClient.setQueryData<StudentMembershipResponse | null>(
+        queryKey,
+        membership
+      )
+      invalidateMembershipRelatedQueries(
+        queryClient,
+        orgId,
+        studentId,
+        membership.branchId
+      )
+    },
+  })
+}
+
+export function useUpdateStudentMembership(
+  orgId: string,
+  studentId: string
+) {
+  const queryClient = useQueryClient()
+  const queryKey = studentMembershipKey(orgId, studentId)
+
+  return useMutation({
+    mutationFn: (body: UpdateStudentMembershipRequest) =>
+      billingApi.updateStudentMembership(orgId, studentId, body),
+    onSuccess: (membership) => {
+      queryClient.setQueryData<StudentMembershipResponse | null>(
+        queryKey,
+        membership
+      )
+      invalidateMembershipRelatedQueries(
+        queryClient,
+        orgId,
+        studentId,
+        membership.branchId
+      )
     },
   })
 }

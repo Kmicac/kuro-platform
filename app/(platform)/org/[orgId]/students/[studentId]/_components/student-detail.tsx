@@ -25,6 +25,7 @@ import { BeltBadge, StatusBadge } from '@/components/kuro'
 import { ErrorState, PageHeader } from '@/components/shared'
 import type { StudentDetail as StudentDetailType } from '@/lib/api/types'
 import { cn } from '@/lib/utils'
+import { StudentMembershipPanel } from './student-membership-panel'
 
 interface StudentDetailProps {
   orgId: string
@@ -96,6 +97,11 @@ export function StudentDetail({ orgId, studentId }: StudentDetailProps) {
             student={student}
             primaryBranchName={primaryBranchName(student)}
             orgId={orgId}
+          />
+          <StudentMembershipPanel
+            orgId={orgId}
+            studentId={student.id}
+            branchId={student.primaryBranchId}
           />
         </div>
       </div>
@@ -530,4 +536,3 @@ function primaryBranchName(student: StudentDetailType): string | null {
   const pb = student.primaryBranch as { name?: string } | null | undefined
   return pb?.name ?? null
 }
-

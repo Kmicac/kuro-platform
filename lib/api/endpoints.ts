@@ -46,6 +46,7 @@ import type {
   BranchStudentFinancialStatusesResponse,
   CreateBillingChargeRequest,
   CreateBillingPlanRequest,
+  CreateStudentMembershipRequest,
   CreatedBillingChargeResponse,
   ManualStudentPaymentResponse,
   GeneralIncomeResponse,
@@ -56,8 +57,10 @@ import type {
   PossibleDuplicatePaymentsResponse,
   RecordManualStudentPaymentRequest,
   RecordGeneralIncomeRequest,
+  StudentMembershipResponse,
   StudentPaymentsQuery,
   StudentBillingChargesQuery,
+  UpdateStudentMembershipRequest,
   UpdateBillingPlanRequest,
 } from './billing.types'
 
@@ -219,6 +222,31 @@ export const billingApi = {
   ) =>
     api.patch<BillingPlanResponse>(
       `/organizations/${orgId}/branches/${branchId}/billing-plans/${planId}`,
+      body
+    ),
+
+  studentMembership: (orgId: string, studentId: string) =>
+    api.getNullable<StudentMembershipResponse>(
+      `/organizations/${orgId}/students/${studentId}/membership`
+    ),
+
+  createStudentMembership: (
+    orgId: string,
+    studentId: string,
+    body: CreateStudentMembershipRequest
+  ) =>
+    api.post<StudentMembershipResponse>(
+      `/organizations/${orgId}/students/${studentId}/membership`,
+      body
+    ),
+
+  updateStudentMembership: (
+    orgId: string,
+    studentId: string,
+    body: UpdateStudentMembershipRequest
+  ) =>
+    api.patch<StudentMembershipResponse>(
+      `/organizations/${orgId}/students/${studentId}/membership`,
       body
     ),
 

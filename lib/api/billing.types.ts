@@ -31,9 +31,22 @@ export type StudentMembershipStatus =
   | 'CANCELED'
   | 'ENDED'
 
+export const STUDENT_MEMBERSHIP_STATUSES = [
+  'ACTIVE',
+  'PAUSED',
+  'FROZEN',
+  'CANCELED',
+  'ENDED',
+] as const satisfies readonly StudentMembershipStatus[]
+
 export type BranchStudentMembershipStatus = 'ACTIVE' | 'PAUSED' | 'FROZEN'
 
 export type DiscountType = 'PERCENTAGE' | 'FIXED'
+
+export const DISCOUNT_TYPES = [
+  'PERCENTAGE',
+  'FIXED',
+] as const satisfies readonly DiscountType[]
 
 export type BillingChargeType =
   | 'MEMBERSHIP'
@@ -227,18 +240,47 @@ export interface StudentMembershipResponse {
   branchId: string
   studentId: string
   billingPlanId: string
-  plan?: BillingPlanResponse | null
+  billingPlan: BillingPlanResponse
   status: StudentMembershipStatus
   startedAt: string
+  endedAt: string | null
   nextBillingDate: string | null
-  freezeStartAt?: string | null
-  freezeEndAt?: string | null
-  endedAt?: string | null
-  discountType?: DiscountType | null
-  discountValue?: DecimalJsonString | null
-  notes?: string | null
+  freezeStartAt: string | null
+  freezeEndAt: string | null
+  discountType: DiscountType | null
+  discountValue: DecimalJsonString | null
+  notes: string | null
   createdAt: string
   updatedAt: string
+}
+
+export type StudentMembershipMutationAmount = number | `${number}`
+
+export interface CreateStudentMembershipRequest {
+  billingPlanId: string
+  startedAt: string
+  nextBillingDate?: string
+  freezeStartAt?: string
+  freezeEndAt?: string
+  status?: StudentMembershipStatus
+  discountType?: DiscountType
+  discountValue?: StudentMembershipMutationAmount
+  notes?: string
+}
+
+export interface UpdateStudentMembershipRequest {
+  billingPlanId?: string
+  startedAt?: string
+  nextBillingDate?: string
+  freezeStartAt?: string
+  freezeEndAt?: string
+  status?: StudentMembershipStatus
+  discountType?: DiscountType
+  discountValue?: StudentMembershipMutationAmount
+  notes?: string
+  endedAt?: string
+  clearFreezeSchedule?: boolean
+  clearDiscount?: boolean
 }
 
 export interface BillingChargeListQuery {

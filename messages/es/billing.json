@@ -7,14 +7,18 @@
     "DUE_SOON": "Por vencer",
     "OVERDUE": "Vencido",
     "RESTRICTED": "Restringido",
-    "FROZEN": "Congelado"
+    "FROZEN": "Suspendido temporalmente"
   },
   "membershipStatus": {
     "ACTIVE": "Activa",
     "PAUSED": "Pausada",
-    "FROZEN": "Congelada",
+    "FROZEN": "Suspendida temporalmente",
     "CANCELED": "Cancelada",
     "ENDED": "Finalizada"
+  },
+  "discountType": {
+    "PERCENTAGE": "Porcentaje",
+    "FIXED": "Monto fijo"
   },
   "billingFrequency": {
     "WEEKLY": "Semanal",
@@ -221,6 +225,103 @@
     "status": {
       "active": "Activo",
       "inactive": "Inactivo"
+    }
+  },
+  "studentMembership": {
+    "title": "Membresía",
+    "subtitle": "Plan de cobro y ciclo de facturación del alumno",
+    "readOnly": "Solo lectura",
+    "fields": {
+      "status": "Estado",
+      "plan": "Plan",
+      "amount": "Monto",
+      "frequency": "Frecuencia",
+      "startedAt": "Inicio",
+      "nextBillingDate": "Próximo cobro",
+      "freezeStartAt": "Inicio de suspensión",
+      "freezeEndAt": "Fin de suspensión",
+      "endedAt": "Finalización",
+      "discount": "Descuento",
+      "notes": "Notas",
+      "updatedAt": "Actualizado"
+    },
+    "states": {
+      "noPrimaryBranch": "El alumno no tiene filial principal para configurar billing.",
+      "forbiddenTitle": "Sin acceso a billing",
+      "forbiddenDescription": "No tienes permisos para leer la membresía de billing de este alumno.",
+      "loadErrorTitle": "No se pudo cargar la membresía",
+      "loadErrorDescription": "El backend rechazó o no pudo completar la consulta de membresía.",
+      "emptyTitle": "Sin membresía activa",
+      "emptyDescription": "Este alumno todavía no tiene un plan de cobro activo, pausado o suspendido temporalmente.",
+      "noActivePlans": "No hay planes activos en la filial principal.",
+      "terminal": "Esta membresía está finalizada y se muestra en modo lectura.",
+      "frozenDescription": "La membresía está suspendida temporalmente. Puede reactivarse manualmente."
+    },
+    "actions": {
+      "create": "Asignar plan",
+      "edit": "Editar",
+      "pause": "Pausar",
+      "freeze": "Suspender temporalmente",
+      "reactivate": "Reactivar",
+      "cancel": "Cancelar",
+      "clearDiscount": "Quitar descuento",
+      "clearFreeze": "Quitar suspensión",
+      "goToPlans": "Ir a planes",
+      "submitting": "Guardando..."
+    },
+    "dialog": {
+      "createTitle": "Asignar plan",
+      "createDescription": "Crea la membresía de billing del alumno en su filial principal.",
+      "editTitle": "Editar membresía",
+      "editDescription": "Actualiza plan, fechas, estado, descuentos y notas.",
+      "freezeTitle": "Suspender temporalmente",
+      "freezeDescription": "Usa esta opción cuando el alumno necesita pausar temporalmente su membresía sin cancelarla.",
+      "cancelTitle": "Cancelar membresía",
+      "cancelDescription": "La membresía dejará de ser actual. Para volver luego se crea una nueva.",
+      "fields": {
+        "plan": "Plan",
+        "planPlaceholder": "Selecciona un plan activo",
+        "startedAt": "Inicio",
+        "nextBillingDate": "Próximo cobro",
+        "status": "Estado",
+        "freezeStartAt": "Inicio de suspensión",
+        "freezeEndAt": "Fin de suspensión",
+        "freezeEndAtHint": "Opcional. Déjalo vacío si la fecha de reactivación aún no está definida.",
+        "discountType": "Tipo de descuento",
+        "discountNone": "Sin descuento",
+        "discountValue": "Valor de descuento",
+        "discountValuePlaceholder": "10.00",
+        "notes": "Notas",
+        "notesPlaceholder": "Detalle interno de billing"
+      },
+      "actions": {
+        "create": "Crear membresía",
+        "update": "Guardar cambios",
+        "freeze": "Suspender",
+        "cancel": "Cancelar membresía"
+      }
+    },
+    "success": {
+      "created": "Membresía creada correctamente",
+      "updated": "Membresía actualizada correctamente",
+      "paused": "Membresía pausada",
+      "reactivated": "Membresía reactivada",
+      "frozen": "Membresía suspendida temporalmente",
+      "canceled": "Membresía cancelada",
+      "discountCleared": "Descuento eliminado",
+      "freezeCleared": "Suspensión quitada"
+    },
+    "errors": {
+      "billingPlanRequired": "Selecciona un plan activo.",
+      "startedAtInvalid": "Ingresa una fecha de inicio válida.",
+      "nextBillingDateInvalid": "Ingresa una fecha de próximo cobro válida.",
+      "freezeStartRequired": "Indica la fecha de inicio de la suspensión.",
+      "freezeDateInvalid": "Ingresa una fecha de suspensión válida.",
+      "discountValueInvalid": "Ingresa un descuento mayor o igual a 0, con hasta 2 decimales.",
+      "discountPercentageMax": "El descuento porcentual no puede superar 100.",
+      "forbidden": "No tienes permiso para modificar la membresía de billing.",
+      "conflict": "El backend rechazó el cambio por el estado actual de la membresía o del plan.",
+      "notFound": "No se encontró una membresía actual para actualizar."
     }
   },
   "financialStatuses": {
