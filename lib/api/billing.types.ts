@@ -187,6 +187,47 @@ export interface PaymentIntegrationResponse {
   createdByMembershipId: string | null
   createdAt: string
   updatedAt: string
+  capabilities: {
+    providerImplemented: boolean
+    supportsConnectionTest: boolean
+    supportedSyncKinds: IntegrationSyncKind[]
+    supportsWebhookIngestion: boolean
+    supportsCheckoutPreference: boolean
+  }
+  configuration: {
+    credentialsConfigured: boolean
+    activationReady: boolean
+    environment: PaymentIntegrationEnvironment | null
+    applicationIdConfigured: boolean
+    webhookSecretConfigured: boolean
+    publicKeyConfigured: boolean
+    checkoutBackUrlsConfigured: boolean
+    notificationUrlConfigured: boolean
+    configurationError: string | null
+    activationError: string | null
+    checkoutConfigurationError: string | null
+  }
+  webhook: {
+    supported: boolean
+    eventsTotal: number
+    invalidEventsTotal: number
+    failedEventsTotal: number
+    pendingEventsTotal: number
+    receivedLast7Days: number
+    failedLast7Days: number
+    lastReceivedAt: string | null
+    lastProcessedAt: string | null
+  }
+  operational: {
+    readinessStatus:
+      | 'READY'
+      | 'NEEDS_CONFIGURATION'
+      | 'ATTENTION_REQUIRED'
+      | 'PLACEHOLDER'
+    attentionFlags: string[]
+    eliminatesManualWork: boolean
+    summary: string
+  }
 }
 
 export interface PaymentIntegrationsQuery {
@@ -211,7 +252,7 @@ export interface CreatePaymentIntegrationRequest {
   provider: PaymentIntegrationProvider
   scopeType: IntegrationScopeType
   branchId?: string
-  displayName?: string
+  displayName: string
   status?: PaymentIntegrationStatus
   configJson?: Record<string, unknown>
 }
@@ -219,10 +260,8 @@ export interface CreatePaymentIntegrationRequest {
 export interface UpdatePaymentIntegrationRequest {
   displayName?: string
   status?: PaymentIntegrationStatus
-  configJson?: Record<string, unknown>
+  configJson?: Record<string, unknown> | null
 }
-
-export type TestPaymentIntegrationResponse = PaymentIntegrationResponse
 
 export interface SyncPaymentIntegrationRequest {
   syncKind: IntegrationSyncKind
@@ -231,19 +270,23 @@ export interface SyncPaymentIntegrationRequest {
 export interface IntegrationSyncJobResponse {
   id: string
   organizationId: string
-  integrationId: string
+  branchId: string | null
+  integrationConnectionId: string
+  provider: PaymentIntegrationProvider
   syncKind: IntegrationSyncKind
   status: IntegrationSyncStatus
-  startedAt: string | null
+  startedAt: string
   finishedAt: string | null
-  errorSummary: string | null
+  triggeredByMembershipId: string | null
+  summaryJson: Record<string, unknown> | null
+  errorMessage: string | null
   createdAt: string
   updatedAt: string
 }
 
-export type SyncPaymentIntegrationResponse =
-  | PaymentIntegrationResponse
-  | IntegrationSyncJobResponse
+export type TestPaymentIntegrationResponse = IntegrationSyncJobResponse
+
+export type SyncPaymentIntegrationResponse = IntegrationSyncJobResponse
 
 export interface IntegrationWebhookEventResponse {
   id: string

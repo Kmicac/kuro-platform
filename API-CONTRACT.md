@@ -1,6 +1,6 @@
 # API Contract
 
-- Generated at: 2026-06-09
+- Generated at: 2026-06-13
 - Backend version: `0.0.1`
 - Source basis: current backend code in this repository
 - API version: `v1`
@@ -8,7 +8,6 @@
 - Base URL development: `http://localhost:3001/api/v1`
 - Auth model: Bearer access token + refresh cookie + CSRF for cookie-backed session csrf/refresh/logout flows
 - Note: this document reflects the backend source in this workspace. If Render differs, the backend and this contract are out of sync and the contract must be updated.
-
 
 ## Frontend Scope Notes
 
@@ -36,7 +35,6 @@ for completeness and are consumed by the KURO mobile app (Flutter, separate repo
 - `POST /organizations/:organizationId/students/me/attendance-suggestions/:id/accept`
 - `POST /organizations/:organizationId/students/me/attendance-suggestions/:id/decline`
 - The deprecated `POST .../self-check-in` endpoint (never to be surfaced).
-
 
 ## 1. Introducción
 
@@ -194,6 +192,8 @@ Controller-verified on 2026-05-28. This index is the parity list used to keep th
 - `GET /organizations/:organizationId/students/me/billing`
 - `GET /organizations/:organizationId/students/me/billing-charges/:chargeId`
 - `GET /organizations/:organizationId/students/me/calendar`
+- `GET /organizations/:organizationId/students/me/class-sessions/:sessionId`
+- `GET /organizations/:organizationId/students/me/class-sessions/:sessionId/attendance/participants`
 - `POST /organizations/:organizationId/students/me/check-ins/qr`
 - `GET /organizations/:organizationId/students/me/home`
 - `GET /organizations/:organizationId/students/me/notes`
@@ -359,6 +359,272 @@ Controller-verified on 2026-05-28. This index is the parity list used to keep th
 - Frontend should cache this catalog aggressively; it changes only when backend rank policy changes.
 - `rank` is the stable enum key. Do not parse rank labels or split enum strings to infer color/track.
 - `MASTER_1..MASTER_7` and `JUVENILE_1/2` are not `PromotionRank` values; they are competition age divisions and belong in a future competition category catalog.
+
+### Common person belt DTO
+
+Student/person-visible read models that expose a compact belt summary should use this shape when the endpoint contract includes a `belt` field:
+
+```ts
+type PersonBeltDto = {
+  rank: string;
+  degree: number | null;
+  stripeCount: number;
+  label: string;
+} | null;
+```
+
+Rules:
+
+- `rank` is a `PromotionRank` enum value.
+- `label` is resolved by the backend from the official promotion rank catalog.
+- `degree` is always `null` in the current backend because there is no reliable degree source yet.
+- `stripeCount` comes from the current rank source used by that endpoint.
+- This DTO is a visual/read-model contract only. It does not change the current rank source-of-truth; student-bound surfaces still read `Student.currentBelt/currentStripes` until a future technical profile read/writer migration is approved.
+
+### Common visible person DTO
+
+Read models that expose compact people inside KURO should converge on this shape when the endpoint contract allows a person object:
+
+```ts
+type VisiblePersonDto = {
+  userId: string | null;
+  membershipId: string | null;
+  studentId?: string | null;
+  displayName: string;
+  firstName?: string;
+  lastName?: string;
+  avatarUrl: string | null;
+  roleLabel?: string | null;
+  publicTitle?: string | null;
+  belt?: PersonBeltDto;
+};
+```
+
+Rules:
+
+- `displayName` is built by the backend from the available real name source.
+- `avatarUrl` is resolved from a visible `OrganizationMembershipProfile` with an active `MEMBER_AVATAR` asset when the storage adapter can produce a safe public URL; otherwise it is `null`.
+- `roleLabel` is included only when derived from real membership/branch/profile data.
+- `publicTitle` is included only when a real organization-scoped membership profile source provides it; it does not replace `roleLabel` or permissions.
+- `belt` uses `PersonBeltDto` and is included only when the endpoint has a real rank source for that person.
+- Student-safe views must not expose email, phone, billing data, date of birth, internal notes, technical notes, raw permissions, provider payloads, payment data, or private operational metadata.
+- `avatarUrl` resolution does not create `OrganizationMembershipTechnicalProfile`, rank migration, or a new identity source-of-truth.
+
+### Media asset foundation
+
+`MediaAsset` is an internal metadata model for controlled media references. Public APIs never expose object-storage internals; upload/delete support is limited to self membership avatar endpoints.
+
+Internal model intent:
+
+```ts
+type MediaAssetReference = {
+  id: string;
+  organizationId: string | null;
+  ownerUserId: string | null;
+  ownerMembershipId: string | null;
+  purpose: 'MEMBER_AVATAR' | 'BRANCH_IMAGE' | 'CERTIFICATE_ASSET' | 'OTHER';
+  mimeType: string;
+  sizeBytes: number;
+  sha256: string | null;
+  width: number | null;
+  height: number | null;
+  status: 'PENDING' | 'ACTIVE' | 'REPLACED' | 'DELETED';
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+};
+```
+
+Rules:
+
+- `MediaAsset` stores metadata and external object references only; image/avatar bytes must not be stored in Postgres.
+- `objectKey`, `bucket`, and provider-specific storage internals are not public DTO fields.
+- Tenant-owned reads and state changes must be filtered by `organizationId`.
+- Membership-owned assets require `organizationId` and use the tenant-scoped membership identity.
+- `VisiblePersonDto.avatarUrl` may be populated only through the membership profile/avatar resolver; public DTOs still must not expose `MediaAsset` ids or storage internals.
+- Current promotion certificates keep their existing narrow DB-backed PDF implementation; this foundation does not migrate certificates or create generic document upload behavior.
+
+### Media storage port foundation
+
+KURO storage integration is provider-agnostic. Business controllers and use-cases must depend on `MediaStoragePort`, not on R2, S3, Cloudinary, SDKs, buckets, object keys, or credentials.
+
+Internal port:
+
+```ts
+interface MediaStoragePort {
+  putObject(input: PutObjectInput): Promise<StoredObjectResult>;
+  deleteObject(input: DeleteObjectInput): Promise<void>;
+  getPublicUrl(input: GetMediaUrlInput): string | null;
+}
+```
+
+Adapters available in this foundation:
+
+- `LocalDevMediaStorageAdapter`: dev/test only, writes under `MEDIA_LOCAL_ROOT`, blocks path traversal, and can return a configured local/public base URL.
+- `R2MediaStorageAdapter`: production candidate, talks to Cloudflare R2 through an S3-compatible API endpoint using env configuration.
+
+Rules:
+
+- Public upload/delete remains limited to self membership avatar endpoints.
+- Presigned URLs and public admin avatar management are not implemented.
+- `MEDIA_STORAGE_PROVIDER=local` is intended for development/test and is blocked in production unless explicitly allowed.
+- `MEDIA_STORAGE_PROVIDER=r2` requires bucket, endpoint, access key id, and secret access key env vars.
+- Public DTOs must not expose `bucket`, `objectKey`, storage provider, access keys, or `mediaAssetId`.
+
+### Organization membership profile foundation
+
+`OrganizationMembershipProfile` is an internal organization-scoped profile model for visible membership metadata. It has no public API endpoints in this phase and does not change existing student/mobile/admin response contracts unless a future endpoint explicitly opts into the mapper.
+
+Internal model intent:
+
+```ts
+type OrganizationMembershipProfileReference = {
+  id: string;
+  organizationId: string;
+  membershipId: string;
+  preferredName: string | null;
+  publicTitle: string | null;
+  bio: string | null;
+  avatarMediaAssetId: string | null;
+  isVisibleToMembers: boolean;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+};
+```
+
+Rules:
+
+- The profile is scoped to `organizationId + membershipId`; it is not a global user profile.
+- Each membership can have at most one profile per organization.
+- `avatarMediaAssetId`, when present, must point to a `MediaAsset` in the same organization with `MEMBER_AVATAR` purpose.
+- Storage internals from `MediaAsset` (`objectKey`, `bucket`, provider details) must not appear in public DTOs.
+- `preferredName` may enrich `VisiblePersonDto.displayName` only through the common mapper.
+- `publicTitle` is visible metadata, not a role, permission, or replacement for `roleLabel`.
+- `bio` is not exposed on student-safe surfaces until a product decision explicitly approves it.
+- `avatarUrl` may be resolved from this profile only through the membership-profile avatar resolver when an active avatar asset and safe public storage URL are available.
+
+### Organization membership technical profile foundation
+
+`OrganizationMembershipTechnicalProfile` is an internal organization-scoped technical BJJ profile for a membership. It creates a future-safe place for rank/stripes on instructors, mestres, staff, admins, and students without using `Student` as a universal proxy.
+
+Internal model intent:
+
+```ts
+type OrganizationMembershipTechnicalProfileReference = {
+  id: string;
+  organizationId: string;
+  membershipId: string;
+  currentBelt: PromotionRank | null;
+  currentStripes: number;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+};
+```
+
+Rules:
+
+- The profile is scoped to `organizationId + membershipId`; it is not global user state.
+- Each membership can have at most one technical profile per organization.
+- `currentBelt` uses the existing `PromotionRank` enum. No new belt enum or catalog is introduced.
+- `currentStripes` is the stripe count for the current technical rank.
+- `degree` is not modeled in this foundation because KURO has no confirmed degree source yet; `PersonBeltDto.degree` remains `null`.
+- Read helpers can map this profile to `PersonBeltDto`.
+- Deleted technical profiles are ignored by read services.
+- This foundation does not backfill from `Student`, migrate Promotions, migrate student writers, or change student/mobile/admin read models yet.
+- `Student.currentBelt/currentStripes` remain the current legacy source for student-bound surfaces until a later migration is explicitly approved.
+- `PromotionRequest.currentBeltSnapshot/currentStripesSnapshot` remain historical snapshots and are not changed.
+
+### Backend avatar service internal foundation
+
+KURO has internal avatar lifecycle services for organization membership profiles. Public HTTP exposure is currently limited to self membership avatar upload/delete.
+
+Internal flow:
+
+- validates target `organizationId + membershipId`
+- ensures an `OrganizationMembershipProfile` exists for the membership
+- validates avatar bytes as JPEG, PNG, or WebP using magic bytes and image dimensions
+- rejects SVG, GIF, HEIC/HEIF, empty files, unknown binaries, oversized files, and images outside `128x128..4096x4096`
+- creates a `MediaAsset` with `PENDING` status and purpose `MEMBER_AVATAR`
+- generates a non-PII object key under `organizations/{organizationId}/memberships/{membershipId}/avatars/`
+- uploads through `MediaStoragePort`
+- transactionally attaches the new avatar and marks the previous avatar `REPLACED`
+- delete clears the profile avatar, marks the asset `DELETED`, and attempts best-effort storage deletion
+
+Rules:
+
+- Public upload/delete endpoints exist only for the authenticated user's own organization-scoped membership avatar.
+- Admin/member-management avatar endpoints do not exist yet.
+- Public DTOs still must not expose `bucket`, `objectKey`, provider, access keys, or `mediaAssetId`.
+- `VisiblePersonDto.avatarUrl` is wired only into compatible read models that already expose an avatar field: student home user, student class detail instructor, and class-session participants.
+- Original filenames are ignored for object key generation and are not audited.
+- Avatar upload currently validates but does not re-encode images; EXIF stripping/re-encoding remains a future hardening phase before opening broad public upload if product/security requires it.
+
+### Self membership avatar endpoints
+
+These endpoints allow an authenticated tenant principal to manage only their own organization-scoped membership avatar.
+
+`POST /organizations/:organizationId/me/avatar`
+
+**Auth required**: yes
+**Capability**: self active membership in `organizationId`
+**Request**: `multipart/form-data` with exactly one file field named `file`
+
+Validation:
+
+- file is required
+- maximum size is `MEDIA_MAX_AVATAR_BYTES` (default `2097152`)
+- allowed images are JPEG, PNG, and WebP
+- MIME is verified from bytes, not trusted only from headers
+- dimensions must be between `128x128` and `4096x4096`
+- SVG, GIF, HEIC/HEIF, unknown binaries, and oversized files are rejected
+
+Success response:
+
+```json
+{
+  "avatarUrl": "https://media.example.test/organizations/org_1/memberships/membership_1/avatars/media_1-random.webp"
+}
+```
+
+If storage does not have a public base URL configured or the storage adapter cannot return a safe URL:
+
+```json
+{
+  "avatarUrl": null
+}
+```
+
+`DELETE /organizations/:organizationId/me/avatar`
+
+**Auth required**: yes
+**Capability**: self active membership in `organizationId`
+
+Success response:
+
+```json
+{
+  "avatarUrl": null
+}
+```
+
+Expected errors:
+
+- `400` missing or invalid file request
+- `401` unauthenticated request
+- `403` token membership does not belong to `organizationId`
+- `413` avatar exceeds configured max bytes
+- `415` unsupported or untrusted image type
+- `503` storage unavailable during upload
+
+Privacy/security rules:
+
+- the target membership is always the authenticated principal's membership
+- no cross-tenant avatar updates are allowed
+- no endpoint exists for changing another member's avatar
+- public responses never include `objectKey`, `bucket`, provider, access keys, or `mediaAssetId`
+- Existing participants/class-detail/student-home response shapes are unchanged; their existing `avatarUrl` fields may now be populated when a visible membership profile has an active avatar and the storage adapter returns a safe public URL.
 
 ## 2. Autenticación
 
@@ -4878,6 +5144,163 @@ Current null/degraded fields:
   `GET /organizations/:organizationId/students/me/calendar?from=YYYY-MM-DD&to=YYYY-MM-DD&view=LIST&itemType=CLASS_SESSION&status=SCHEDULED`
 - The response is chronologically ordered and contains only student-visible branches: primary branch plus approved visit branches in the requested range.
 
+### Student class session detail
+
+`GET /organizations/:organizationId/students/me/class-sessions/:sessionId`
+
+**Roles permitted**: authenticated tenant member with linked student profile
+**Capability required**: student self access through `trainingCalendar.canReadStudentSelfCalendar`
+**Step-up required**: no
+**Scope**: BRANCH_SCOPED, restricted to the linked student and the student's primary branch plus approved visit branches active on the class date
+
+#### Response
+
+```json
+{
+  "id": "session_123",
+  "type": "CLASS_SESSION",
+  "title": "No-Gi Fundamentals",
+  "description": "Guard retention and escapes",
+  "note": null,
+  "startAt": "2026-06-01T22:00:00.000Z",
+  "endAt": "2026-06-01T23:00:00.000Z",
+  "durationMinutes": 60,
+  "status": "SCHEDULED",
+  "branch": {
+    "id": "branch_123",
+    "name": "HQ",
+    "slug": "hq",
+    "timezone": "America/Buenos_Aires"
+  },
+  "mat": null,
+  "instructor": {
+    "membershipId": "membership_instructor",
+    "userId": "user_instructor",
+    "firstName": "Andre",
+    "lastName": "Coach",
+    "displayName": "Andre Coach",
+    "avatarUrl": "https://media.example.test/organizations/org_1/memberships/membership_instructor/avatars/media_1-random.webp",
+    "roleLabel": "Instructor",
+    "belt": {
+      "rank": "ADULT_BLACK",
+      "degree": null,
+      "stripeCount": 3,
+      "label": "Adult Black"
+    }
+  },
+  "sessionOverview": {
+    "capacity": 24,
+    "goingCount": 9,
+    "availableSpots": 15,
+    "isFull": false,
+    "difficultyLabel": null,
+    "uniform": null
+  },
+  "userAttendanceIntent": {
+    "id": "intent_123",
+    "status": "GOING"
+  },
+  "capabilities": {
+    "canView": true,
+    "canMarkIntent": true,
+    "canCancelIntent": true,
+    "canCheckIn": false
+  }
+}
+```
+
+#### Contract rules
+
+- This is the mobile/student optimized class detail endpoint. It is separate from the admin/calendar detail endpoint and does not change that existing contract.
+- `description` comes from the linked `ClassSchedule.description` when the session was created from a schedule and that description exists. It is `null` for ad hoc sessions or schedules without description.
+- `note` is currently `null`. `ClassSession.notes` remains an internal operational/admin field and is not exposed to student mobile.
+- `mat`, `difficultyLabel`, and `uniform` are `null` because the current data model has no dedicated student-safe source fields for them.
+- `instructor.roleLabel` is derived from real membership/branch data only: branch `headCoachMembershipId` takes precedence, then membership roles such as `MESTRE`, `HEAD_COACH`, `INSTRUCTOR`, `ACADEMY_MANAGER`, or `STAFF`. It is `null` only when no visible role source exists.
+- `instructor.avatarUrl` comes from the instructor's visible `OrganizationMembershipProfile.avatarMediaAsset` only when the profile is visible to members, not deleted, points to an active avatar asset, and storage can return a safe public URL. It is `null` otherwise.
+- `instructor.belt` is `PersonBeltDto | null` and comes only from `OrganizationMembershipTechnicalProfile` for the session `instructorMembershipId`. If there is no technical profile, the profile is deleted, or `currentBelt` is `null`, the field is `null`.
+- `Student.currentBelt/currentStripes` are not used as an instructor-profile proxy, even if the instructor user also has a student record.
+- `sessionOverview.goingCount` is the count of active `AttendanceIntent` rows for this session whose student is active and not deleted.
+- `userAttendanceIntent.status` is `GOING` for active intent, `CANCELED` for canceled intent, or `null` when no intent exists.
+- The response does not include the participants list. Use the paginated participants endpoint below for that section.
+
+#### Privacy and security
+
+- Requires a valid access token and a linked student profile in the requested organization.
+- Returns `404 Class session not found` when the session does not exist, belongs to another tenant, or is outside the student's visible branch set.
+- Does not expose emails, phone numbers, billing data, attendance history, internal notes, medical data, payment ids, raw provider payloads, private roles, or permission internals.
+
+#### Errors
+
+- `401 Unauthorized`: missing or invalid token.
+- `403 Forbidden`: authenticated user has no linked student profile in the organization.
+- `404 Not Found`: session missing or not visible to the student.
+
+### Student class session attendance participants
+
+`GET /organizations/:organizationId/students/me/class-sessions/:sessionId/attendance/participants?limit=7&cursor=...`
+
+**Roles permitted**: authenticated tenant member with linked student profile
+**Capability required**: student self access through `trainingCalendar.canReadStudentSelfCalendar`
+**Step-up required**: no
+**Scope**: BRANCH_SCOPED, restricted to the linked student and the student's primary branch plus approved visit branches active on the class date
+
+#### Query params
+
+- `limit`: optional integer, default `7`, max `20`.
+- `cursor`: optional opaque cursor returned by `pagination.nextCursor`.
+
+#### Response
+
+```json
+{
+  "items": [
+    {
+      "studentId": "student_123",
+      "membershipId": "membership_123",
+      "fullName": "Joao Silva",
+      "avatarUrl": "https://media.example.test/organizations/org_1/memberships/membership_123/avatars/media_1-random.webp",
+      "belt": {
+        "rank": "ADULT_BLUE",
+        "degree": null,
+        "stripeCount": 2,
+        "label": "Adult Blue"
+      },
+      "attendanceStatus": "GOING",
+      "attendanceLabel": "Asistirá"
+    }
+  ],
+  "pagination": {
+    "limit": 7,
+    "nextCursor": "eyJjcmVhdGVkQXQiOiIyMDI2LTA2LTAxVDEwOjA3OjAwLjAwMFoiLCJpZCI6ImludGVudF83In0"
+  }
+}
+```
+
+#### Contract rules
+
+- "Asistirá" means an active `AttendanceIntent` with `status=ACTIVE` for the exact `classSessionId`.
+- Pending, declined, canceled, expired, or rejected `AttendanceSuggestion` rows are not included.
+- Canceled attendance intents are not included.
+- Historical `AttendanceRecord` rows are not included unless they also have an active current intent; attendance history is not a participant source.
+- Inactive or deleted students are not included.
+- Ordering is stable: current student first when they are going and the request has no cursor, then active intents by `createdAt ASC`, then intent `id ASC`.
+- `membershipId` is the student's organization membership id only when the student has a linked user account and membership in the organization. It is `null` for unclaimed/unlinked student profiles because the current `Student` model does not guarantee an `OrganizationMembership`.
+- `avatarUrl` comes from the student's linked organization membership profile only when a linked membership exists, the profile is visible to members, not deleted, points to an active avatar asset, and storage can return a safe public URL. It is `null` for unlinked students, hidden/deleted profiles, missing/inactive avatars, or storage without a public base URL.
+- `belt` is `null` when the student has no current rank.
+
+#### Privacy and security
+
+- The endpoint returns only `studentId`, `membershipId`, `fullName`, `avatarUrl`, public rank/stripe summary, and the fixed going label/status.
+- It does not expose email, phone, date of birth, billing status, payment data, attendance history, internal notes, medical data, roles, permissions, cancellation reasons, suggestion messages, or provider payloads.
+- Returns `404 Class session not found` when the session does not exist, belongs to another tenant, or is outside the student's visible branch set.
+
+#### Errors
+
+- `400 Bad Request`: invalid `limit` or query shape.
+- `401 Unauthorized`: missing or invalid token.
+- `403 Forbidden`: authenticated user has no linked student profile in the organization.
+- `404 Not Found`: session missing or not visible to the student.
+
 ### Student mobile home
 
 `GET /organizations/:organizationId/students/me/home`
@@ -4894,7 +5317,7 @@ Current null/degraded fields:
   "user": {
     "id": "user_123",
     "displayName": "Joao Silva",
-    "avatarUrl": null
+    "avatarUrl": "https://media.example.test/organizations/org_1/memberships/membership_123/avatars/media_1-random.webp"
   },
   "student": {
     "id": "student_123",
@@ -4978,6 +5401,7 @@ Current null/degraded fields:
 #### Contract rules
 
 - This is a compact mobile Home snapshot. Android should use drill-down endpoints for full profile, full calendar, attendance history, notes, or check-in execution.
+- `user.avatarUrl` comes from the authenticated user's organization membership profile only when the profile is visible to members, not deleted, points to an active avatar asset, and storage can return a safe public URL. It is `null` otherwise.
 - The endpoint is intentionally not a class detail endpoint, not an attendance history endpoint, not a training-notes index endpoint, and not a check-in execution endpoint.
 - `currentStripes` is the student's current stripe count for the current belt state. This is the canonical, legacy-stable field; the Home does not return a duplicate `stripesNumber`. `primaryBelt.maxStripes` is the maximum stripes allowed for that rank.
 - `beltName` is the current student-facing belt label and `beltColor` is a stable backend color token for the active rank.
@@ -5016,7 +5440,8 @@ Current null/degraded fields:
 - Upcoming Classes / View All: `GET /organizations/:organizationId/students/me/calendar?from=YYYY-MM-DD&to=YYYY-MM-DD&view=LIST&itemType=CLASS_SESSION&status=SCHEDULED`
 - Attendance history: `GET /organizations/:organizationId/students/me/attendance`
 - Training notes: `GET /organizations/:organizationId/students/me/notes`
-- Session detail: `GET /organizations/:organizationId/training-calendar/class-sessions/:sessionId`
+- Session detail: `GET /organizations/:organizationId/students/me/class-sessions/:sessionId`
+- Session participants: `GET /organizations/:organizationId/students/me/class-sessions/:sessionId/attendance/participants?limit=7`
 - Training itinerary: `GET /organizations/:organizationId/students/me/training-itinerary`
 - Student QR check-in (official student attendance flow): `POST /organizations/:organizationId/students/me/check-ins/qr`
 - Note: there is no Home drill-down to self check-in. `SELF_CHECKIN` / `OPEN_SELF_CHECK_IN` are deprecated and never emitted by the Home.
@@ -5104,7 +5529,7 @@ Same class session item shape used by the training calendar, with the selected s
 - The endpoint returns `404 Class session not found` both when the session id does not exist and when it belongs to a branch the principal cannot read. This avoids cross-branch id inference.
 - For student/self context, `ClassSession.notes` is treated as internal operational notes and is not exposed as `description`; `description` is `null`.
 - For admin/manager or assigned-instructor context, `description` may contain `ClassSession.notes`.
-- Android should use this endpoint for Next Class / View Details and class card drill-downs from Home.
+- Mobile/student should prefer `GET /organizations/:organizationId/students/me/class-sessions/:sessionId` for Next Class / View Details and class card drill-downs from Home. This generic calendar detail remains for existing admin/instructor-compatible calendar flows.
 
 **Validation**
 

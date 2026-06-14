@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
-import { BillingPlaceholderPage } from '../_components/billing-placeholder-page'
+import { BillingIntegrationsPage } from './_components/billing-integrations-page'
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('billing.sections.integrations')
@@ -9,6 +9,11 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 }
 
-export default function BillingIntegrationsPage() {
-  return <BillingPlaceholderPage section="integrations" />
+interface PageProps {
+  params: Promise<{ orgId: string; branchId: string }>
+}
+
+export default async function IntegrationsPage({ params }: PageProps) {
+  const { orgId, branchId } = await params
+  return <BillingIntegrationsPage orgId={orgId} branchId={branchId} />
 }
