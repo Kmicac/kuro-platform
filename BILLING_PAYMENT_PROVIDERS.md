@@ -42,7 +42,7 @@ Spec arquitectónica vinculante para la construcción del módulo Billing en el 
 
 1. **Backend = única fuente de verdad** del estado de pago. El frontend nunca confirma un pago por query params del redirect de Mercado Pago. Tras un retorno desde checkout, refresca contra el backend.
 2. **Provider-agnostic core**: el dominio Billing (Plan, Membership, Charge, Payment, FinancialStatus) NO conoce a Mercado Pago. MP es un caso concreto de `PaymentProvider`.
-3. **Componentes específicos de MP están aislados** bajo nombres explícitos (`MercadoPagoIntegrationForm`, `MercadoPagoCheckoutAction`, `MercadoPagoWebhookEventsTable`). Componentes genéricos NUNCA llevan `MercadoPago` en el nombre.
+3. **Componentes específicos de MP están aislados** bajo nombres explícitos (`MercadoPagoIntegrationForm`, `MercadoPagoCheckoutProAssistedLink`, `MercadoPagoWebhookEventsTable`). Componentes genéricos NUNCA llevan `MercadoPago` en el nombre.
 4. **Credenciales jamás expuestas en cliente**: `accessToken` de MP vive solo en backend. Frontend solo recibe `publicKey`, `status` del integration, último sync, y datos no sensibles.
 5. **Capabilities gateando, no roles**: cada acción de UI consulta `capabilities.billing.*` o `capabilities.integrations.*`. Nada de `if (role === "ORG_ADMIN")`.
 6. **i18n absoluto**: todo texto visible en `messages/es/billing.json` con keys jerárquicas. Cero strings hardcodeados.
@@ -374,10 +374,8 @@ interface PaymentProviderDescriptor {
   key: PaymentProviderKey;
   displayName: string;            // i18n key
   supportedMethods: PaymentMethod[];
-  supportsRedirectCheckout: boolean;
+  supportsCheckoutPreference: boolean;
   supportsWebhook: boolean;
-  IntegrationFormComponent: React.ComponentType<IntegrationFormProps>;
-  CheckoutActionComponent: React.ComponentType<CheckoutActionProps>;
 }
 ```
 
@@ -488,7 +486,7 @@ Cada acción de UI consulta `capabilities` desde el store de auth. Mapeo:
 | --------------------------------------------------- | -------------------------------------------------------- |
 | `billing.canReadBilling`                            | ver páginas /billing/*, sidebar links                    |
 | `billing.canWriteBilling`                           | crear plans, charges, memberships, manual payments       |
-| `billing.canCreateMercadoPagoPreference`            | botón "Cobrar con Mercado Pago" en cada charge open      |
+| `billing.canCreateMercadoPagoPreference`            | generar link de pago asistido para cargos abiertos       |
 | `billing.canManagePaymentIntegrations`              | alta/edición de integration form de MP                   |
 | `billing.canReadWebhookEvents`                      | tabla de webhook events                                  |
 | `billing.canReprocessWebhookEvents`                 | botón reprocess en cada webhook event                    |
@@ -515,15 +513,13 @@ export const PAYMENT_PROVIDERS: Record<PaymentProviderKey, PaymentProviderDescri
     key: "MERCADO_PAGO",
     displayName: "billing.providers.mercadoPago.name",
     supportedMethods: ["CARD", "MERCADO_PAGO"],
-    supportsRedirectCheckout: true,
+    supportsCheckoutPreference: true,
     supportsWebhook: true,
-    IntegrationFormComponent: MercadoPagoIntegrationForm,
-    CheckoutActionComponent: MercadoPagoCheckoutAction,
   },
 };
 ```
 
-Agregar Ualá/Modo en el futuro = una entrada nueva en este map + 2 componentes específicos. **El resto del módulo no cambia.**
+Agregar Ualá/Modo en el futuro = una entrada nueva en este map + componentes provider-specific aislados. **El resto del módulo no cambia.**
 
 ### 5.2 Componentes provider-agnostic (los que NO deben saber de MP)
 
@@ -542,12 +538,12 @@ Agregar Ualá/Modo en el futuro = una entrada nueva en este map + 2 componentes 
 - `WebhookEventsTable` (genérica)
 - `WebhookEventDetailDialog` (genérica)
 - `PossibleDuplicatesPanel`
-- `ChargeActionsMenu` — incluye "Cobrar con [provider]" donde provider se resuelve dinámico del registry.
+- `ChargeActionsMenu` — expone acciones genéricas de cobro asistido donde el provider se resuelve desde el registry.
 
 ### 5.3 Componentes específicos de Mercado Pago (aislados)
 
 - `MercadoPagoIntegrationForm`
-- `MercadoPagoCheckoutAction`
+- `MercadoPagoCheckoutProAssistedLink`
 - `MercadoPagoWebhookEventDetail` (extiende el genérico con payload-specific rendering)
 
 ---
@@ -631,11 +627,19 @@ Gateadas por `billing.canReadBilling`.
 
 - `MercadoPagoIntegrationForm`: alta de credenciales (access token va al backend, publicKey en frontend), branch específico.
 - Botón "Probar conexión" → llama `POST /integrations/:id/test`.
-- `MercadoPagoCheckoutAction`: en cada charge open, botón "Cobrar con Mercado Pago" → llama `POST .../mercado-pago/preference` → recibe `initPoint` → abre en nueva pestaña.
+- `MercadoPagoCheckoutProAssistedLink`: en cada charge abierto cobrable, acción "Generar link de pago" → llama `POST .../mercado-pago/preference` → recibe `sandboxInitPoint`/`initPoint` → permite copiar link o abrir checkout asistido.
 - Tras retorno, NO confirmar nada por query params. Refresca queries del charge/payment desde backend.
 - `WebhookEventsTable` para auditoría operativa.
 - Reprocess de webhook event individual.
 - Status del integration en sidebar de billing (Active/Error con ícono).
+
+### 5.4C-1 — Web/Admin Assisted Payment Link with Mercado Pago Checkout Pro
+
+- Web/admin no es el canal principal de pago del alumno; es un flujo asistido para staff.
+- Copy principal: "Generar link de pago", "Copiar link de pago", "Abrir checkout asistido", "Verificar estado del pago".
+- Evitar en backoffice: "Pagar con Mercado Pago", "Pagar ahora", "Confirmar pago".
+- El redirect de Mercado Pago es solo UX. El backend, vía webhook + verificación con Mercado Pago, sigue siendo la fuente de verdad.
+- No llamar APIs de Mercado Pago desde frontend ni manejar `accessToken` en cliente.
 
 ### 5.5 — Dashboard + Financial Status (1 día)
 
@@ -775,7 +779,7 @@ ancho desktop aproximado 480px; en mobile ocupa pantalla completa.
 │ Vencimiento           01/06/2026                   │
 ├────────────────────────────────────────────────────┤
 │ Acciones                                            │
-│ [Registrar pago manual] [Cobrar con Mercado Pago]  │
+│ [Registrar pago manual] [Generar link de pago]     │
 │ [Marcar como void]                                 │
 ├────────────────────────────────────────────────────┤
 │ Payments aplicados                                  │
@@ -803,7 +807,7 @@ ancho desktop aproximado 480px; en mobile ocupa pantalla completa.
 
 Gating:
 - `Registrar pago manual`: `billing.canWriteBilling`.
-- `Cobrar con Mercado Pago`: `billing.canCreateMercadoPagoPreference` y cargo con saldo abierto.
+- `Generar link de pago`: `billing.canCreateMercadoPagoPreference` y cargo con saldo abierto.
 - Acciones provider-specific se resuelven por registry; el drawer sigue siendo provider-agnostic.
 - `403` en cualquier acción queda en toast/error de dominio con `requestId`, sin cerrar el drawer automáticamente.
 

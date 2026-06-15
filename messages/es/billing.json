@@ -205,7 +205,7 @@
       "title": "Integraciones",
       "subtitle": "Providers de pago y estado operativo",
       "emptyTitle": "Base de integraciones preparada",
-      "emptyDescription": "Esta ruta queda reservada para Mercado Pago y futuros providers. No se exponen credenciales ni se confirma checkout desde el cliente."
+      "emptyDescription": "Esta ruta queda reservada para Mercado Pago y futuros providers. No se exponen credenciales ni se confirma ningún pago desde el cliente."
     }
   },
   "integrations": {
