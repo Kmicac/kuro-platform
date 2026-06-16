@@ -526,6 +526,43 @@
       "create": "Cargo",
       "recordManualPayment": "Registrar pago manual"
     },
+    "checkoutPro": {
+      "title": "Generar link de pago",
+      "description": "Crea un link de Mercado Pago Checkout Pro para que el alumno pague este cargo.",
+      "generatedTitle": "Link de pago generado",
+      "generatedDescription": "Comparte el link con el alumno o abre el checkout asistido en otra pestaña.",
+      "securityNote": "El pago se confirma únicamente cuando el backend lo verifique con Mercado Pago.",
+      "fields": {
+        "amount": "Monto",
+        "currency": "Moneda",
+        "reference": "Referencia",
+        "preferenceId": "Preference ID"
+      },
+      "states": {
+        "reused": "Se reutilizó una preferencia existente para este cargo."
+      },
+      "actions": {
+        "generate": "Generar link de pago",
+        "generating": "Generando...",
+        "copy": "Copiar link de pago",
+        "open": "Abrir checkout asistido",
+        "verify": "Verificar estado del pago"
+      },
+      "success": {
+        "generated": "Link de pago generado.",
+        "copied": "Link de pago copiado.",
+        "verifying": "Actualizando estado desde backend."
+      },
+      "errors": {
+        "notConfigured": "Mercado Pago todavía no está configurado para esta sede.",
+        "conflict": "Este cargo ya no está disponible para generar un link de pago.",
+        "forbidden": "No tienes permisos para generar links de pago.",
+        "notFound": "No se encontró el cargo o el alumno.",
+        "generic": "No se pudo generar el link de pago. Inténtalo nuevamente.",
+        "missingUrl": "La preferencia no devolvió un link de checkout disponible.",
+        "copyFailed": "No se pudo copiar el link de pago."
+      }
+    },
     "createManual": {
       "title": "Crear cargo manual",
       "description": "Emite un cargo único para un alumno de esta filial.",

@@ -42,6 +42,7 @@ import { useBranch, useBranchBillingCharges, useCapabilities } from '@/lib/hooks
 import { cn } from '@/lib/utils'
 import { CreateManualChargeDialog } from './create-manual-charge-dialog'
 import { ManualPaymentDialog } from './manual-payment-dialog'
+import { MercadoPagoCheckoutProAssistedLink } from './mercado-pago-checkout-pro-assisted-link'
 
 interface BillingChargesPageProps {
   orgId: string
@@ -68,6 +69,12 @@ const TYPE_LABEL_KEYS = {
   MANUAL: 'chargeType.MANUAL',
 } as const satisfies Record<BillingChargeType, string>
 
+const MERCADO_PAGO_COLLECTIBLE_STATUSES = new Set<BillingChargeStatus>([
+  'PENDING',
+  'PARTIALLY_PAID',
+  'OVERDUE',
+])
+
 export function BillingChargesPage({
   orgId,
   branchId,
@@ -89,6 +96,9 @@ export function BillingChargesPage({
     capabilitiesQuery.data?.capabilities.billing?.canReadBilling ?? false
   const canWriteBilling =
     capabilitiesQuery.data?.capabilities.billing?.canWriteBilling ?? false
+  const canCreateMercadoPagoPreference =
+    capabilitiesQuery.data?.capabilities.billing
+      ?.canCreateMercadoPagoPreference ?? false
   const hasCapabilities = Boolean(capabilitiesQuery.data)
   const billingEnabled = hasCapabilities && canReadBilling
 
@@ -228,9 +238,14 @@ export function BillingChargesPage({
         }
         formatDate={formatDate}
         orgId={orgId}
+        branchId={branchId}
         canWriteBilling={canWriteBilling}
+        canCreateMercadoPagoPreference={canCreateMercadoPagoPreference}
         onPaymentRecorded={() => {
           setSelectedCharge(null)
+          void chargesQuery.refetch()
+        }}
+        onVerifyPaymentStatus={() => {
           void chargesQuery.refetch()
         }}
       />
@@ -542,8 +557,11 @@ function ChargeDetailSheet({
   labelType,
   formatDate,
   orgId,
+  branchId,
   canWriteBilling,
+  canCreateMercadoPagoPreference,
   onPaymentRecorded,
+  onVerifyPaymentStatus,
 }: {
   charge: BillingChargeListItem | null
   open: boolean
@@ -552,8 +570,11 @@ function ChargeDetailSheet({
   labelType: (type: BillingChargeType) => string
   formatDate: (value: string) => string
   orgId: string
+  branchId: string
   canWriteBilling: boolean
+  canCreateMercadoPagoPreference: boolean
   onPaymentRecorded: () => void
+  onVerifyPaymentStatus: () => void
 }) {
   const t = useTranslations('billing.charges')
   const tb = useTranslations('billing')
@@ -572,6 +593,11 @@ function ChargeDetailSheet({
     canWriteBilling &&
     Number.parseFloat(charge.outstandingAmount) > 0 &&
     !['PAID', 'CANCELED', 'VOID'].includes(charge.effectiveStatus)
+  const canGenerateMercadoPagoLink =
+    canCreateMercadoPagoPreference &&
+    Number.parseFloat(charge.outstandingAmount) > 0 &&
+    MERCADO_PAGO_COLLECTIBLE_STATUSES.has(charge.effectiveStatus)
+  const hasChargeAction = canWriteBilling || canGenerateMercadoPagoLink
 
   return (
     <>
@@ -612,17 +638,30 @@ function ChargeDetailSheet({
               <DetailRow label={t('dueDate')} value={vm.dueDateFormatted} />
             </DetailSection>
 
-            {canWriteBilling && (
+            {hasChargeAction && (
               <DetailSection title={t('detail.sections.actions')}>
-                <Button
-                  type="button"
-                  size="sm"
-                  disabled={!canRecordManualPayment}
-                  onClick={() => setManualPaymentOpen(true)}
-                >
-                  <CreditCard className="h-4 w-4" />
-                  {t('actions.recordManualPayment')}
-                </Button>
+                <div className="space-y-3">
+                  {canWriteBilling ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={!canRecordManualPayment}
+                      onClick={() => setManualPaymentOpen(true)}
+                    >
+                      <CreditCard className="h-4 w-4" />
+                      {t('actions.recordManualPayment')}
+                    </Button>
+                  ) : null}
+
+                  {canGenerateMercadoPagoLink ? (
+                    <MercadoPagoCheckoutProAssistedLink
+                      orgId={orgId}
+                      branchId={branchId}
+                      charge={charge}
+                      onVerifyStatus={onVerifyPaymentStatus}
+                    />
+                  ) : null}
+                </div>
               </DetailSection>
             )}
 

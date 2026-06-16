@@ -571,6 +571,45 @@ export function useRecordGeneralIncome(orgId: string, branchId: string) {
   })
 }
 
+export function useInvalidateBillingPaymentState(
+  orgId: string,
+  branchId: string,
+  studentId: string
+) {
+  const queryClient = useQueryClient()
+
+  return () => {
+    queryClient.invalidateQueries(branchChargesFilter(orgId, branchId))
+    queryClient.invalidateQueries(studentChargesFilter(orgId, studentId))
+    queryClient.invalidateQueries(branchPaymentsFilter(orgId, branchId))
+    queryClient.invalidateQueries(studentPaymentsFilter(orgId, studentId))
+    queryClient.invalidateQueries({
+      queryKey: ['billing-summary', orgId, branchId],
+    })
+  }
+}
+
+export function useCreateMercadoPagoPreference(
+  orgId: string,
+  branchId: string,
+  studentId: string,
+  chargeId: string
+) {
+  const invalidateBillingPaymentState = useInvalidateBillingPaymentState(
+    orgId,
+    branchId,
+    studentId
+  )
+
+  return useMutation({
+    mutationFn: () =>
+      billingApi.createMercadoPagoPreference(orgId, studentId, chargeId),
+    onSuccess: () => {
+      invalidateBillingPaymentState()
+    },
+  })
+}
+
 export function useOrganizationIntegrations(
   orgId: string,
   params?: PaymentIntegrationsQuery,

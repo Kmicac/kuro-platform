@@ -759,7 +759,7 @@ export interface MercadoPagoPreferenceResponse {
   amount: number
   currency: string
   status: 'READY'
-  environment: 'test' | 'production'
+  environment: string
   reused: boolean
 }
 
