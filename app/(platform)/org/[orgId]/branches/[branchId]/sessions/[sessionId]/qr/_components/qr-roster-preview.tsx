@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { CheckCircle2, Circle, Search } from 'lucide-react'
 
+import { PersonAvatar } from '@/components/common/person-avatar'
 import { Input } from '@/components/ui/input'
 import { BeltBadge } from '@/components/kuro'
 import { ErrorState } from '@/components/shared'
@@ -122,19 +123,14 @@ export function QRRosterPreview({
                 key={it.studentId}
                 className="flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2.5"
               >
-                <span
-                  className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-[11px] font-bold"
-                  style={{
-                    background:
-                      'color-mix(in srgb, var(--primary) 14%, transparent)',
-                    color: 'var(--primary)',
-                    border:
-                      '0.5px solid color-mix(in srgb, var(--primary) 30%, transparent)',
-                  }}
-                >
-                  {`${it.student.firstName?.[0] ?? ''}${it.student.lastName?.[0] ?? ''}`.toUpperCase() ||
-                    '—'}
-                </span>
+                <PersonAvatar
+                  avatarUrl={it.student.avatarUrl}
+                  firstName={it.student.firstName}
+                  lastName={it.student.lastName}
+                  size="sm"
+                  className="h-9 w-9"
+                  fallbackClassName="text-[11px]"
+                />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm text-foreground">
                     {it.student.firstName} {it.student.lastName}

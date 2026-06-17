@@ -9,6 +9,7 @@ import {
   useUpdateAttendance,
   useDeleteAttendance,
 } from '@/lib/hooks'
+import { PersonAvatar } from '@/components/common/person-avatar'
 import { notifySuccess } from '@/lib/utils/toast'
 import { useAttendanceErrorHandler } from './use-attendance-error'
 import { BeltBadge } from '@/components/kuro'
@@ -38,11 +39,6 @@ const ACTION_LABEL_KEY = {
   ABSENT: 'actions.markAbsent',
   EXCUSED: 'actions.markExcused',
 } as const
-
-/** Iniciales para el avatar. */
-function initials(first: string, last: string): string {
-  return `${first?.[0] ?? ''}${last?.[0] ?? ''}`.toUpperCase() || '—'
-}
 
 export function AttendanceRow({
   item,
@@ -100,17 +96,14 @@ export function AttendanceRow({
     <li className="flex flex-col gap-3 px-4 py-3 sm:grid sm:grid-cols-[1fr_auto_auto] sm:items-center sm:gap-4">
       {/* Alumno: avatar + nombre + faixa + intent */}
       <div className="flex min-w-0 items-center gap-3">
-        <span
-          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-[11px] font-bold"
-          style={{
-            background: 'color-mix(in srgb, var(--primary) 14%, transparent)',
-            color: 'var(--primary)',
-            border:
-              '0.5px solid color-mix(in srgb, var(--primary) 30%, transparent)',
-          }}
-        >
-          {initials(item.student.firstName, item.student.lastName)}
-        </span>
+        <PersonAvatar
+          avatarUrl={item.student.avatarUrl}
+          firstName={item.student.firstName}
+          lastName={item.student.lastName}
+          size="sm"
+          className="h-9 w-9"
+          fallbackClassName="text-[11px]"
+        />
         <div className="min-w-0">
           <p className="truncate text-sm text-foreground">
             {item.student.firstName} {item.student.lastName}

@@ -309,6 +309,7 @@ function StudentRow({
       <td className="px-4 py-3">
         <div className="flex items-center gap-2.5 min-w-0">
           <PersonAvatar
+            avatarUrl={student.avatarUrl}
             firstName={student.firstName}
             lastName={student.lastName}
             size="sm"

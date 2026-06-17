@@ -189,6 +189,7 @@ function Row({
       {/* Alumno */}
       <div className="flex min-w-0 items-center gap-3">
         <PersonAvatar
+          avatarUrl={item.student.avatarUrl}
           firstName={item.student.firstName}
           lastName={item.student.lastName}
           size="sm"

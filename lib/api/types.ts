@@ -441,6 +441,7 @@ export interface ClassSessionInstructor {
   userId: string
   firstName: string
   lastName: string
+  avatarUrl?: string | null
   role: string
   /**
    * Catálogo rico de promotion rank o null si el instructor no tiene
@@ -641,6 +642,7 @@ export interface TechnicalRosterStudent {
   primaryBranchId: string
   firstName: string
   lastName: string
+  avatarUrl?: string | null
   status: StudentStatus
   currentBelt: PromotionRank
   currentStripes: number
@@ -964,6 +966,7 @@ export interface StudentListItem {
   primaryBranchId: string
   firstName: string
   lastName: string
+  avatarUrl?: string | null
   email: string
   phone: string
   status: StudentStatus

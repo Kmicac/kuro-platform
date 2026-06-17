@@ -3,6 +3,7 @@
 import { useFormatter, useTranslations } from 'next-intl'
 import { CalendarDays, Clock, Timer } from 'lucide-react'
 
+import { PersonAvatar } from '@/components/common/person-avatar'
 import { BeltBadge, ClassTypeChip } from '@/components/kuro'
 import type { ClassSessionDetail } from '@/lib/api/types'
 
@@ -47,18 +48,12 @@ export function QRClassInfo({ session }: QRClassInfoProps) {
 
       {instructor && (
         <div className="flex items-center gap-3 pt-1">
-          <span
-            className="flex h-10 w-10 items-center justify-center rounded-full text-xs font-bold"
-            style={{
-              background: 'color-mix(in srgb, var(--primary) 14%, transparent)',
-              color: 'var(--primary)',
-              border:
-                '0.5px solid color-mix(in srgb, var(--primary) 30%, transparent)',
-            }}
-          >
-            {`${instructor.firstName?.[0] ?? ''}${instructor.lastName?.[0] ?? ''}`.toUpperCase() ||
-              '—'}
-          </span>
+          <PersonAvatar
+            avatarUrl={instructor.avatarUrl}
+            firstName={instructor.firstName}
+            lastName={instructor.lastName}
+            size="md"
+          />
           <div>
             <p className="text-xs text-[var(--text-tertiary)]">
               {t('instructor')}

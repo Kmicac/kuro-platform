@@ -510,6 +510,7 @@ function InviteRow({
   return (
     <li className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors">
       <PersonAvatar
+        avatarUrl={student.avatarUrl}
         firstName={student.firstName}
         lastName={student.lastName}
         size="sm"
