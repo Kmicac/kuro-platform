@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/texture-card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { PersonAvatar } from '@/components/common/person-avatar'
 import { ApiError } from '@/lib/api/client'
 import {
   useBranches,
@@ -483,7 +484,6 @@ function InviteRow({
   const mutation = useInviteStudent(orgId)
 
   const fullName = `${student.firstName} ${student.lastName}`.trim()
-  const initials = `${student.firstName[0] ?? ''}${student.lastName[0] ?? ''}`
 
   const onClick = () => {
     setState({ kind: 'sending' })
@@ -509,7 +509,11 @@ function InviteRow({
 
   return (
     <li className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors">
-      <Avatar initials={initials} />
+      <PersonAvatar
+        firstName={student.firstName}
+        lastName={student.lastName}
+        size="sm"
+      />
       <div className="flex-1 min-w-0">
         <Link
           href={`/org/${orgId}/students/${student.id}`}
@@ -583,21 +587,6 @@ function InviteFeedback({ state }: { state: InviteState }) {
     )
   }
   return null
-}
-
-function Avatar({ initials }: { initials: string }) {
-  return (
-    <span
-      className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0"
-      style={{
-        background: 'color-mix(in srgb, var(--primary) 12%, transparent)',
-        color: 'var(--primary)',
-        border: '0.5px solid color-mix(in srgb, var(--primary) 25%, transparent)',
-      }}
-    >
-      {initials.toUpperCase() || '—'}
-    </span>
-  )
 }
 
 // ── Helpers ────────────────────────────────────────────────

@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Check, Search, Users } from 'lucide-react'
 
+import { PersonAvatar } from '@/components/common/person-avatar'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { BeltBadge } from '@/components/kuro'
@@ -187,17 +188,13 @@ function Row({
     <li className="grid grid-cols-1 gap-3 px-4 py-3 transition-colors hover:bg-muted/40 sm:grid-cols-[2fr_1.2fr_1fr_auto] sm:items-center sm:gap-4">
       {/* Alumno */}
       <div className="flex min-w-0 items-center gap-3">
-        <span
-          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-[11px] font-bold"
-          style={{
-            background: 'color-mix(in srgb, var(--primary) 16%, transparent)',
-            color: 'var(--primary)',
-            border:
-              '0.5px solid color-mix(in srgb, var(--primary) 32%, transparent)',
-          }}
-        >
-          {initials(item.student.firstName, item.student.lastName)}
-        </span>
+        <PersonAvatar
+          firstName={item.student.firstName}
+          lastName={item.student.lastName}
+          size="sm"
+          className="h-9 w-9"
+          fallbackClassName="text-[11px]"
+        />
         <span className="truncate text-sm text-foreground">
           {item.student.firstName} {item.student.lastName}
         </span>
@@ -264,8 +261,4 @@ function StatusChip({
       {registered ? t('registered') : t('pending')}
     </span>
   )
-}
-
-function initials(first: string, last: string): string {
-  return `${first?.[0] ?? ''}${last?.[0] ?? ''}`.toUpperCase() || '—'
 }

@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { PersonAvatar } from '@/components/common/person-avatar'
 import { KuroLogo } from '@/components/kuro/logo'
 import { useUiStore } from '@/stores/ui.store'
 import { useAuthStore } from '@/stores/auth.store'
@@ -131,10 +132,6 @@ export function Sidebar({ orgId }: SidebarProps) {
     if (item.path === '') return subPath === '' || subPath === '/'
     return subPath.startsWith(item.path)
   }
-
-  const initials = user
-    ? `${user.firstName[0]}${user.lastName[0]}`
-    : 'KU'
 
   return (
     <aside
@@ -271,16 +268,14 @@ export function Sidebar({ orgId }: SidebarProps) {
         {/* User info */}
         {!sidebarCollapsed && (
           <div className="flex items-center gap-2.5 px-4 py-2.5">
-            <div
-              className="w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-bold flex-shrink-0"
-              style={{
-                background: c.accentBg,
-                color: c.accent,
-                border: `0.5px solid ${c.accent}`,
-              }}
-            >
-              {initials}
-            </div>
+            <PersonAvatar
+              displayName={user ? `${user.firstName} ${user.lastName}` : null}
+              firstName={user?.firstName}
+              lastName={user?.lastName}
+              size="sm"
+              className="h-7 w-7 flex-shrink-0"
+              fallbackClassName="text-[9px]"
+            />
             <div className="flex-1 min-w-0">
               <div
                 className="text-[11px] font-medium truncate leading-tight"

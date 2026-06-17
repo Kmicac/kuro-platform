@@ -34,6 +34,7 @@ import {
   ForbiddenState,
   PageHeader,
 } from '@/components/shared'
+import { PersonAvatar } from '@/components/common/person-avatar'
 import type {
   ClassSessionAttendanceCounts,
   ClassSessionCapacity,
@@ -183,7 +184,11 @@ function InstructorSection({
     <Section label={t('instructor')}>
       {instructor ? (
         <div className="flex items-center gap-3">
-          <Avatar initials={initialsFor(instructor)} />
+          <PersonAvatar
+            firstName={instructor.firstName}
+            lastName={instructor.lastName}
+            size="md"
+          />
           <div className="min-w-0 flex-1">
             <p className="text-sm text-foreground">
               {instructor.firstName} {instructor.lastName}
@@ -198,22 +203,6 @@ function InstructorSection({
         <p className="text-sm text-muted-foreground">{t('noInstructor')}</p>
       )}
     </Section>
-  )
-}
-
-function Avatar({ initials }: { initials: string }) {
-  return (
-    <span
-      className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold"
-      style={{
-        background: 'color-mix(in srgb, var(--primary) 14%, transparent)',
-        color: 'var(--primary)',
-        border:
-          '0.5px solid color-mix(in srgb, var(--primary) 30%, transparent)',
-      }}
-    >
-      {initials || '—'}
-    </span>
   )
 }
 
@@ -532,14 +521,6 @@ function DetailSkeleton() {
       </div>
     </div>
   )
-}
-
-// ── Helpers ────────────────────────────────────────────────
-
-function initialsFor(instructor: ClassSessionInstructor): string {
-  const a = instructor.firstName?.[0] ?? ''
-  const b = instructor.lastName?.[0] ?? ''
-  return `${a}${b}`.toUpperCase()
 }
 
 type Formatter = ReturnType<typeof useFormatter>

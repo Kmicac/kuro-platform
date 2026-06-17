@@ -24,6 +24,7 @@ import {
   useBranchStudents,
   usePromotionRankResolver,
 } from '@/lib/hooks'
+import { PersonAvatar } from '@/components/common/person-avatar'
 import { BeltBadge, StatusBadge } from '@/components/kuro'
 import {
   EmptyState,
@@ -303,12 +304,15 @@ function StudentRow({
   const tTrack = useTranslations('students.track')
   const format = useFormatter()
   const fullName = `${student.firstName} ${student.lastName}`.trim()
-  const initials = `${student.firstName[0] ?? ''}${student.lastName[0] ?? ''}`
   return (
     <tr className="hover:bg-muted/40 transition-colors">
       <td className="px-4 py-3">
         <div className="flex items-center gap-2.5 min-w-0">
-          <Avatar initials={initials} />
+          <PersonAvatar
+            firstName={student.firstName}
+            lastName={student.lastName}
+            size="sm"
+          />
           <div className="min-w-0">
             <Link
               href={`/org/${orgId}/students/${student.id}`}
@@ -364,21 +368,6 @@ function StudentRow({
         </Link>
       </td>
     </tr>
-  )
-}
-
-function Avatar({ initials }: { initials: string }) {
-  return (
-    <span
-      className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0"
-      style={{
-        background: 'color-mix(in srgb, var(--primary) 12%, transparent)',
-        color: 'var(--primary)',
-        border: '0.5px solid color-mix(in srgb, var(--primary) 25%, transparent)',
-      }}
-    >
-      {initials.toUpperCase() || '—'}
-    </span>
   )
 }
 

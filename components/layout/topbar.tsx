@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { useTranslations } from 'next-intl'
+import { PersonAvatar } from '@/components/common/person-avatar'
 import { useAuthStore } from '@/stores/auth.store'
 import { useBranches, useCapabilities, useCurrentContext } from '@/lib/hooks'
 import { FamilyButton, FamilyButtonItem } from '@/components/ui/family-button'
@@ -50,10 +51,6 @@ export function Topbar({ orgId, branchId }: TopbarProps) {
   const t = useTranslations('navigation.topbar')
   const ctx = useCurrentContext()
   const { user, currentOrg, currentBranch } = useAuthStore()
-
-  const initials = user
-    ? `${user.firstName[0]}${user.lastName[0]}`
-    : 'KU'
 
   const activeBranchId = branchId ?? ctx.branchId ?? currentBranch?.id
 
@@ -149,17 +146,14 @@ export function Topbar({ orgId, branchId }: TopbarProps) {
         <div className="w-px h-5 bg-border mx-0.5" />
 
         <button className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted transition-colors">
-          <div
-            className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0"
-            style={{
-              background: 'color-mix(in srgb, var(--primary) 15%, transparent)',
-              color: 'var(--primary)',
-              border:
-                '0.5px solid color-mix(in srgb, var(--primary) 30%, transparent)',
-            }}
-          >
-            {initials}
-          </div>
+          <PersonAvatar
+            displayName={user ? `${user.firstName} ${user.lastName}` : null}
+            firstName={user?.firstName}
+            lastName={user?.lastName}
+            size="sm"
+            className="h-7 w-7 flex-shrink-0"
+            fallbackClassName="text-[10px]"
+          />
           <div className="hidden sm:flex flex-col items-start min-w-0">
             <span className="text-xs font-medium text-foreground leading-tight whitespace-nowrap">
               {user ? `${user.firstName} ${user.lastName}` : '—'}
