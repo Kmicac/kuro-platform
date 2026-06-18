@@ -29,7 +29,9 @@ import type {
   SessionTechnicalRoster,
   UpdateAttendanceBody,
   TrainingCalendarResponse,
+  AvatarResponseDto,
   CapabilitiesResponse,
+  CurrentMembershipVisibleProfile,
   PaginatedResponse,
   IntakeRequest,
   StudentListItem,
@@ -104,6 +106,33 @@ export const organizationsApi = {
 export const capabilitiesApi = {
   get: (orgId: string) =>
     api.get<CapabilitiesResponse>(`/organizations/${orgId}/me/capabilities`),
+}
+
+export const currentMembershipVisibleProfileApi = {
+  get: (orgId: string) =>
+    api.getNullable<CurrentMembershipVisibleProfile>(
+      `/organizations/${orgId}/me/profile`
+    ),
+}
+
+export function uploadMyAvatar(
+  organizationId: string,
+  file: File,
+): Promise<AvatarResponseDto> {
+  const body = new FormData()
+  body.append('file', file)
+  return api.postForm<AvatarResponseDto>(
+    `/organizations/${organizationId}/me/avatar`,
+    body,
+  )
+}
+
+export function deleteMyAvatar(
+  organizationId: string,
+): Promise<AvatarResponseDto> {
+  return api.delete<AvatarResponseDto>(
+    `/organizations/${organizationId}/me/avatar`
+  )
 }
 
 // ── Branches ─────────────────────────────────────────────────

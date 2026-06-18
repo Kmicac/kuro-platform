@@ -12,6 +12,7 @@ import type { LucideIcon } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { PersonAvatar } from '@/components/common/person-avatar'
 import { KuroLogo } from '@/components/kuro/logo'
+import { useCurrentMembershipVisibleProfile } from '@/lib/hooks'
 import { useUiStore } from '@/stores/ui.store'
 import { useAuthStore } from '@/stores/auth.store'
 import { authApi } from '@/lib/api/client'
@@ -96,6 +97,16 @@ export function Sidebar({ orgId }: SidebarProps) {
   const { sidebarCollapsed, toggleSidebar } = useUiStore()
   const user = useAuthStore((s) => s.user)
   const currentBranchId = useAuthStore((s) => s.currentBranchId)
+  const profileQuery = useCurrentMembershipVisibleProfile(orgId)
+
+  const authDisplayName =
+    [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim() || null
+  const profile = profileQuery.data
+  const visibleDisplayName = profile?.displayName?.trim() || authDisplayName
+  const visibleFirstName = profile?.firstName ?? user?.firstName ?? null
+  const visibleLastName = profile?.lastName ?? user?.lastName ?? null
+  const visibleAvatarUrl = profile?.avatarUrl ?? null
+  const visibleRoleLabel = profile?.roleLabel ?? user?.primaryRole ?? ''
 
   const handleLogout = async () => {
     await authApi.logout()
@@ -269,9 +280,10 @@ export function Sidebar({ orgId }: SidebarProps) {
         {!sidebarCollapsed && (
           <div className="flex items-center gap-2.5 px-4 py-2.5">
             <PersonAvatar
-              displayName={user ? `${user.firstName} ${user.lastName}` : null}
-              firstName={user?.firstName}
-              lastName={user?.lastName}
+              avatarUrl={visibleAvatarUrl}
+              displayName={visibleDisplayName}
+              firstName={visibleFirstName}
+              lastName={visibleLastName}
               size="sm"
               className="h-7 w-7 flex-shrink-0"
               fallbackClassName="text-[9px]"
@@ -281,13 +293,13 @@ export function Sidebar({ orgId }: SidebarProps) {
                 className="text-[11px] font-medium truncate leading-tight"
                 style={{ color: c.textActive }}
               >
-                {user ? `${user.firstName} ${user.lastName}` : '—'}
+                {visibleDisplayName ?? '—'}
               </div>
               <div
                 className="text-[9px] uppercase tracking-[.08em] leading-tight mt-0.5"
                 style={{ color: c.label }}
               >
-                {user?.primaryRole ?? ''}
+                {visibleRoleLabel}
               </div>
             </div>
             <button

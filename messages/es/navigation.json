@@ -27,11 +27,40 @@
     "notifications": "Notificaciones",
     "themeLight": "Cambiar a modo claro",
     "themeDark": "Cambiar a modo oscuro",
+    "manageAvatar": "Gestionar avatar",
     "branchLabel": "Filial",
     "branchLoading": "Cargando...",
     "branchSelect": "Seleccionar",
     "changeBranch": "Cambiar de filial",
-    "branchesLoading": "Cargando filiales..."
+    "branchesLoading": "Cargando filiales...",
+    "avatarDialog": {
+      "title": "Avatar de perfil",
+      "description": "Actualiza la imagen visible en tu perfil operativo.",
+      "fallbackName": "Usuario",
+      "currentHint": "JPG, PNG o WebP hasta 2 MB.",
+      "fileInputLabel": "Seleccionar imagen de avatar",
+      "actions": {
+        "change": "Cambiar avatar",
+        "delete": "Eliminar avatar",
+        "save": "Guardar avatar"
+      },
+      "validation": {
+        "required": "Selecciona una imagen.",
+        "type": "Formato no permitido. Usa JPG, PNG o WebP.",
+        "size": "La imagen no puede superar 2 MB."
+      },
+      "success": {
+        "updated": "Avatar actualizado.",
+        "deleted": "Avatar eliminado."
+      },
+      "errors": {
+        "update": "No se pudo actualizar el avatar.",
+        "delete": "No se pudo eliminar el avatar.",
+        "forbidden": "No tienes permisos para modificar este avatar.",
+        "tooLarge": "La imagen es demasiado grande.",
+        "noPublicUrl": "El avatar se subió, pero no hay una URL pública disponible."
+      }
+    }
   },
   "breadcrumb": {
     "aria": "Migas de navegación"

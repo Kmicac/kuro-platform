@@ -20,7 +20,13 @@ import { useTheme } from 'next-themes'
 import { useTranslations } from 'next-intl'
 import { PersonAvatar } from '@/components/common/person-avatar'
 import { useAuthStore } from '@/stores/auth.store'
-import { useBranches, useCapabilities, useCurrentContext } from '@/lib/hooks'
+import { CurrentUserAvatarDialog } from './current-user-avatar-dialog'
+import {
+  useBranches,
+  useCapabilities,
+  useCurrentContext,
+  useCurrentMembershipVisibleProfile,
+} from '@/lib/hooks'
 import { FamilyButton, FamilyButtonItem } from '@/components/ui/family-button'
 import { SessionDialog } from '@/components/sessions/session-dialog'
 import { ScheduleDialog } from '@/app/(platform)/org/[orgId]/branches/[branchId]/schedules/_components/schedule-dialog'
@@ -51,8 +57,17 @@ export function Topbar({ orgId, branchId }: TopbarProps) {
   const t = useTranslations('navigation.topbar')
   const ctx = useCurrentContext()
   const { user, currentOrg, currentBranch } = useAuthStore()
+  const profileQuery = useCurrentMembershipVisibleProfile(orgId)
 
   const activeBranchId = branchId ?? ctx.branchId ?? currentBranch?.id
+  const authDisplayName =
+    [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim() || null
+  const profile = profileQuery.data
+  const visibleDisplayName = profile?.displayName?.trim() || authDisplayName
+  const visibleFirstName = profile?.firstName ?? user?.firstName ?? null
+  const visibleLastName = profile?.lastName ?? user?.lastName ?? null
+  const visibleAvatarUrl = profile?.avatarUrl ?? null
+  const visibleRoleLabel = profile?.roleLabel ?? user?.primaryRole ?? ''
 
   // Family Button (crear) — gating por capability + contexto de filial.
   const caps = useCapabilities(orgId)
@@ -62,6 +77,7 @@ export function Topbar({ orgId, branchId }: TopbarProps) {
   const hasBranch = Boolean(ctx.branchId)
   const [createSessionOpen, setCreateSessionOpen] = useState(false)
   const [createScheduleOpen, setCreateScheduleOpen] = useState(false)
+  const [avatarDialogOpen, setAvatarDialogOpen] = useState(false)
 
   return (
     <>
@@ -145,21 +161,27 @@ export function Topbar({ orgId, branchId }: TopbarProps) {
 
         <div className="w-px h-5 bg-border mx-0.5" />
 
-        <button className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted transition-colors">
+        <button
+          type="button"
+          title={t('manageAvatar')}
+          onClick={() => setAvatarDialogOpen(true)}
+          className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted transition-colors"
+        >
           <PersonAvatar
-            displayName={user ? `${user.firstName} ${user.lastName}` : null}
-            firstName={user?.firstName}
-            lastName={user?.lastName}
+            avatarUrl={visibleAvatarUrl}
+            displayName={visibleDisplayName}
+            firstName={visibleFirstName}
+            lastName={visibleLastName}
             size="sm"
             className="h-7 w-7 flex-shrink-0"
             fallbackClassName="text-[10px]"
           />
           <div className="hidden sm:flex flex-col items-start min-w-0">
             <span className="text-xs font-medium text-foreground leading-tight whitespace-nowrap">
-              {user ? `${user.firstName} ${user.lastName}` : '—'}
+              {visibleDisplayName ?? '—'}
             </span>
             <span className="text-[10px] text-muted-foreground uppercase tracking-wide leading-tight">
-              {user?.primaryRole ?? ''}
+              {visibleRoleLabel}
             </span>
           </div>
           <ChevronDown
@@ -181,6 +203,11 @@ export function Topbar({ orgId, branchId }: TopbarProps) {
         mode="create"
         open={createScheduleOpen}
         onOpenChange={setCreateScheduleOpen}
+      />
+      <CurrentUserAvatarDialog
+        orgId={orgId}
+        open={avatarDialogOpen}
+        onOpenChange={setAvatarDialogOpen}
       />
     </>
   )

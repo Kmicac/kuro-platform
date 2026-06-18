@@ -244,12 +244,14 @@ async function request<T>(
 ): Promise<T> {
   const { getAuthHeader, logout } = useAuthStore.getState()
   const isCookiePath = AUTH_COOKIE_PATHS.some(p => path.startsWith(p))
+  const isFormDataBody =
+    typeof FormData !== 'undefined' && options.body instanceof FormData
 
   const res = await fetch(`${BASE_URL}${path}`, {
     ...options,
     credentials: isCookiePath ? 'include' : 'same-origin',
     headers: {
-      'Content-Type': 'application/json',
+      ...(isFormDataBody ? {} : { 'Content-Type': 'application/json' }),
       'x-request-id': crypto.randomUUID(),
       // Auth endpoints no llevan Bearer (login no tiene token aún;
       // refresh/logout usan cookie)
@@ -312,6 +314,8 @@ export const api = {
     request<T | null>(path, { method: 'GET', ...opts }, false, true),
   post:   <T>(path: string, body?: unknown, opts?: RequestInit) =>
     request<T>(path, { method: 'POST', body: body != null ? JSON.stringify(body) : undefined, ...opts }),
+  postForm: <T>(path: string, body: FormData, opts?: RequestInit) =>
+    request<T>(path, { method: 'POST', body, ...opts }),
   patch:  <T>(path: string, body?: unknown, opts?: RequestInit) =>
     request<T>(path, { method: 'PATCH', body: body != null ? JSON.stringify(body) : undefined, ...opts }),
   put:    <T>(path: string, body?: unknown, opts?: RequestInit) =>

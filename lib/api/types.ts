@@ -134,6 +134,24 @@ export interface CapabilitiesResponse {
   }
 }
 
+// ── Current Membership Visible Profile ───────────────────────
+
+export type CurrentMembershipVisibleProfile = {
+  organizationId: string
+  membershipId: string
+  userId: string
+  displayName: string
+  firstName: string | null
+  lastName: string | null
+  email: string | null
+  avatarUrl: string | null
+  roleLabel: string | null
+}
+
+export type AvatarResponseDto = {
+  avatarUrl: string | null
+}
+
 // ── Branch ───────────────────────────────────────────────────
 
 export interface BranchPublicSurface {
