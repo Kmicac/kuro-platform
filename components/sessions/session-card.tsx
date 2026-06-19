@@ -1,11 +1,12 @@
 'use client'
 
 import { useFormatter } from 'next-intl'
-import { Clock, Users } from 'lucide-react'
+import { Users } from 'lucide-react'
 import {
   ClassTypeChip,
   SessionStatusBadge,
 } from '@/components/kuro'
+import { PersonAvatar } from '@/components/common/person-avatar'
 import type {
   CalendarItem,
   ClassSessionListItem,
@@ -104,7 +105,13 @@ export function SessionCard({
           )}
           {v.instructorName && (
             <span className="inline-flex items-center gap-1 truncate">
-              <Clock className="h-3 w-3" />
+              <PersonAvatar
+                avatarUrl={v.instructorAvatarUrl}
+                displayName={v.instructorName}
+                firstName={v.instructorFirstName}
+                lastName={v.instructorLastName}
+                size="xs"
+              />
               {v.instructorName}
             </span>
           )}
@@ -129,6 +136,9 @@ interface NormalizedSession {
   status: ClassSessionStatus | string
   capacity?: { max?: number; enrolled?: number }
   instructorName?: string
+  instructorFirstName?: string
+  instructorLastName?: string
+  instructorAvatarUrl?: string | null
 }
 
 function normalize(
@@ -137,11 +147,8 @@ function normalize(
   // CalendarItem tiene `type === 'CLASS_SESSION' | 'ACADEMY_EVENT'`
   // y `classSession: { classType, capacity, ... } | null`.
   if ('type' in s && 'classSession' in s) {
-    const calendarItem = s as CalendarItem
-    const inst = calendarItem.instructor as
-      | { firstName?: string; lastName?: string; fullName?: string }
-      | null
-      | undefined
+    const calendarItem = s
+    const inst = calendarItem.instructor
     return {
       id: calendarItem.id,
       title: calendarItem.title,
@@ -153,8 +160,13 @@ function normalize(
         ? { max: calendarItem.classSession.capacity }
         : undefined,
       instructorName: inst
-        ? inst.fullName ?? joinName(inst.firstName, inst.lastName)
+        ? inst.displayName ??
+          inst.fullName ??
+          joinName(inst.firstName, inst.lastName)
         : undefined,
+      instructorFirstName: inst?.firstName,
+      instructorLastName: inst?.lastName,
+      instructorAvatarUrl: inst?.avatarUrl,
     }
   }
 
@@ -172,6 +184,9 @@ function normalize(
     instructorName: inst
       ? inst.displayName ?? joinName(inst.firstName, inst.lastName)
       : undefined,
+    instructorFirstName: inst?.firstName,
+    instructorLastName: inst?.lastName,
+    instructorAvatarUrl: inst?.avatarUrl,
   }
 }
 

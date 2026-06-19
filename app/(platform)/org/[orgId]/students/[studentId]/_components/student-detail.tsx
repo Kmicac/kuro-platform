@@ -22,6 +22,7 @@ import {
 import { ApiError } from '@/lib/api/client'
 import { usePromotionRankResolver, useStudent } from '@/lib/hooks'
 import { BeltBadge, StatusBadge } from '@/components/kuro'
+import { PersonAvatar } from '@/components/common/person-avatar'
 import { ErrorState, PageHeader } from '@/components/shared'
 import type { StudentDetail as StudentDetailType } from '@/lib/api/types'
 import { cn } from '@/lib/utils'
@@ -123,7 +124,6 @@ function Header({
   const tn = useTranslations('navigation')
   const tTrack = useTranslations('students.track')
   const fullName = `${student.firstName} ${student.lastName}`.trim()
-  const initials = `${student.firstName[0] ?? ''}${student.lastName[0] ?? ''}`
   const branchName = primaryBranchName(student)
 
   const breadcrumbs = [
@@ -159,7 +159,13 @@ function Header({
       }
       meta={
         <div className="flex items-center gap-3 flex-wrap">
-          <BigAvatar initials={initials} />
+          <PersonAvatar
+            avatarUrl={student.avatarUrl}
+            firstName={student.firstName}
+            lastName={student.lastName}
+            displayName={fullName}
+            size="lg"
+          />
           <div className="flex items-center gap-2 flex-wrap">
             <StatusBadge status={student.status} />
             <BeltBadge
@@ -170,22 +176,6 @@ function Header({
         </div>
       }
     />
-  )
-}
-
-function BigAvatar({ initials }: { initials: string }) {
-  return (
-    <span
-      className="w-14 h-14 rounded-full flex items-center justify-center text-base font-bold flex-shrink-0"
-      style={{
-        background: 'color-mix(in srgb, var(--primary) 14%, transparent)',
-        color: 'var(--primary)',
-        border:
-          '0.5px solid color-mix(in srgb, var(--primary) 30%, transparent)',
-      }}
-    >
-      {initials.toUpperCase() || '—'}
-    </span>
   )
 }
 

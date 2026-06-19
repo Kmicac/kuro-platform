@@ -21,6 +21,7 @@ import {
   useClassTypeLabel,
 } from '@/components/kuro'
 import { PageHeader } from '@/components/shared'
+import { PersonAvatar } from '@/components/common/person-avatar'
 import { SessionDialog } from '@/components/sessions/session-dialog'
 import { CancelSessionDialog } from '@/components/sessions/cancel-session-dialog'
 import { SuggestAttendanceDialog } from '@/components/attendance/suggest-attendance-dialog'
@@ -97,14 +98,24 @@ export function SessionDetailHeader({
             <span className="inline-flex items-center gap-1.5">
               {t('header.instructor')}:{' '}
               {instructor ? (
-                <>
-                  {instructor.firstName} {instructor.lastName}
+                <span className="inline-flex items-center gap-1.5">
+                  <PersonAvatar
+                    avatarUrl={instructor.avatarUrl}
+                    firstName={instructor.firstName}
+                    lastName={instructor.lastName}
+                    size="xs"
+                    className="h-5 w-5"
+                    fallbackClassName="text-[8px]"
+                  />
+                  <span>
+                    {instructor.firstName} {instructor.lastName}
+                  </span>
                   <BeltBadge
                     rank={instructor.primaryBelt}
                     size="sm"
                     showLabel={false}
                   />
-                </>
+                </span>
               ) : (
                 <span className="text-[var(--text-tertiary)]">
                   {t('header.noInstructor')}

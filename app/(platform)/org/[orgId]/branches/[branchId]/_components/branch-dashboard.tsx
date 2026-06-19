@@ -28,6 +28,7 @@ import {
   PageHeader,
 } from '@/components/shared'
 import { StatusBadge } from '@/components/kuro'
+import { PersonAvatar } from '@/components/common/person-avatar'
 import { ApiError } from '@/lib/api/client'
 import {
   useActionSummary,
@@ -38,6 +39,7 @@ import {
 import type {
   BranchActionSummary,
   CalendarItem,
+  CalendarInstructor,
   RiskItem,
 } from '@/lib/api/types'
 
@@ -343,32 +345,49 @@ function AgendaCard({
         }
       >
         <ul className="space-y-2">
-          {items.map((it) => (
-            <li
-              key={it.id}
-              className="flex items-start gap-3 rounded-lg border border-border bg-card p-3"
-            >
-              <div className="flex flex-col items-center min-w-[44px]">
-                <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                  {formatTime(it.startAt)}
-                </span>
-                {it.endAt && (
-                  <span className="text-[10px] text-muted-foreground/70 mt-0.5">
-                    {formatTime(it.endAt)}
+          {items.map((it) => {
+            const instructor = instructorPerson(it)
+            const name = instructorName(it)
+            return (
+              <li
+                key={it.id}
+                className="flex items-start gap-3 rounded-lg border border-border bg-card p-3"
+              >
+                <div className="flex flex-col items-center min-w-[44px]">
+                  <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                    {formatTime(it.startAt)}
                   </span>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">
-                  {it.title}
-                </p>
-                <p className="text-xs text-muted-foreground truncate">
-                  {instructorName(it) ?? t('agenda.instructorUnassigned')}
-                </p>
-              </div>
-              <SessionStatusBadge status={it.status} />
-            </li>
-          ))}
+                  {it.endAt && (
+                    <span className="text-[10px] text-muted-foreground/70 mt-0.5">
+                      {formatTime(it.endAt)}
+                    </span>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">
+                    {it.title}
+                  </p>
+                  {name ? (
+                    <p className="inline-flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+                      <PersonAvatar
+                        avatarUrl={instructor?.avatarUrl}
+                        displayName={name}
+                        firstName={instructor?.firstName}
+                        lastName={instructor?.lastName}
+                        size="xs"
+                      />
+                      <span className="truncate">{name}</span>
+                    </p>
+                  ) : (
+                    <p className="truncate text-xs text-muted-foreground">
+                      {t('agenda.instructorUnassigned')}
+                    </p>
+                  )}
+                </div>
+                <SessionStatusBadge status={it.status} />
+              </li>
+            )
+          })}
         </ul>
       </SectionStateWrapper>
     </SectionCard>
@@ -595,9 +614,18 @@ function RiskRosterCard({
                   <td className="py-2.5">
                     <Link
                       href={`/org/${orgId}/students/${item.studentId}`}
-                      className="font-medium text-foreground hover:text-primary"
+                      className="inline-flex min-w-0 items-center gap-2 font-medium text-foreground hover:text-primary"
                     >
-                      {`${item.firstName} ${item.lastName}`.trim()}
+                      <PersonAvatar
+                        avatarUrl={item.avatarUrl}
+                        firstName={item.firstName}
+                        lastName={item.lastName}
+                        displayName={`${item.firstName} ${item.lastName}`.trim()}
+                        size="xs"
+                      />
+                      <span className="truncate">
+                        {`${item.firstName} ${item.lastName}`.trim()}
+                      </span>
                     </Link>
                   </td>
                   <td className="py-2.5">
@@ -804,22 +832,20 @@ function SectionStateWrapper({
 
 // ── Helpers ────────────────────────────────────────────────
 
+function instructorPerson(item: CalendarItem): CalendarInstructor | undefined {
+  return item.instructor ?? undefined
+}
+
 function instructorName(item: CalendarItem): string | undefined {
-  const inst = item.instructor as
-    | { fullName?: string; firstName?: string; lastName?: string }
-    | null
-    | undefined
+  const inst = instructorPerson(item)
   if (!inst) return undefined
+  if (inst.displayName) return inst.displayName
   if (inst.fullName) return inst.fullName
   const full = [inst.firstName, inst.lastName].filter(Boolean).join(' ').trim()
   return full || undefined
 }
 
 function instructorId(item: CalendarItem): string | undefined {
-  const inst = item.instructor as
-    | { id?: string; membershipId?: string }
-    | null
-    | undefined
+  const inst = instructorPerson(item)
   return inst?.id ?? inst?.membershipId
 }
-

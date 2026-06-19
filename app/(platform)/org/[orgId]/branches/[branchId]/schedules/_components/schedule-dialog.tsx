@@ -48,6 +48,7 @@ import {
 } from '@/components/ui/select'
 import { TimePicker } from '@/components/ui/time-picker'
 import { ClassTypeChip } from '@/components/kuro'
+import { PersonAvatar } from '@/components/common/person-avatar'
 import { ApiError } from '@/lib/api/client'
 import {
   useBranchInstructorCandidates,
@@ -356,7 +357,20 @@ export function ScheduleDialog(props: ScheduleDialogProps) {
                                 key={c.membershipId}
                                 value={c.membershipId}
                               >
-                                {c.displayName}
+                                <span className="inline-flex min-w-0 items-center gap-2">
+                                  <PersonAvatar
+                                    avatarUrl={
+                                      c.avatarUrl ?? c.user?.avatarUrl
+                                    }
+                                    displayName={c.displayName}
+                                    firstName={c.user?.firstName}
+                                    lastName={c.user?.lastName}
+                                    size="xs"
+                                  />
+                                  <span className="truncate">
+                                    {c.displayName}
+                                  </span>
+                                </span>
                               </SelectItem>
                             ))}
                           </SelectContent>

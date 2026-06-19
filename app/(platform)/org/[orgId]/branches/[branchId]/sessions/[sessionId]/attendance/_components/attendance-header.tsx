@@ -9,6 +9,7 @@ import {
   ClassTypeChip,
   SessionStatusBadge,
 } from '@/components/kuro'
+import { PersonAvatar } from '@/components/common/person-avatar'
 import { PageHeader } from '@/components/shared'
 import type { ClassSessionDetail } from '@/lib/api/types'
 
@@ -52,7 +53,15 @@ export function AttendanceHeader({
           </span>
           {instructorName && (
             <span className="inline-flex items-center gap-1.5">
-              {t('header.instructor')}: {instructorName}
+              {t('header.instructor')}:
+              <PersonAvatar
+                avatarUrl={instructor?.avatarUrl}
+                firstName={instructor?.firstName}
+                lastName={instructor?.lastName}
+                displayName={instructorName}
+                size="xs"
+              />
+              {instructorName}
               <BeltBadge
                 rank={instructor?.primaryBelt ?? null}
                 size="sm"

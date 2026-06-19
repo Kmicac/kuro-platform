@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { ClassTypeChip } from '@/components/kuro'
+import { PersonAvatar } from '@/components/common/person-avatar'
 import { useUpdateSchedule } from '@/lib/hooks'
 import { ApiError } from '@/lib/api/client'
 import { notifyError, notifySuccess } from '@/lib/utils/toast'
@@ -44,6 +45,7 @@ export function ScheduleCard({
   const instructorName = schedule.instructorMembership?.user
     ? `${schedule.instructorMembership.user.firstName} ${schedule.instructorMembership.user.lastName}`
     : null
+  const instructor = schedule.instructorMembership?.user
 
   const handleActivate = () => {
     update.mutate(
@@ -84,12 +86,27 @@ export function ScheduleCard({
             </Badge>
           )}
         </div>
-        <div className="mt-0.5 truncate text-xs text-muted-foreground">
-          {instructorName ?? t('noInstructor')}
-          {' · '}
-          {schedule.capacity != null
-            ? t('capacityCount', { count: schedule.capacity })
-            : t('noCapacity')}
+        <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+          {instructorName && instructor ? (
+            <span className="inline-flex min-w-0 items-center gap-1.5 truncate">
+              <PersonAvatar
+                avatarUrl={instructor.avatarUrl}
+                firstName={instructor.firstName}
+                lastName={instructor.lastName}
+                displayName={instructorName}
+                size="xs"
+              />
+              <span className="truncate">{instructorName}</span>
+            </span>
+          ) : (
+            <span className="truncate">{t('noInstructor')}</span>
+          )}
+          <span aria-hidden>·</span>
+          <span className="truncate">
+            {schedule.capacity != null
+              ? t('capacityCount', { count: schedule.capacity })
+              : t('noCapacity')}
+          </span>
         </div>
       </div>
 

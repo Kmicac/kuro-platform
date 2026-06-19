@@ -20,6 +20,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ErrorState } from '@/components/shared'
+import { PersonAvatar } from '@/components/common/person-avatar'
 import { ApiError } from '@/lib/api/client'
 import { useCancelSuggestion, useSessionSuggestions } from '@/lib/hooks'
 import { notifyError, notifySuccess } from '@/lib/utils/toast'
@@ -167,17 +168,14 @@ function SuggestionRow({
 
   return (
     <li className="flex items-start gap-3 py-3">
-      <span
-        className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-medium"
-        style={{
-          background: 'color-mix(in srgb, var(--primary) 14%, transparent)',
-          color: 'var(--primary)',
-          border: '0.5px solid color-mix(in srgb, var(--primary) 30%, transparent)',
-        }}
-        aria-hidden
-      >
-        {initials(firstName, lastName)}
-      </span>
+      <PersonAvatar
+        avatarUrl={suggestion.student.avatarUrl}
+        firstName={firstName}
+        lastName={lastName}
+        size="sm"
+        className="mt-0.5 h-8 w-8"
+        fallbackClassName="text-[10px]"
+      />
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
@@ -288,10 +286,6 @@ function safeDate(format: Formatter, iso: string): string {
   } catch {
     return '—'
   }
-}
-
-function initials(first: string, last: string): string {
-  return `${first?.[0] ?? ''}${last?.[0] ?? ''}`.toUpperCase() || '—'
 }
 
 function SkeletonRows() {

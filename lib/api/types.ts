@@ -295,6 +295,7 @@ export interface RiskItem {
   studentId: string
   firstName: string
   lastName: string
+  avatarUrl?: string | null
   riskLevel: RiskLevel
   attentionCategory: AttentionCategory
   riskScore: number
@@ -356,13 +357,24 @@ export interface CalendarClassSession {
   cancellationReason: string | null
 }
 
+export interface CalendarInstructor {
+  id?: string
+  membershipId?: string
+  userId?: string
+  firstName?: string
+  lastName?: string
+  fullName?: string
+  displayName?: string
+  avatarUrl?: string | null
+}
+
 export interface CalendarItem {
   id: string
   type: CalendarItemType
   title: string
   description: string | null
   branch: CalendarItemBranch
-  instructor: Record<string, unknown>
+  instructor: CalendarInstructor | null
   classSession: CalendarClassSession | null
   startAt: string
   endAt: string
@@ -422,7 +434,12 @@ export type Weekday =
 
 export interface ClassScheduleInstructorMembership {
   id: string
-  user: { id: string; firstName: string; lastName: string }
+  user: {
+    id: string
+    firstName: string
+    lastName: string
+    avatarUrl?: string | null
+  }
 }
 
 export interface ClassSchedule {
@@ -546,6 +563,7 @@ export interface ClassSessionListItem {
     firstName?: string
     lastName?: string
     displayName?: string
+    avatarUrl?: string | null
   } | null
   cancellationReason?: string | null
 }
@@ -878,6 +896,7 @@ export interface AttendanceSuggestionStudent {
   primaryBranchId: string | null
   firstName: string
   lastName: string
+  avatarUrl?: string | null
   email: string | null
   phone: string | null
   status: string
@@ -928,6 +947,7 @@ export interface InstructorCandidate {
   membershipId: string
   userId: string
   displayName: string
+  avatarUrl?: string | null
   roles: string[]
   scopeType?: string
   branchAccess?: {
@@ -939,7 +959,12 @@ export interface InstructorCandidate {
   canBeAssignedAsInstructor: boolean
   upcomingAssignedSessionCount?: number
   status?: string
-  user?: { id: string; firstName: string; lastName: string }
+  user?: {
+    id: string
+    firstName: string
+    lastName: string
+    avatarUrl?: string | null
+  }
   effectiveRoles?: string[]
 }
 

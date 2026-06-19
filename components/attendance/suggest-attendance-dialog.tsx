@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { ErrorState } from '@/components/shared'
+import { PersonAvatar } from '@/components/common/person-avatar'
 import { ApiError } from '@/lib/api/client'
 import {
   useBranchStudents,
@@ -219,18 +220,14 @@ export function SuggestAttendanceDialog({
                         onCheckedChange={() => toggle(s)}
                         aria-label={`${s.firstName} ${s.lastName}`}
                       />
-                      <span
-                        className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold"
-                        style={{
-                          background:
-                            'color-mix(in srgb, var(--primary) 14%, transparent)',
-                          color: 'var(--primary)',
-                          border:
-                            '0.5px solid color-mix(in srgb, var(--primary) 30%, transparent)',
-                        }}
-                      >
-                        {initials(s.firstName, s.lastName)}
-                      </span>
+                      <PersonAvatar
+                        avatarUrl={s.avatarUrl}
+                        firstName={s.firstName}
+                        lastName={s.lastName}
+                        size="sm"
+                        className="h-8 w-8"
+                        fallbackClassName="text-[10px]"
+                      />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm text-foreground">
                           {s.firstName} {s.lastName}
@@ -362,8 +359,4 @@ function notifyResult(
   if (invalidStudents.length > 0 && process.env.NODE_ENV === 'development') {
     console.warn('[SUGGEST] Alumnos inválidos:', invalidStudents.length)
   }
-}
-
-function initials(first: string, last: string): string {
-  return `${first?.[0] ?? ''}${last?.[0] ?? ''}`.toUpperCase() || '—'
 }
