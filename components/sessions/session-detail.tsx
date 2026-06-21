@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useFormatter, useTranslations } from 'next-intl'
 import {
@@ -17,6 +17,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { ApiError } from '@/lib/api/client'
 import { useSession } from '@/lib/hooks/use-sessions'
+import { useSessionRoster } from '@/lib/hooks/use-attendance'
 import { useCapabilities, useCurrentContext } from '@/lib/hooks'
 import { SessionDialog } from '@/components/sessions/session-dialog'
 import { CancelSessionDialog } from '@/components/sessions/cancel-session-dialog'
@@ -41,6 +42,7 @@ import type {
   ClassSessionDetail as ClassSessionDetailType,
   ClassSessionInstructor,
   ClassSessionStatus,
+  TechnicalRosterItem,
 } from '@/lib/api/types'
 
 export interface SessionDetailProps {
@@ -53,6 +55,7 @@ export function SessionDetail({ sessionId, onClose }: SessionDetailProps) {
   const te = useTranslations('errors.session')
   const tEmpty = useTranslations('empty-states.session')
   const query = useSession(sessionId)
+  const rosterQuery = useSessionRoster(sessionId)
 
   if (query.isLoading) return <DetailSkeleton />
 
@@ -110,6 +113,9 @@ export function SessionDetail({ sessionId, onClose }: SessionDetailProps) {
         <CapacitySection capacity={session.capacity} />
         <AttendanceSection
           attendance={session.attendance}
+          capacity={session.capacity}
+          rosterItems={rosterQuery.data?.items}
+          isRosterLoading={rosterQuery.isLoading}
           status={session.status}
         />
         {session.notes && <NotesSection notes={session.notes} />}
@@ -258,14 +264,63 @@ function CapacitySection({ capacity }: { capacity: ClassSessionCapacity }) {
 
 function AttendanceSection({
   attendance,
+  capacity,
+  rosterItems,
+  isRosterLoading,
   status,
 }: {
   attendance: ClassSessionAttendanceCounts
+  capacity: ClassSessionCapacity
+  rosterItems?: TechnicalRosterItem[]
+  isRosterLoading: boolean
   status: ClassSessionStatus
 }) {
   const t = useTranslations('calendar.session.attendance')
+  const fallbackCheckedIn = attendance.present + attendance.late
+  const fallbackRecordCount =
+    attendance.present + attendance.late + attendance.absent + attendance.excused
 
-  if (status !== 'COMPLETED') {
+  const rosterSummary = useMemo(() => {
+    if (!rosterItems) return null
+    const counts = rosterItems.reduce(
+      (acc, item) => {
+        const status = item.attendance?.status
+        if (status === 'PRESENT') acc.present += 1
+        if (status === 'LATE') acc.late += 1
+        if (status === 'ABSENT') acc.absent += 1
+        if (status === 'EXCUSED') acc.excused += 1
+        return acc
+      },
+      { present: 0, late: 0, absent: 0, excused: 0 },
+    )
+    return {
+      ...counts,
+      checkedIn: counts.present + counts.late,
+      hasRecords: rosterItems.some((item) => item.attendance != null),
+    }
+  }, [rosterItems])
+
+  const checkedIn = rosterSummary?.checkedIn ?? fallbackCheckedIn
+  const hasRecords = rosterSummary?.hasRecords ?? fallbackRecordCount > 0
+  const counts = {
+    present: rosterSummary?.present ?? attendance.present,
+    late: rosterSummary?.late ?? attendance.late,
+    absent: rosterSummary?.absent ?? attendance.absent,
+    excused: rosterSummary?.excused ?? attendance.excused,
+    expected: attendance.expected,
+  }
+
+  if (isRosterLoading && !rosterSummary && fallbackRecordCount === 0) {
+    return (
+      <Section label={t('title')}>
+        <p className="text-sm text-[var(--text-tertiary)]">
+          {t('loading')}
+        </p>
+      </Section>
+    )
+  }
+
+  if (!hasRecords) {
     return (
       <Section label={t('title')}>
         <p className="text-sm text-[var(--text-tertiary)]">
@@ -277,15 +332,29 @@ function AttendanceSection({
 
   // Lista vertical, sin colores por estado (solo tipografía + posición).
   const rows: { label: string; value: number }[] = [
-    { label: t('present'), value: attendance.present },
-    { label: t('late'), value: attendance.late },
-    { label: t('absent'), value: attendance.absent },
-    { label: t('excused'), value: attendance.excused },
-    { label: t('expected'), value: attendance.expected },
+    { label: t('checkedIn'), value: checkedIn },
+    { label: t('present'), value: counts.present },
+    { label: t('late'), value: counts.late },
+    { label: t('absent'), value: counts.absent },
+    { label: t('excused'), value: counts.excused },
+    { label: t('expected'), value: counts.expected },
   ]
 
   return (
     <Section label={t('title')}>
+      <div className="mb-3 rounded-lg border border-primary/30 bg-primary/10 p-3">
+        <p className="text-sm font-medium text-foreground">
+          {t('checkedInSummary', {
+            checkedIn,
+            total: capacity.max,
+          })}
+        </p>
+        {status !== 'COMPLETED' && (
+          <p className="mt-1 text-xs text-muted-foreground">
+            {t('inProgressHint')}
+          </p>
+        )}
+      </div>
       <div>
         {rows.map((row) => (
           <div

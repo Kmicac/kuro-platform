@@ -163,6 +163,10 @@
       "absent": "Ausentes",
       "excused": "Justificados",
       "late": "Tarde",
+      "checkedIn": "Check-in",
+      "checkedInSummary": "{checkedIn} / {total} alumnos con check-in",
+      "inProgressHint": "La clase aún no está completada; este resumen refleja los registros actuales.",
+      "loading": "Cargando asistencia...",
       "notRecorded": "Asistencia aún no registrada."
     },
     "actions": {
