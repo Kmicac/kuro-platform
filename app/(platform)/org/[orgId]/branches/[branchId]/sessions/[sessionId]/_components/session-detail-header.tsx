@@ -10,6 +10,7 @@ import {
   ClipboardCheck,
   Clock,
   Pencil,
+  QrCode,
   Send,
 } from 'lucide-react'
 
@@ -74,6 +75,10 @@ export function SessionDetailHeader({
   const goToAttendance = () =>
     router.push(
       `/org/${orgId}/branches/${sessionBranchId}/sessions/${session.id}/attendance`,
+    )
+  const goToQr = () =>
+    router.push(
+      `/org/${orgId}/branches/${sessionBranchId}/sessions/${session.id}/qr`,
     )
 
   return (
@@ -148,6 +153,18 @@ export function SessionDetailHeader({
           >
             <ClipboardCheck className="h-3.5 w-3.5" />
             {t('actions.markAttendance')}
+          </Button>
+        )}
+        {canValidate && (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isCanceled}
+            title={isCanceled ? t('actions.notAvailableForStatus') : undefined}
+            onClick={goToQr}
+          >
+            <QrCode className="h-3.5 w-3.5" />
+            {t('actions.generateQr')}
           </Button>
         )}
         {canSuggest && (

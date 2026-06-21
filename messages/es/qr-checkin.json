@@ -49,21 +49,60 @@
     "available": "{count} cupos disponibles",
     "occupied": "{percent}% ocupado"
   },
+  "freshness": {
+    "updatedAt": "Última actualización: {time}",
+    "notLoaded": "Roster pendiente de actualización",
+    "refresh": "Actualizar",
+    "refreshing": "Actualizando..."
+  },
   "roster": {
     "title": "Alumnos registrados",
     "showing": "Mostrando {showing} de {total}",
-    "empty": "Sin alumnos registrados",
+    "empty": {
+      "title": "Sin alumnos registrados",
+      "description": "Esta clase todavía no tiene alumnos registrados para mostrar en el roster QR."
+    },
+    "emptySearch": {
+      "title": "Sin resultados",
+      "description": "No encontramos alumnos que coincidan con la búsqueda."
+    },
+    "emptyFilter": {
+      "title": "Sin alumnos en este estado",
+      "description": "Cambia el filtro para ver otros estados del roster."
+    },
     "loadError": "No se pudo cargar el roster",
+    "counts": {
+      "registered": "Registrados",
+      "checkedIn": "Con check-in",
+      "present": "Presentes",
+      "late": "Tarde",
+      "absent": "Ausentes",
+      "excused": "Justificados",
+      "pending": "Pendientes"
+    },
     "filter": {
       "all": "Todos",
-      "checkedIn": "Check-in",
-      "expected": "Esperados"
+      "checkedIn": "Con check-in",
+      "pending": "Pendientes",
+      "PRESENT": "Presentes",
+      "LATE": "Tarde",
+      "ABSENT": "Ausentes",
+      "EXCUSED": "Justificados"
+    },
+    "registration": {
+      "registered": "Registrado",
+      "walkIn": "Sin inscripción"
     },
     "search": "Buscar alumno..."
   },
   "status": {
     "checkedIn": "Check-in",
-    "expected": "Esperado"
+    "expected": "Esperado",
+    "pending": "Pendiente",
+    "PRESENT": "Presente",
+    "LATE": "Tarde",
+    "ABSENT": "Ausente",
+    "EXCUSED": "Justificado"
   },
   "errors": {
     "generationFailed": "No se pudo generar el QR. Intenta de nuevo.",

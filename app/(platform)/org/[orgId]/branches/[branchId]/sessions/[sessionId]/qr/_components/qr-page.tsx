@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useTranslations } from 'next-intl'
-import { ArrowLeft, CalendarDays } from 'lucide-react'
+import { useFormatter, useTranslations } from 'next-intl'
+import { ArrowLeft, CalendarDays, RefreshCw } from 'lucide-react'
 
 import { ApiError } from '@/lib/api/client'
 import { parseQRError, type QRErrorInfo } from '@/lib/api/error-parsers'
@@ -37,6 +37,7 @@ const ROSTER_POLL_MS = 30_000
 
 export function QRPage({ orgId, branchId, sessionId }: QRPageProps) {
   const t = useTranslations('qr-checkin')
+  const format = useFormatter()
   const router = useRouter()
 
   const sessionQuery = useSession(sessionId)
@@ -162,6 +163,12 @@ export function QRPage({ orgId, branchId, sessionId }: QRPageProps) {
         </div>
 
         {/* ÁREA 3 — Roster de alumnos */}
+        <FreshnessBar
+          updatedAt={rosterQuery.dataUpdatedAt}
+          isFetching={rosterQuery.isFetching}
+          onRefresh={() => rosterQuery.refetch()}
+          format={format}
+        />
         <QRRosterPreview
           items={rosterItems}
           isLoading={rosterQuery.isLoading}
@@ -172,6 +179,43 @@ export function QRPage({ orgId, branchId, sessionId }: QRPageProps) {
         />
       </div>
     </FullscreenShell>
+  )
+}
+
+function FreshnessBar({
+  updatedAt,
+  isFetching,
+  onRefresh,
+  format,
+}: {
+  updatedAt: number
+  isFetching: boolean
+  onRefresh: () => void
+  format: ReturnType<typeof useFormatter>
+}) {
+  const t = useTranslations('qr-checkin.freshness')
+  const hasUpdatedAt = updatedAt > 0
+  const label = hasUpdatedAt
+    ? t('updatedAt', { time: safeTime(format, updatedAt) })
+    : t('notLoaded')
+
+  return (
+    <div className="-mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card/70 px-4 py-3">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={onRefresh}
+        disabled={isFetching}
+        aria-label={isFetching ? t('refreshing') : t('refresh')}
+      >
+        <RefreshCw
+          className={isFetching ? 'h-3.5 w-3.5 animate-spin' : 'h-3.5 w-3.5'}
+        />
+        {isFetching ? t('refreshing') : t('refresh')}
+      </Button>
+    </div>
   )
 }
 
@@ -231,4 +275,16 @@ function QRSkeleton() {
       </div>
     </div>
   )
+}
+
+function safeTime(format: ReturnType<typeof useFormatter>, value: number) {
+  try {
+    return format.dateTime(new Date(value), {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    })
+  } catch {
+    return '—'
+  }
 }

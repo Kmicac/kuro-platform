@@ -2,18 +2,32 @@
 
 import { useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { CheckCircle2, Circle, Search } from 'lucide-react'
+import {
+  CheckCircle2,
+  Circle,
+  Clock3,
+  Search,
+  ShieldCheck,
+  XCircle,
+} from 'lucide-react'
 
 import { PersonAvatar } from '@/components/common/person-avatar'
 import { Input } from '@/components/ui/input'
 import { BeltBadge } from '@/components/kuro'
-import { ErrorState } from '@/components/shared'
+import { EmptyState, ErrorState } from '@/components/shared'
 import { cn } from '@/lib/utils'
-import type { TechnicalRosterItem } from '@/lib/api/types'
+import type { AttendanceStatus, TechnicalRosterItem } from '@/lib/api/types'
 import { isCheckedInAttendanceStatus } from '@/lib/attendance/attendance-status'
 import type { usePromotionRankResolver } from '@/lib/hooks/use-catalogs'
 
-type RosterFilter = 'all' | 'checkedIn' | 'expected'
+type RosterFilter =
+  | 'all'
+  | 'checkedIn'
+  | 'pending'
+  | 'PRESENT'
+  | 'LATE'
+  | 'ABSENT'
+  | 'EXCUSED'
 
 export interface QRRosterPreviewProps {
   items: TechnicalRosterItem[]
@@ -24,7 +38,15 @@ export interface QRRosterPreviewProps {
   resolveRank: ReturnType<typeof usePromotionRankResolver>
 }
 
-const FILTERS: RosterFilter[] = ['all', 'checkedIn', 'expected']
+const FILTERS: RosterFilter[] = [
+  'all',
+  'checkedIn',
+  'pending',
+  'PRESENT',
+  'LATE',
+  'ABSENT',
+  'EXCUSED',
+]
 
 export function QRRosterPreview({
   items,
@@ -35,10 +57,11 @@ export function QRRosterPreview({
   resolveRank,
 }: QRRosterPreviewProps) {
   const t = useTranslations('qr-checkin.roster')
-  const tStatus = useTranslations('qr-checkin.status')
 
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<RosterFilter>('all')
+
+  const counts = useMemo(() => getRosterCounts(items), [items])
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -47,9 +70,10 @@ export function QRRosterPreview({
         const name = `${it.student.firstName} ${it.student.lastName}`.toLowerCase()
         if (!name.includes(q)) return false
       }
-      const checkedIn = isCheckedInAttendanceStatus(it.attendance?.status)
-      if (filter === 'checkedIn') return checkedIn
-      if (filter === 'expected') return !checkedIn
+      const status = it.attendance?.status ?? null
+      if (filter === 'checkedIn') return isCheckedInAttendanceStatus(status)
+      if (filter === 'pending') return status == null
+      if (filter !== 'all') return status === filter
       return true
     })
   }, [items, search, filter])
@@ -61,6 +85,19 @@ export function QRRosterPreview({
         <span className="text-xs tabular-nums text-muted-foreground">
           {t('showing', { showing: filtered.length, total: items.length })}
         </span>
+      </div>
+
+      <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-7">
+        <RosterCounter
+          label={t('counts.registered')}
+          value={counts.registered}
+        />
+        <RosterCounter label={t('counts.checkedIn')} value={counts.checkedIn} />
+        <RosterCounter label={t('counts.present')} value={counts.present} />
+        <RosterCounter label={t('counts.late')} value={counts.late} />
+        <RosterCounter label={t('counts.absent')} value={counts.absent} />
+        <RosterCounter label={t('counts.excused')} value={counts.excused} />
+        <RosterCounter label={t('counts.pending')} value={counts.pending} />
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -111,16 +148,27 @@ export function QRRosterPreview({
             <div key={i} className="h-16 animate-pulse rounded-lg bg-muted/50" />
           ))}
         </div>
+      ) : items.length === 0 ? (
+        <EmptyState
+          icon={Circle}
+          title={t('empty.title')}
+          description={t('empty.description')}
+        />
       ) : filtered.length === 0 ? (
-        <p className="py-8 text-center text-sm text-muted-foreground">
-          {t('empty')}
-        </p>
+        <div className="rounded-lg border border-border bg-card px-4 py-8 text-center">
+          <p className="text-sm font-medium text-foreground">
+            {search.trim() ? t('emptySearch.title') : t('emptyFilter.title')}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {search.trim()
+              ? t('emptySearch.description')
+              : t('emptyFilter.description')}
+          </p>
+        </div>
       ) : (
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((it) => {
-            const checkedIn = isCheckedInAttendanceStatus(
-              it.attendance?.status,
-            )
+            const status = it.attendance?.status ?? null
             return (
               <div
                 key={it.studentId}
@@ -138,34 +186,101 @@ export function QRRosterPreview({
                   <p className="truncate text-sm text-foreground">
                     {it.student.firstName} {it.student.lastName}
                   </p>
-                  <BeltBadge
-                    rank={resolveRank(it.student.currentBelt)}
-                    stripes={it.student.currentStripes}
-                    size="sm"
-                    showLabel={false}
-                    className="mt-1"
-                  />
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <BeltBadge
+                      rank={resolveRank(it.student.currentBelt)}
+                      stripes={it.student.currentStripes}
+                      size="sm"
+                      showLabel={false}
+                    />
+                    <span className="text-[10px] text-[var(--text-tertiary)]">
+                      {it.intent
+                        ? t('registration.registered')
+                        : t('registration.walkIn')}
+                    </span>
+                  </div>
                 </div>
-                <span
-                  className={cn(
-                    'inline-flex items-center gap-1 text-xs',
-                    checkedIn
-                      ? 'text-[var(--kuro-success)]'
-                      : 'text-[var(--text-tertiary)]',
-                  )}
-                >
-                  {checkedIn ? (
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                  ) : (
-                    <Circle className="h-3.5 w-3.5" />
-                  )}
-                  {checkedIn ? tStatus('checkedIn') : tStatus('expected')}
-                </span>
+                <RosterStatusBadge status={status} />
               </div>
             )
           })}
         </div>
       )}
     </section>
+  )
+}
+
+function RosterCounter({
+  label,
+  value,
+}: {
+  label: string
+  value: number
+}) {
+  return (
+    <div className="rounded-lg border border-border bg-card px-3 py-2">
+      <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+        {label}
+      </p>
+      <p className="mt-1 text-lg font-medium tabular-nums text-foreground">
+        {value}
+      </p>
+    </div>
+  )
+}
+
+function RosterStatusBadge({ status }: { status: AttendanceStatus | null }) {
+  const t = useTranslations('qr-checkin.status')
+  const checkedIn = isCheckedInAttendanceStatus(status)
+  const Icon =
+    status === 'PRESENT'
+      ? CheckCircle2
+      : status === 'LATE'
+        ? Clock3
+        : status === 'ABSENT'
+          ? XCircle
+          : status === 'EXCUSED'
+            ? ShieldCheck
+            : Circle
+
+  return (
+    <span
+      className={cn(
+        'inline-flex h-7 shrink-0 items-center gap-1.5 rounded border px-2 text-xs font-medium',
+        checkedIn
+          ? 'border-primary/40 bg-primary/10 text-foreground'
+          : status === 'ABSENT' || status === 'EXCUSED'
+            ? 'border-amber-500/35 bg-amber-500/10 text-foreground'
+            : 'border-border text-[var(--text-tertiary)]',
+      )}
+    >
+      <Icon className="h-3.5 w-3.5" />
+      {status ? t(status) : t('pending')}
+    </span>
+  )
+}
+
+function getRosterCounts(items: TechnicalRosterItem[]) {
+  return items.reduce(
+    (acc, item) => {
+      const status = item.attendance?.status ?? null
+      if (item.intent) acc.registered += 1
+      if (status === 'PRESENT') acc.present += 1
+      if (status === 'LATE') acc.late += 1
+      if (status === 'ABSENT') acc.absent += 1
+      if (status === 'EXCUSED') acc.excused += 1
+      if (status == null) acc.pending += 1
+      if (isCheckedInAttendanceStatus(status)) acc.checkedIn += 1
+      return acc
+    },
+    {
+      registered: 0,
+      checkedIn: 0,
+      present: 0,
+      late: 0,
+      absent: 0,
+      excused: 0,
+      pending: 0,
+    },
   )
 }
