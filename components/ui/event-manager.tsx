@@ -15,8 +15,8 @@
 //
 // KURO custom: en la vista MONTH (componente MonthView) las celdas de meses
 // adyacentes se atenúan (número en text-muted-foreground/60 y eventos en
-// opacity-60), tipo Google Calendar. Es el único cambio visual custom sobre
-// el upstream; mantenerlo al actualizar el componente vendored.
+// opacity-60), tipo Google Calendar. En WEEK se usa semana lunes-domingo para
+// coincidir con TrainingCalendar y el backend class-calendar.
 import { useCallback, useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import {
@@ -210,6 +210,15 @@ function formatGroupedDate(d: Date) {
 }
 function formatTime(d: Date) {
   return d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
+}
+
+function startOfISOWeek(d: Date) {
+  const start = new Date(d)
+  start.setHours(0, 0, 0, 0)
+  const day = start.getDay()
+  const diff = (day + 6) % 7
+  start.setDate(start.getDate() - diff)
+  return start
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -1577,8 +1586,7 @@ function WeekView({
   onShowList: () => void
 }) {
   const t = useTranslations('calendar.grid')
-  const startOfWeek = new Date(currentDate)
-  startOfWeek.setDate(currentDate.getDate() - currentDate.getDay())
+  const startOfWeek = startOfISOWeek(currentDate)
 
   const weekDays = Array.from({ length: 7 }, (_, i) => {
     const day = new Date(startOfWeek)

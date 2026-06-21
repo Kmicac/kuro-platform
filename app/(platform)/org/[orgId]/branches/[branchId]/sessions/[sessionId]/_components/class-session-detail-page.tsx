@@ -16,6 +16,7 @@ import {
 import { usePromotionRankResolver } from '@/lib/hooks/use-catalogs'
 import { ErrorState, ForbiddenState, EmptyState } from '@/components/shared'
 import { notifyError, notifySuccess } from '@/lib/utils/toast'
+import { isCheckedInAttendanceStatus } from '@/lib/attendance/attendance-status'
 import type { AttendanceStatus, TechnicalRosterItem } from '@/lib/api/types'
 
 import { SessionDetailHeader } from './session-detail-header'
@@ -69,9 +70,7 @@ export function ClassSessionDetailPage({
   const checkedInCount = useMemo(
     () =>
       allItems.filter(
-        (it) =>
-          it.attendance?.status === 'PRESENT' ||
-          it.attendance?.status === 'LATE',
+        (it) => isCheckedInAttendanceStatus(it.attendance?.status),
       ).length,
     [allItems],
   )

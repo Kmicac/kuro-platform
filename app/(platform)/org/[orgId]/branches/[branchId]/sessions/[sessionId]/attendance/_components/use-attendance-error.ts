@@ -47,6 +47,14 @@ export function useAttendanceErrorHandler() {
       return
     }
 
+    if (
+      error instanceof ApiError &&
+      (error.status === 400 || error.status === 422)
+    ) {
+      notifyError(t('errors.validation'), error)
+      return
+    }
+
     const windowError = parseAttendanceWindowError(error)
     if (windowError) {
       notifyError(

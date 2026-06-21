@@ -653,6 +653,7 @@ export interface AttendanceRecord {
   studentId: string
   status: AttendanceStatus
   reasonCode: string | null
+  notes?: string | null
   source: AttendanceSource
   updatedAt: string
 }
@@ -688,6 +689,7 @@ export interface TechnicalRosterAttendance {
   recordId: string
   status: AttendanceStatus
   reasonCode: string | null
+  notes?: string | null
   source: AttendanceSource
   updatedAt: string
 }

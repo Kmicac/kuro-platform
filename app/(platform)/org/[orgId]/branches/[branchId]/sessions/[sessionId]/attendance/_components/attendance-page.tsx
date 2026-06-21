@@ -18,7 +18,11 @@ import type {
   AttendanceStatus,
   TechnicalRosterItem,
 } from '@/lib/api/types'
-import { notifySuccess } from '@/lib/utils/toast'
+import {
+  isAdministrativeAttendanceStatus,
+  isCheckedInAttendanceStatus,
+} from '@/lib/attendance/attendance-status'
+import { notifyInfo, notifySuccess } from '@/lib/utils/toast'
 
 import { AttendanceHeader } from './attendance-header'
 import { AttendanceToolbar, type AttendanceFilter } from './attendance-toolbar'
@@ -49,8 +53,8 @@ export function AttendancePage({
   const caps = useCapabilities(orgId)
   const resolveRank = usePromotionRankResolver()
 
-  const calendarHref = `/org/${orgId}/calendar`
-  const goBack = () => router.push(calendarHref)
+  const sessionDetailHref = `/org/${orgId}/branches/${branchId}/sessions/${sessionId}`
+  const goBack = () => router.push(sessionDetailHref)
 
   // ── Permission gating ──────────────────────────────────────
   const attendanceCaps = caps.data?.capabilities?.attendance
@@ -66,6 +70,9 @@ export function AttendancePage({
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<AttendanceFilter>('all')
   const [walkInOpen, setWalkInOpen] = useState(false)
+  const [pendingWalkInStudentId, setPendingWalkInStudentId] = useState<
+    string | null
+  >(null)
 
   const record = useRecordAttendance(sessionId)
 
@@ -74,8 +81,11 @@ export function AttendancePage({
     [rosterQuery.data],
   )
 
-  const markedCount = useMemo(
-    () => allItems.filter((it) => it.attendance != null).length,
+  const checkedInCount = useMemo(
+    () =>
+      allItems.filter((it) =>
+        isCheckedInAttendanceStatus(it.attendance?.status),
+      ).length,
     [allItems],
   )
 
@@ -87,14 +97,26 @@ export function AttendancePage({
         if (!name.includes(q)) return false
       }
       if (filter === 'expected') return it.intent != null
-      if (filter === 'marked') return it.attendance != null
+      if (filter === 'marked') {
+        return isCheckedInAttendanceStatus(it.attendance?.status)
+      }
       return true
     })
   }, [allItems, search, filter])
 
-  // ── Bulk: marcar todos presentes (los que aún no están PRESENT) ──
+  // ── Bulk seguro: no sobrescribe estados administrativos sin confirmación. ──
   const markAllPresent = () => {
-    const targets = allItems.filter((it) => it.attendance?.status !== 'PRESENT')
+    const administrativeCount = allItems.filter((it) =>
+      isAdministrativeAttendanceStatus(it.attendance?.status),
+    ).length
+    const targets = allItems.filter(
+      (it) =>
+        !isCheckedInAttendanceStatus(it.attendance?.status) &&
+        !isAdministrativeAttendanceStatus(it.attendance?.status),
+    )
+    if (administrativeCount > 0) {
+      notifyInfo(t('toolbar.administrativeExcluded'))
+    }
     if (targets.length === 0) return
     record.mutate(
       {
@@ -117,14 +139,19 @@ export function AttendancePage({
   // useAttendanceErrorHandler). NO confundir con "Sugerir asistencia" (Sheet),
   // que solo recomienda y no marca asistencia.
   const addWalkIn = (studentId: string) => {
+    setPendingWalkInStudentId(studentId)
     record.mutate(
       { records: [{ studentId, status: 'PRESENT' as AttendanceStatus }] },
       {
         onSuccess: () => {
           notifySuccess(t('success.walkInAdded'))
           setWalkInOpen(false)
+          setPendingWalkInStudentId(null)
         },
-        onError: handleError,
+        onError: (error) => {
+          setPendingWalkInStudentId(null)
+          handleError(error)
+        },
       },
     )
   }
@@ -252,7 +279,7 @@ export function AttendancePage({
         onSearchChange={setSearch}
         filter={filter}
         onFilterChange={setFilter}
-        markedCount={markedCount}
+        checkedInCount={checkedInCount}
         totalCount={allItems.length}
         onMarkAllPresent={markAllPresent}
         onAddWalkIn={() => setWalkInOpen(true)}
@@ -275,7 +302,10 @@ export function AttendancePage({
 
       <footer className="flex items-center justify-between border-t border-border pt-6">
         <span className="label-mono">
-          {t('toolbar.counter', { marked: markedCount, total: allItems.length })}
+          {t('toolbar.counter', {
+            checkedIn: checkedInCount,
+            total: allItems.length,
+          })}
         </span>
         <button
           type="button"
@@ -294,6 +324,7 @@ export function AttendancePage({
         rosterStudentIds={allItems.map((it) => it.studentId)}
         onSelect={addWalkIn}
         pending={record.isPending}
+        pendingStudentId={pendingWalkInStudentId}
       />
     </div>
   )

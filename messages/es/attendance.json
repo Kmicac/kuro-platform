@@ -16,11 +16,12 @@
     "filter": {
       "all": "Todos",
       "expected": "Esperados",
-      "marked": "Marcados"
+      "marked": "Con check-in"
     },
     "markAllPresent": "Marcar todos presentes",
+    "administrativeExcluded": "No se modificarán ausentes o excusados ya marcados.",
     "addWalkIn": "Agregar alumno",
-    "counter": "{marked} de {total} marcados"
+    "counter": "{checkedIn} de {total} con check-in"
   },
   "table": {
     "student": "Alumno",
@@ -29,7 +30,8 @@
     "status": "Estado",
     "actions": "Acciones",
     "expectedBadge": "Esperado",
-    "walkInBadge": "Sin inscripción"
+    "walkInBadge": "Sin inscripción",
+    "noteBadge": "Nota"
   },
   "status": {
     "PRESENT": "Presente",
@@ -37,6 +39,12 @@
     "ABSENT": "Ausente",
     "EXCUSED": "Justificado",
     "pending": "Pendiente"
+  },
+  "statusShort": {
+    "PRESENT": "P",
+    "LATE": "L",
+    "ABSENT": "A",
+    "EXCUSED": "E"
   },
   "reasonCode": {
     "INJURY": "Lesión",
@@ -53,7 +61,10 @@
     "markAbsent": "Marcar ausente",
     "markExcused": "Marcar justificado",
     "remove": "Eliminar registro",
-    "addNote": "Agregar nota"
+    "addNote": "Agregar nota de asistencia",
+    "editNote": "Ver o editar nota de asistencia",
+    "noteRequiresRecord": "Marca asistencia antes de agregar una nota",
+    "updating": "Actualizando..."
   },
   "walkIn": {
     "title": "Agregar alumno",
@@ -62,6 +73,7 @@
     "noResults": "No hay resultados",
     "noResultsQuery": "No encontramos alumnos que coincidan con \"{query}\".",
     "loadError": "No se pudo cargar el padrón",
+    "adding": "Agregando...",
     "addAsPresent": "Marcar presente"
   },
   "suggest": {
@@ -110,11 +122,13 @@
   "success": {
     "marked": "Asistencia registrada",
     "updated": "Asistencia actualizada",
+    "noteSaved": "Nota de asistencia guardada",
     "removed": "Registro eliminado",
     "walkInAdded": "Alumno agregado correctamente"
   },
   "errors": {
     "forbidden": "No tienes permiso para marcar asistencia",
+    "validation": "No se pudo actualizar la asistencia. Revisa el estado seleccionado.",
     "forbiddenTitle": "Sin acceso a la asistencia",
     "forbiddenDescription": "Tu rol no permite registrar asistencia de esta clase.",
     "loadErrorTitle": "No se pudo cargar el roster",

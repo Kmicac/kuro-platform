@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { StickyNote, Trash2 } from 'lucide-react'
+import { Loader2, StickyNote, Trash2 } from 'lucide-react'
 
 import {
   useRecordAttendance,
@@ -14,8 +14,14 @@ import { notifySuccess } from '@/lib/utils/toast'
 import { useAttendanceErrorHandler } from './use-attendance-error'
 import { BeltBadge } from '@/components/kuro'
 import { cn } from '@/lib/utils'
+import {
+  getAttendanceStatusLabelKey,
+  getAttendanceStatusTone,
+  isCheckedInAttendanceStatus,
+} from '@/lib/attendance/attendance-status'
 import type {
   AttendanceStatus,
+  UpdateAttendanceBody,
   PromotionRankCatalogEntry,
   TechnicalRosterItem,
 } from '@/lib/api/types'
@@ -53,6 +59,8 @@ export function AttendanceRow({
 
   const current = item.attendance?.status ?? null
   const hasRecord = item.attendance != null
+  const currentNotes = item.attendance?.notes ?? null
+  const hasNote = Boolean(currentNotes?.trim())
 
   const record = useRecordAttendance(sessionId)
   const update = useUpdateAttendance(item.studentId, sessionId)
@@ -64,7 +72,7 @@ export function AttendanceRow({
   const setStatus = (status: AttendanceStatus) => {
     if (hasRecord) {
       update.mutate(
-        { status, correctionReasonCode: 'STATUS_CORRECTION' },
+        buildStatusCorrectionBody(status),
         {
           onSuccess: () => notifySuccess(t('success.updated')),
           onError: handleError,
@@ -72,7 +80,7 @@ export function AttendanceRow({
       )
     } else {
       record.mutate(
-        { records: [{ studentId: item.studentId, status }] },
+        { records: [buildStatusRecord(item.studentId, status)] },
         {
           onSuccess: () => notifySuccess(t('success.marked')),
           onError: handleError,
@@ -91,6 +99,12 @@ export function AttendanceRow({
   // Si ya hay un registro y NO puede corregir, los toggles se deshabilitan
   // (solo podría registrar nuevos, no cambiar existentes).
   const toggleDisabled = disabled || anyPending || (hasRecord && !canCorrect)
+  const noteDisabled = disabled || anyPending || !hasRecord
+  const noteActionLabel = !hasRecord
+    ? t('actions.noteRequiresRecord')
+    : hasNote
+      ? t('actions.editNote')
+      : t('actions.addNote')
 
   return (
     <li className="flex flex-col gap-3 px-4 py-3 sm:grid sm:grid-cols-[1fr_auto_auto] sm:items-center sm:gap-4">
@@ -145,25 +159,31 @@ export function AttendanceRow({
             aria-label={t(ACTION_LABEL_KEY[status])}
             title={t(ACTION_LABEL_KEY[status])}
             className={cn(
-              'flex h-7 w-7 items-center justify-center rounded-md border text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40',
+              'flex h-7 min-w-7 items-center justify-center rounded-md border px-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40',
               current === status
-                ? 'border-primary/50 bg-primary/15 text-foreground'
+                ? getActionActiveClassName(status)
                 : 'border-border text-muted-foreground hover:border-border-medium hover:text-foreground',
             )}
           >
-            {t(`status.${status}`).charAt(0)}
+            {t(`statusShort.${status}`)}
           </button>
         ))}
 
         <button
           type="button"
           onClick={() => setNoteOpen(true)}
-          disabled={disabled}
-          aria-label={t('actions.addNote')}
-          title={t('actions.addNote')}
-          className="flex h-7 w-7 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+          disabled={noteDisabled}
+          aria-label={noteActionLabel}
+          title={noteActionLabel}
+          className={cn(
+            'flex h-7 items-center justify-center gap-1 rounded-md border px-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40',
+            hasNote
+              ? 'border-primary/45 bg-primary/10 text-foreground'
+              : 'border-border text-muted-foreground hover:text-foreground',
+          )}
         >
           <StickyNote className="h-3.5 w-3.5" />
+          {hasNote && <span>{t('table.noteBadge')}</span>}
         </button>
 
         {hasRecord && (
@@ -180,6 +200,16 @@ export function AttendanceRow({
         )}
       </div>
 
+      {anyPending && (
+        <div
+          role="status"
+          className="flex items-center gap-1.5 text-xs text-muted-foreground sm:col-span-3 sm:justify-end"
+        >
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          {t('actions.updating')}
+        </div>
+      )}
+
       <AttendanceNoteDialog
         open={noteOpen}
         onOpenChange={setNoteOpen}
@@ -187,6 +217,7 @@ export function AttendanceRow({
         studentId={item.studentId}
         studentName={`${item.student.firstName} ${item.student.lastName}`}
         currentStatus={current}
+        currentNotes={currentNotes}
         hasRecord={hasRecord}
       />
     </li>
@@ -196,17 +227,53 @@ export function AttendanceRow({
 // ── Status chip (sobrio, sin colores brillantes) ───────────────
 
 function StatusChip({ status }: { status: AttendanceStatus | null }) {
-  const t = useTranslations('attendance.status')
+  const t = useTranslations('attendance')
+  const tone = getAttendanceStatusTone(status)
   if (!status) {
     return (
       <span className="inline-flex items-center rounded-md border border-border/60 px-2 py-0.5 text-xs text-[var(--text-tertiary)]">
-        {t('pending')}
+        {t(getAttendanceStatusLabelKey(status))}
       </span>
     )
   }
   return (
-    <span className="inline-flex items-center rounded-md border border-primary/40 bg-primary/10 px-2 py-0.5 text-xs font-medium text-foreground">
-      {t(status)}
+    <span
+      className={cn(
+        'inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium',
+        tone === 'checkedIn'
+          ? 'border-primary/40 bg-primary/10 text-foreground'
+          : 'border-amber-500/35 bg-amber-500/10 text-foreground',
+      )}
+    >
+      {t(getAttendanceStatusLabelKey(status))}
     </span>
   )
+}
+
+function getActionActiveClassName(status: AttendanceStatus): string {
+  if (isCheckedInAttendanceStatus(status)) {
+    return 'border-primary/50 bg-primary/15 text-foreground'
+  }
+  return 'border-amber-500/45 bg-amber-500/10 text-foreground'
+}
+
+function buildStatusCorrectionBody(
+  status: AttendanceStatus,
+): UpdateAttendanceBody {
+  return {
+    status,
+    correctionReasonCode: 'STATUS_CORRECTION',
+    ...(status === 'EXCUSED' ? { reasonCode: 'OTHER' as const } : {}),
+  }
+}
+
+function buildStatusRecord(
+  studentId: string,
+  status: AttendanceStatus,
+) {
+  return {
+    studentId,
+    status,
+    ...(status === 'EXCUSED' ? { reasonCode: 'OTHER' as const } : {}),
+  }
 }

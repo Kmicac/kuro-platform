@@ -14,7 +14,7 @@ export interface AttendanceToolbarProps {
   onSearchChange: (value: string) => void
   filter: AttendanceFilter
   onFilterChange: (filter: AttendanceFilter) => void
-  markedCount: number
+  checkedInCount: number
   totalCount: number
   onMarkAllPresent: () => void
   /** Abre el dialog de agregar alumno (asistencia manual / walk-in). */
@@ -30,7 +30,7 @@ export function AttendanceToolbar({
   onSearchChange,
   filter,
   onFilterChange,
-  markedCount,
+  checkedInCount,
   totalCount,
   onMarkAllPresent,
   onAddWalkIn,
@@ -80,7 +80,7 @@ export function AttendanceToolbar({
 
       {/* Contador */}
       <span className="text-xs tabular-nums text-muted-foreground">
-        {t('counter', { marked: markedCount, total: totalCount })}
+        {t('counter', { checkedIn: checkedInCount, total: totalCount })}
       </span>
 
       {/* Bulk + agregar alumno (asistencia manual) */}

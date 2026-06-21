@@ -20,9 +20,11 @@ import {
   useMutation,
   useQuery,
   useQueryClient,
+  type QueryClient,
 } from '@tanstack/react-query'
 import { classSessionsApi } from '@/lib/api/endpoints'
 import type {
+  AttendanceReasonCode,
   AttendanceStatus,
   IssueQRTokenBody,
   RecordAttendanceBody,
@@ -83,6 +85,26 @@ export function useSessionRoster(
 /** Alias retro-compatible (read). Preferir `useSessionRoster`. */
 export const useTechnicalRoster = useSessionRoster
 
+function invalidateAttendanceViews(
+  qc: QueryClient,
+  orgId: string | null,
+  branchId: string | null,
+  sessionId: string,
+) {
+  qc.invalidateQueries({
+    queryKey: ['session-roster', orgId, branchId, sessionId],
+  })
+  qc.invalidateQueries({
+    queryKey: ['session-attendance', orgId, branchId, sessionId],
+  })
+  qc.invalidateQueries({
+    queryKey: ['session', orgId, branchId, sessionId],
+  })
+  qc.invalidateQueries({
+    queryKey: ['class-calendar', orgId, branchId],
+  })
+}
+
 // ── Optimistic helpers (operan sobre el roster técnico) ────────
 
 /**
@@ -94,6 +116,8 @@ function patchRosterStatus(
   roster: SessionTechnicalRoster,
   studentId: string,
   status: AttendanceStatus,
+  reasonCode?: AttendanceReasonCode,
+  notes?: string,
 ): SessionTechnicalRoster {
   return {
     ...roster,
@@ -104,7 +128,8 @@ function patchRosterStatus(
             attendance: {
               recordId: it.attendance?.recordId ?? `optimistic-${studentId}`,
               status,
-              reasonCode: it.attendance?.reasonCode ?? null,
+              reasonCode: reasonCode ?? it.attendance?.reasonCode ?? null,
+              notes: notes ?? it.attendance?.notes ?? null,
               source: it.attendance?.source ?? 'STAFF_MANUAL',
               updatedAt: it.attendance?.updatedAt ?? '',
             },
@@ -152,7 +177,13 @@ export function useRecordAttendance(sessionId: string) {
       if (snapshot) {
         let next = snapshot
         for (const rec of body.records) {
-          next = patchRosterStatus(next, rec.studentId, rec.status)
+          next = patchRosterStatus(
+            next,
+            rec.studentId,
+            rec.status,
+            rec.reasonCode,
+            rec.notes,
+          )
         }
         qc.setQueryData(key, next)
       }
@@ -161,15 +192,8 @@ export function useRecordAttendance(sessionId: string) {
     onError: (_error, _vars, ctx) => {
       if (ctx?.snapshot) qc.setQueryData(key, ctx.snapshot)
     },
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: key })
-      qc.invalidateQueries({
-        queryKey: ['session-attendance', orgId, branchId, sessionId],
-      })
-      qc.invalidateQueries({
-        queryKey: ['session', orgId, branchId, sessionId],
-      })
-    },
+    onSettled: () =>
+      invalidateAttendanceViews(qc, orgId, branchId, sessionId),
   })
 }
 
@@ -198,22 +222,24 @@ export function useUpdateAttendance(
       await qc.cancelQueries({ queryKey: key })
       const snapshot = qc.getQueryData<SessionTechnicalRoster>(key)
       if (snapshot && body.status) {
-        qc.setQueryData(key, patchRosterStatus(snapshot, studentId, body.status))
+        qc.setQueryData(
+          key,
+          patchRosterStatus(
+            snapshot,
+            studentId,
+            body.status,
+            body.reasonCode,
+            body.notes,
+          ),
+        )
       }
       return { snapshot }
     },
     onError: (_error, _vars, ctx) => {
       if (ctx?.snapshot) qc.setQueryData(key, ctx.snapshot)
     },
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: key })
-      qc.invalidateQueries({
-        queryKey: ['session-attendance', orgId, branchId, sessionId],
-      })
-      qc.invalidateQueries({
-        queryKey: ['session', orgId, branchId, sessionId],
-      })
-    },
+    onSettled: () =>
+      invalidateAttendanceViews(qc, orgId, branchId, sessionId),
   })
 }
 
@@ -248,15 +274,8 @@ export function useDeleteAttendance(
     onError: (_error, _vars, ctx) => {
       if (ctx?.snapshot) qc.setQueryData(key, ctx.snapshot)
     },
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: key })
-      qc.invalidateQueries({
-        queryKey: ['session-attendance', orgId, branchId, sessionId],
-      })
-      qc.invalidateQueries({
-        queryKey: ['session', orgId, branchId, sessionId],
-      })
-    },
+    onSettled: () =>
+      invalidateAttendanceViews(qc, orgId, branchId, sessionId),
   })
 }
 

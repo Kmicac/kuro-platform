@@ -10,6 +10,7 @@ import { BeltBadge } from '@/components/kuro'
 import { ErrorState } from '@/components/shared'
 import { cn } from '@/lib/utils'
 import type { TechnicalRosterItem } from '@/lib/api/types'
+import { isCheckedInAttendanceStatus } from '@/lib/attendance/attendance-status'
 import type { usePromotionRankResolver } from '@/lib/hooks/use-catalogs'
 
 type RosterFilter = 'all' | 'checkedIn' | 'expected'
@@ -46,7 +47,7 @@ export function QRRosterPreview({
         const name = `${it.student.firstName} ${it.student.lastName}`.toLowerCase()
         if (!name.includes(q)) return false
       }
-      const checkedIn = it.attendance != null
+      const checkedIn = isCheckedInAttendanceStatus(it.attendance?.status)
       if (filter === 'checkedIn') return checkedIn
       if (filter === 'expected') return !checkedIn
       return true
@@ -117,7 +118,9 @@ export function QRRosterPreview({
       ) : (
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((it) => {
-            const checkedIn = it.attendance != null
+            const checkedIn = isCheckedInAttendanceStatus(
+              it.attendance?.status,
+            )
             return (
               <div
                 key={it.studentId}

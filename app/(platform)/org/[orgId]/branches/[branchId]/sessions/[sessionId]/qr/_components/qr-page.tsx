@@ -19,6 +19,7 @@ import { KuroLogo } from '@/components/kuro'
 import { Button } from '@/components/ui/button'
 import { notifyError } from '@/lib/utils/toast'
 import type { QRTokenResponse } from '@/lib/api/types'
+import { isCheckedInAttendanceStatus } from '@/lib/attendance/attendance-status'
 
 import { QRClassInfo } from './qr-class-info'
 import { QRDisplay } from './qr-display'
@@ -34,7 +35,7 @@ export interface QRPageProps {
 /** Polling del roster para reflejar check-ins ~en vivo. */
 const ROSTER_POLL_MS = 30_000
 
-export function QRPage({ orgId, sessionId }: QRPageProps) {
+export function QRPage({ orgId, branchId, sessionId }: QRPageProps) {
   const t = useTranslations('qr-checkin')
   const router = useRouter()
 
@@ -47,7 +48,8 @@ export function QRPage({ orgId, sessionId }: QRPageProps) {
   const [token, setToken] = useState<QRTokenResponse | null>(null)
   const [qrError, setQrError] = useState<QRErrorInfo | null>(null)
 
-  const goBack = () => router.push(`/org/${orgId}/calendar`)
+  const goBack = () =>
+    router.push(`/org/${orgId}/branches/${branchId}/sessions/${sessionId}`)
 
   const canValidate = Boolean(
     caps.data?.capabilities?.attendance?.canValidateAttendance,
@@ -133,7 +135,7 @@ export function QRPage({ orgId, sessionId }: QRPageProps) {
   const isCanceled = session.status === 'CANCELED'
   const rosterItems = rosterQuery.data?.items ?? []
   const checkedInCount = rosterItems.filter(
-    (it) => it.attendance != null,
+    (it) => isCheckedInAttendanceStatus(it.attendance?.status),
   ).length
 
   return (

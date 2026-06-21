@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/form'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
-import { useRecordAttendance, useUpdateAttendance } from '@/lib/hooks'
+import { useUpdateAttendance } from '@/lib/hooks'
 import {
   makeAttendanceNoteSchema,
   type AttendanceNoteFormValues,
@@ -38,6 +38,7 @@ export interface AttendanceNoteDialogProps {
   studentId: string
   studentName: string
   currentStatus: AttendanceStatus | null
+  currentNotes?: string | null
   hasRecord: boolean
 }
 
@@ -50,15 +51,15 @@ export function AttendanceNoteDialog({
   studentId,
   studentName,
   currentStatus,
+  currentNotes,
   hasRecord,
 }: AttendanceNoteDialogProps) {
   const t = useTranslations('attendance')
   const tc = useTranslations('common')
   const handleError = useAttendanceErrorHandler()
 
-  const record = useRecordAttendance(sessionId)
   const update = useUpdateAttendance(studentId, sessionId)
-  const pending = record.isPending || update.isPending
+  const pending = update.isPending
 
   const schema = useMemo(
     () => makeAttendanceNoteSchema({ notesTooLong: t('noteDialog.tooLong') }),
@@ -71,41 +72,31 @@ export function AttendanceNoteDialog({
   })
 
   useEffect(() => {
-    if (open) form.reset({ notes: '' })
-  }, [open, form])
+    if (open) form.reset({ notes: currentNotes ?? '' })
+  }, [open, currentNotes, form])
 
   const notes = useWatch({ control: form.control, name: 'notes' })
   const length = notes?.length ?? 0
 
   const onSubmit = (values: AttendanceNoteFormValues) => {
+    if (!hasRecord) return
+    const notes = values.notes.trim()
     const onSuccess = () => {
-      notifySuccess(t('success.updated'))
+      notifySuccess(t('success.noteSaved'))
       onOpenChange(false)
     }
     const onError = handleError
 
-    if (hasRecord) {
-      // Corrección sobre un registro existente — solo la nota.
-      update.mutate(
-        {
-          status: currentStatus ?? undefined,
-          notes: values.notes,
-          correctionReasonCode: 'STATUS_CORRECTION',
-          correctionNote: values.notes,
-        },
-        { onSuccess, onError },
-      )
-    } else {
-      // Aún sin registro: crea uno PRESENT con la nota.
-      record.mutate(
-        {
-          records: [
-            { studentId, status: 'PRESENT', notes: values.notes },
-          ],
-        },
-        { onSuccess, onError },
-      )
-    }
+    // Corrección sobre un registro existente — solo la nota.
+    update.mutate(
+      {
+        status: currentStatus ?? undefined,
+        notes,
+        correctionReasonCode: 'STATUS_CORRECTION',
+        correctionNote: notes,
+      },
+      { onSuccess, onError },
+    )
   }
 
   return (

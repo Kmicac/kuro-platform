@@ -34,6 +34,7 @@ export interface WalkInDialogProps {
   rosterStudentIds: string[]
   onSelect: (studentId: string) => void
   pending: boolean
+  pendingStudentId?: string | null
 }
 
 export function WalkInDialog({
@@ -44,6 +45,7 @@ export function WalkInDialog({
   rosterStudentIds,
   onSelect,
   pending,
+  pendingStudentId,
 }: WalkInDialogProps) {
   const t = useTranslations('attendance.walkIn')
   const [query, setQuery] = useState('')
@@ -124,39 +126,47 @@ export function WalkInDialog({
             </p>
           ) : (
             <ul className="space-y-1">
-              {results.map((s) => (
-                <li key={s.id}>
-                  <button
-                    type="button"
-                    disabled={pending}
-                    onClick={() => onSelect(s.id)}
-                    className="flex w-full items-center justify-between gap-3 rounded-lg border border-transparent px-3 py-2 text-left transition-colors hover:border-border hover:bg-muted/40 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <PersonAvatar
-                      avatarUrl={s.avatarUrl}
-                      firstName={s.firstName}
-                      lastName={s.lastName}
-                      size="sm"
-                      className="h-9 w-9"
-                      fallbackClassName="text-[11px]"
-                    />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm text-foreground">
-                        {s.firstName} {s.lastName}
+              {results.map((s) => {
+                const isSelected = pending && pendingStudentId === s.id
+                return (
+                  <li key={s.id}>
+                    <button
+                      type="button"
+                      disabled={pending}
+                      onClick={() => onSelect(s.id)}
+                      aria-busy={isSelected}
+                      className="flex w-full items-center justify-between gap-3 rounded-lg border border-transparent px-3 py-2 text-left transition-colors hover:border-border hover:bg-muted/40 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <PersonAvatar
+                        avatarUrl={s.avatarUrl}
+                        firstName={s.firstName}
+                        lastName={s.lastName}
+                        size="sm"
+                        className="h-9 w-9"
+                        fallbackClassName="text-[11px]"
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm text-foreground">
+                          {s.firstName} {s.lastName}
+                        </span>
+                        <span className="block truncate text-xs text-muted-foreground">
+                          {isSelected ? t('adding') : s.email}
+                        </span>
                       </span>
-                      <span className="block truncate text-xs text-muted-foreground">
-                        {s.email}
-                      </span>
-                    </span>
-                    <BeltBadge
-                      rank={resolveRank(s.currentBelt)}
-                      stripes={s.currentStripes}
-                      size="sm"
-                      showLabel={false}
-                    />
-                  </button>
-                </li>
-              ))}
+                      {isSelected ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      ) : (
+                        <BeltBadge
+                          rank={resolveRank(s.currentBelt)}
+                          stripes={s.currentStripes}
+                          size="sm"
+                          showLabel={false}
+                        />
+                      )}
+                    </button>
+                  </li>
+                )
+              })}
             </ul>
           )}
         </ScrollArea>

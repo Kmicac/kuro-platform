@@ -12,6 +12,7 @@ import { ErrorState, ForbiddenState, EmptyState } from '@/components/shared'
 import { ApiError } from '@/lib/api/client'
 import { cn } from '@/lib/utils'
 import type { TechnicalRosterItem } from '@/lib/api/types'
+import { isCheckedInAttendanceStatus } from '@/lib/attendance/attendance-status'
 import type { usePromotionRankResolver } from '@/lib/hooks/use-catalogs'
 
 export interface RegisteredStudentsTableProps {
@@ -181,13 +182,13 @@ function Row({
 }) {
   const t = useTranslations('class-detail.students')
   const status = item.attendance?.status ?? null
-  const checkedIn = status === 'PRESENT' || status === 'LATE'
+  const checkedIn = isCheckedInAttendanceStatus(status)
   const registered = item.intent != null
 
   return (
-    <li className="grid grid-cols-1 gap-3 px-4 py-3 transition-colors hover:bg-muted/40 sm:grid-cols-[2fr_1.2fr_1fr_auto] sm:items-center sm:gap-4">
+    <li className="grid min-h-[64px] grid-cols-1 gap-3 px-4 py-3 transition-colors hover:bg-muted/40 sm:grid-cols-[2fr_1.2fr_1fr_minmax(96px,auto)] sm:items-center sm:gap-4">
       {/* Alumno */}
-      <div className="flex min-w-0 items-center gap-3">
+      <div className="flex min-h-9 min-w-0 items-center gap-3">
         <PersonAvatar
           avatarUrl={item.student.avatarUrl}
           firstName={item.student.firstName}
@@ -202,7 +203,7 @@ function Row({
       </div>
 
       {/* Rank */}
-      <div className="sm:justify-self-start">
+      <div className="flex min-h-9 items-center sm:justify-self-start">
         <BeltBadge
           rank={beltEntry}
           stripes={item.student.currentStripes}
@@ -211,16 +212,17 @@ function Row({
       </div>
 
       {/* Estado */}
-      <div className="sm:justify-self-start">
+      <div className="flex min-h-9 items-center sm:justify-self-start">
         <StatusChip checkedIn={checkedIn} registered={registered} />
       </div>
 
       {/* Acción */}
-      <div className="sm:justify-self-end">
+      <div className="flex min-h-9 items-center sm:justify-self-end">
         {canValidate && !checkedIn && (
           <Button
             variant="outline"
             size="sm"
+            className="h-8"
             disabled={disabled || pending}
             onClick={() => onCheckIn(item.studentId)}
           >
@@ -244,7 +246,7 @@ function StatusChip({
 
   if (checkedIn) {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded border border-primary/40 bg-primary/10 px-2 py-0.5 text-xs font-medium text-foreground">
+      <span className="inline-flex h-7 items-center gap-1.5 rounded border border-primary/40 bg-primary/10 px-2 text-xs font-medium text-foreground">
         <Check className="h-3 w-3 text-[var(--kuro-success)]" />
         {t('checkedIn')}
       </span>
@@ -254,6 +256,7 @@ function StatusChip({
     <span
       className={cn(
         'inline-flex items-center rounded border px-2 py-0.5 text-xs',
+        'h-7',
         registered
           ? 'border-border text-muted-foreground'
           : 'border-border/60 text-[var(--text-tertiary)]',
