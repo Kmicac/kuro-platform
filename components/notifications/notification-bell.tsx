@@ -47,6 +47,9 @@ export function NotificationBell({ orgId }: NotificationBellProps) {
   const unreadCount = unreadQuery.data?.unreadCount ?? 0
   const items = notificationsQuery.data?.items ?? []
   const hasUnreadItems = items.some((item) => !item.readAt)
+  const [markingNotificationId, setMarkingNotificationId] = useState<
+    string | null
+  >(null)
 
   useEffect(() => {
     if (!open) return
@@ -61,15 +64,31 @@ export function NotificationBell({ orgId }: NotificationBellProps) {
 
   const handleNotificationClick = async (notification: NotificationItem) => {
     const href = getNotificationTargetHref(orgId, notification)
-    if (!notification.readAt) await markRead.mutateAsync(notification.id)
-    if (href) {
-      setOpen(false)
-      router.push(href)
+    if (markingNotificationId === notification.id) return
+
+    try {
+      if (!notification.readAt) {
+        setMarkingNotificationId(notification.id)
+        await markRead.mutateAsync(notification.id)
+      }
+      if (href) {
+        setOpen(false)
+        router.push(href)
+      }
+    } finally {
+      setMarkingNotificationId(null)
     }
   }
 
   const handleMarkOneRead = async (notificationId: string) => {
-    await markRead.mutateAsync(notificationId)
+    if (markingNotificationId === notificationId) return
+
+    try {
+      setMarkingNotificationId(notificationId)
+      await markRead.mutateAsync(notificationId)
+    } finally {
+      setMarkingNotificationId(null)
+    }
   }
 
   const handleMarkAllRead = () => {
@@ -161,7 +180,7 @@ export function NotificationBell({ orgId }: NotificationBellProps) {
                 notification={notification}
                 orgId={orgId}
                 t={t}
-                markReadPending={markRead.isPending}
+                markReadPending={markingNotificationId === notification.id}
                 onClick={() => handleNotificationClick(notification)}
                 onMarkRead={() => handleMarkOneRead(notification.id)}
               />
@@ -191,10 +210,8 @@ function NotificationListItem({
   onMarkRead,
 }: NotificationListItemProps) {
   const unread = !notification.readAt
+  const display = getNotificationDisplay(notification, t)
   const href = getNotificationTargetHref(orgId, notification)
-  const description =
-    getPayloadDescription(notification.payload) ??
-    getNotificationDescription(notification.type, t)
 
   return (
     <div
@@ -210,7 +227,12 @@ function NotificationListItem({
         )}
         aria-hidden
       />
-      <button type="button" onClick={onClick} className="min-w-0 flex-1 text-left">
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={markReadPending}
+        className="min-w-0 flex-1 text-left disabled:cursor-wait"
+      >
         <span className="flex items-start justify-between gap-2">
           <span
             className={cn(
@@ -218,14 +240,14 @@ function NotificationListItem({
               unread && 'font-semibold',
             )}
           >
-            {getNotificationTitle(notification.type, t)}
+            {display.title}
           </span>
           <span className="whitespace-nowrap text-[11px] text-muted-foreground">
             {formatRelativeDate(notification.createdAt, t)}
           </span>
         </span>
         <span className="mt-0.5 line-clamp-2 block text-xs leading-snug text-muted-foreground">
-          {description}
+          {display.description}
         </span>
         <span className="mt-2 flex items-center justify-between gap-2">
           <span className="truncate text-[10px] uppercase text-muted-foreground">
@@ -240,12 +262,12 @@ function NotificationListItem({
           disabled={markReadPending}
           className="mt-auto inline-flex h-6 flex-shrink-0 items-center gap-1 rounded px-2 text-[11px] font-medium text-primary hover:bg-primary/10 disabled:opacity-50"
         >
-              {markReadPending ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
-              ) : (
-                <Check className="h-3 w-3" />
-              )}
-              {t('panel.markAsRead')}
+          {markReadPending ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : (
+            <Check className="h-3 w-3" />
+          )}
+          {t('panel.markAsRead')}
         </button>
       )}
     </div>
@@ -257,7 +279,7 @@ export function getNotificationTargetHref(
   notification: NotificationItem,
 ): string | null {
   const resourceType = notification.resourceType.toUpperCase()
-  const payload = notification.payload
+  const payload = getPayloadRecord(notification.payload)
   const branchId = readPayloadString(payload, 'branchId', 'targetBranchId')
   const sessionId =
     readPayloadString(payload, 'classSessionId', 'sessionId') ??
@@ -265,6 +287,9 @@ export function getNotificationTargetHref(
   const studentId =
     readPayloadString(payload, 'studentId', 'targetStudentId') ??
     (resourceType === 'STUDENT' ? notification.resourceId : null)
+  const intakeRequestId =
+    readPayloadString(payload, 'intakeRequestId', 'requestId') ??
+    (resourceType === 'ACADEMY_INTAKE_REQUEST' ? notification.resourceId : null)
 
   if (
     notification.type === 'ATTENDANCE_SUGGESTION' &&
@@ -280,10 +305,14 @@ export function getNotificationTargetHref(
 
   if (
     (resourceType === 'INTAKE_REQUEST' ||
+      resourceType === 'ACADEMY_INTAKE_REQUEST' ||
       notification.type === 'ACADEMY_INTAKE_REQUEST_CREATED') &&
     branchId
   ) {
-    return `/org/${orgId}/branches/${branchId}/intake`
+    const query = intakeRequestId
+      ? `?requestId=${encodeURIComponent(intakeRequestId)}`
+      : ''
+    return `/org/${orgId}/branches/${branchId}/intake${query}`
   }
 
   if (
@@ -298,10 +327,27 @@ export function getNotificationTargetHref(
   return null
 }
 
-function getNotificationTitle(
-  type: string,
+type NotificationDisplay = {
+  title: string
+  description: string
+}
+
+export function getNotificationDisplay(
+  notification: NotificationItem,
   t: NotificationsTranslator,
-): string {
+): NotificationDisplay {
+  const type = notification.type
+  const payload = getPayloadRecord(notification.payload)
+
+  return {
+    title: getNotificationTitle(type, t),
+    description:
+      getPayloadDescription(type, payload, t) ??
+      getNotificationDescription(type, t),
+  }
+}
+
+function getNotificationTitle(type: string, t: NotificationsTranslator): string {
   switch (type) {
     case 'ANNOUNCEMENT_PUBLISHED':
       return t('types.ANNOUNCEMENT_PUBLISHED.title')
@@ -366,17 +412,53 @@ function getNotificationDescription(
   }
 }
 
-function getPayloadDescription(payload: Record<string, unknown>): string | null {
-  return readPayloadString(
-    payload,
-    'message',
-    'description',
-    'title',
-    'studentName',
-    'requesterName',
-    'className',
-    'branchName',
-  )
+function getPayloadDescription(
+  type: string,
+  payload: Record<string, unknown>,
+  t: NotificationsTranslator,
+): string | null {
+  const studentName = readPayloadString(payload, 'studentName')
+  const branchName = readPayloadString(payload, 'branchName')
+  const title = readPayloadString(payload, 'title')
+  const className = readPayloadString(payload, 'className', 'sessionName')
+  const summary = readPayloadString(payload, 'summary')
+  const message = readPayloadString(payload, 'message')
+
+  switch (type) {
+    case 'ACADEMY_INTAKE_REQUEST_CREATED': {
+      const fullName = readPayloadString(payload, 'fullName', 'requesterName')
+      return fullName
+        ? t('payload.intakeRequestFrom', { name: fullName })
+        : null
+    }
+    case 'ATTENDANCE_SUGGESTION':
+      return className ?? summary ?? message
+    case 'ATTENDANCE_FOLLOW_UP_ASSIGNED':
+      return studentName
+        ? t('payload.attendanceFollowUpFor', { name: studentName })
+        : null
+    case 'INSTITUTIONAL_REQUEST_ACTION_REQUIRED':
+    case 'INSTITUTIONAL_REQUEST_ASSIGNED':
+    case 'INSTITUTIONAL_REQUEST_CLOSED':
+    case 'INSTITUTIONAL_REQUEST_REMINDER':
+    case 'INSTITUTIONAL_REQUEST_ESCALATED':
+      return title
+    case 'TRAINING_NOTE_VISIBLE':
+    case 'TRAINING_NOTE_COACH_REVIEW':
+      return studentName
+        ? t('payload.trainingNoteFor', { name: studentName })
+        : branchName
+    default:
+      return readPayloadString(payload, 'description', 'summary', 'title')
+  }
+}
+
+function getPayloadRecord(payload: unknown): Record<string, unknown> {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return {}
+  }
+
+  return payload as Record<string, unknown>
 }
 
 function readPayloadString(

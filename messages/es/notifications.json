@@ -16,30 +16,35 @@
     "total": "{total, plural, =1 {1 notificación} other {# notificaciones}}",
     "noTarget": "Sin acceso directo disponible"
   },
+  "payload": {
+    "intakeRequestFrom": "Nueva solicitud de {name}.",
+    "attendanceFollowUpFor": "Seguimiento asignado para {name}.",
+    "trainingNoteFor": "Nota relacionada con {name}."
+  },
   "types": {
     "ANNOUNCEMENT_PUBLISHED": {
-      "title": "Anuncio publicado",
-      "description": "Hay un nuevo anuncio disponible."
+      "title": "Nuevo comunicado publicado",
+      "description": "Revisa el comunicado para más detalles."
     },
     "INVITATION_ACCEPTED": {
       "title": "Invitación aceptada",
-      "description": "Una invitación fue aceptada."
+      "description": "Un usuario aceptó una invitación."
     },
     "ACADEMY_INTAKE_REQUEST_CREATED": {
-      "title": "Nueva solicitud de captación",
-      "description": "Se registró una nueva solicitud de ingreso."
+      "title": "Nueva solicitud de academia",
+      "description": "Hay una nueva solicitud pendiente de revisión."
     },
     "ATTENDANCE_SUGGESTION": {
       "title": "Sugerencia de asistencia",
-      "description": "Hay una nueva sugerencia de asistencia para revisar."
+      "description": "Hay una sugerencia de asistencia pendiente."
     },
     "ATTENDANCE_FOLLOW_UP_ASSIGNED": {
       "title": "Seguimiento de asistencia asignado",
-      "description": "Se asignó un seguimiento de asistencia."
+      "description": "Tienes un seguimiento de asistencia asignado."
     },
     "INSTITUTIONAL_REQUEST_ACTION_REQUIRED": {
-      "title": "Solicitud requiere acción",
-      "description": "Una solicitud institucional necesita atención."
+      "title": "Acción requerida",
+      "description": "Hay una solicitud institucional que requiere atención."
     },
     "INSTITUTIONAL_REQUEST_ASSIGNED": {
       "title": "Solicitud asignada",
@@ -58,8 +63,8 @@
       "description": "Una solicitud institucional fue escalada."
     },
     "TRAINING_NOTE_VISIBLE": {
-      "title": "Nota de entrenamiento visible",
-      "description": "Una nota de entrenamiento está disponible."
+      "title": "Nueva nota de entrenamiento",
+      "description": "Hay una nota de entrenamiento disponible."
     },
     "TRAINING_NOTE_COACH_REVIEW": {
       "title": "Nota pendiente de revisión",
