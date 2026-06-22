@@ -251,7 +251,7 @@ function NotificationListItem({
         </span>
         <span className="mt-2 flex items-center justify-between gap-2">
           <span className="truncate text-[10px] uppercase text-muted-foreground">
-            {href ? notification.resourceType : t('panel.noTarget')}
+            {href ? t('panel.openTarget') : t('panel.noTarget')}
           </span>
         </span>
       </button>
@@ -338,12 +338,36 @@ export function getNotificationDisplay(
 ): NotificationDisplay {
   const type = notification.type
   const payload = getPayloadRecord(notification.payload)
+  const knownType = isKnownNotificationType(type)
 
   return {
     title: getNotificationTitle(type, t),
     description:
-      getPayloadDescription(type, payload, t) ??
+      (knownType ? getPayloadDescription(type, payload, t) : null) ??
       getNotificationDescription(type, t),
+  }
+}
+
+function isKnownNotificationType(type: string): boolean {
+  switch (type) {
+    case 'ANNOUNCEMENT_PUBLISHED':
+    case 'INVITATION_ACCEPTED':
+    case 'ACADEMY_INTAKE_REQUEST_CREATED':
+    case 'ATTENDANCE_SUGGESTION':
+    case 'ATTENDANCE_FOLLOW_UP_ASSIGNED':
+    case 'INSTITUTIONAL_REQUEST_ACTION_REQUIRED':
+    case 'INSTITUTIONAL_REQUEST_ASSIGNED':
+    case 'INSTITUTIONAL_REQUEST_CLOSED':
+    case 'INSTITUTIONAL_REQUEST_REMINDER':
+    case 'INSTITUTIONAL_REQUEST_ESCALATED':
+    case 'TRAINING_NOTE_VISIBLE':
+    case 'TRAINING_NOTE_COACH_REVIEW':
+      return true
+    default:
+      if (process.env.NODE_ENV === 'development') {
+        console.debug('[notifications] Unknown notification type', type)
+      }
+      return false
   }
 }
 
