@@ -18,6 +18,7 @@ const NAMESPACES = [
   'intake',
   'claims',
   'billing',
+  'notifications',
   'attendance',
   'qr-checkin',
   'class-detail',
@@ -26,7 +27,7 @@ const NAMESPACES = [
 ] as const
 
 /**
- * Carga y mergea los 13 namespaces de messages/<locale>/*.json en un solo
+ * Carga y mergea los namespaces de messages/<locale>/*.json en un solo
  * objeto `{ [namespace]: { ...keys } }`.
  */
 async function loadMessages(locale: string) {

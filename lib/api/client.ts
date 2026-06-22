@@ -337,16 +337,24 @@ export const authApi = {
     password: string,
     organizationSlug?: string
   ): Promise<LoginResponse> => {
-    const res = await fetch(`${BASE_URL}/auth/login`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email,
-        password,
-        ...(organizationSlug ? { organizationSlug } : {}),
-      }),
-    })
+    let res: Response
+    try {
+      res = await fetch(`${BASE_URL}/auth/login`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          password,
+          ...(organizationSlug ? { organizationSlug } : {}),
+        }),
+      })
+    } catch (error) {
+      throw new ApiError(0, {
+        code: 'NETWORK_ERROR',
+        message: error instanceof Error ? error.message : 'Network error',
+      })
+    }
 
     if (!res.ok) {
       let body: unknown = null

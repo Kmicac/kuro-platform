@@ -34,6 +34,7 @@ import type {
   UpdateAttendanceBody,
 } from '@/lib/api/types'
 import { STALE, kuroRetry } from './_shared'
+import { notificationsKeys } from './use-notifications'
 import { useCurrentContext } from './use-current-context'
 
 /** Resumen + registros de asistencia de la sesión (vista administrativa). */
@@ -330,6 +331,18 @@ export function useSuggestAttendance(sessionId: string, branchId?: string) {
       qc.invalidateQueries({
         queryKey: ['session-roster', orgId, resolvedBranchId, sessionId],
       })
+      const unreadCountKey = notificationsKeys.unreadCount(orgId)
+      qc.invalidateQueries({
+        queryKey: unreadCountKey,
+      })
+      if (typeof window !== 'undefined') {
+        window.setTimeout(() => {
+          qc.invalidateQueries({ queryKey: unreadCountKey })
+        }, 5_000)
+        window.setTimeout(() => {
+          qc.invalidateQueries({ queryKey: unreadCountKey })
+        }, 12_000)
+      }
     },
   })
 }

@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import {
-  Bell,
   Building2,
   Calendar,
   CalendarClock,
@@ -30,6 +29,7 @@ import {
 import { FamilyButton, FamilyButtonItem } from '@/components/ui/family-button'
 import { SessionDialog } from '@/components/sessions/session-dialog'
 import { ScheduleDialog } from '@/app/(platform)/org/[orgId]/branches/[branchId]/schedules/_components/schedule-dialog'
+import { NotificationBell } from '@/components/notifications/notification-bell'
 import type { Branch } from '@/lib/api/types'
 import { cn } from '@/lib/utils'
 
@@ -147,15 +147,7 @@ export function Topbar({ orgId, branchId }: TopbarProps) {
           />
         </FamilyButton>
 
-        <button
-          title={t('notifications')}
-          className="relative w-8 h-8 flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-        >
-          <Bell size={15} aria-hidden />
-          <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 flex items-center justify-center rounded-full text-[9px] font-bold px-1 bg-destructive text-destructive-foreground">
-            3
-          </span>
-        </button>
+        <NotificationBell orgId={orgId} />
 
         <ThemeToggle />
 

@@ -1,0 +1,81 @@
+{
+  "bell": {
+    "label": "Notificaciones",
+    "unreadCount": "{count, plural, =1 {1 notificación sin leer} other {# notificaciones sin leer}}"
+  },
+  "panel": {
+    "title": "Notificaciones",
+    "loading": "Cargando notificaciones...",
+    "error": "No se pudieron cargar las notificaciones.",
+    "retry": "Reintentar",
+    "empty": "No tienes notificaciones",
+    "emptyHint": "Cuando haya novedades operativas, aparecerán aquí.",
+    "markAllRead": "Marcar todas como leídas",
+    "markAsRead": "Marcar como leída",
+    "markingRead": "Marcando...",
+    "total": "{total, plural, =1 {1 notificación} other {# notificaciones}}",
+    "noTarget": "Sin acceso directo disponible"
+  },
+  "types": {
+    "ANNOUNCEMENT_PUBLISHED": {
+      "title": "Anuncio publicado",
+      "description": "Hay un nuevo anuncio disponible."
+    },
+    "INVITATION_ACCEPTED": {
+      "title": "Invitación aceptada",
+      "description": "Una invitación fue aceptada."
+    },
+    "ACADEMY_INTAKE_REQUEST_CREATED": {
+      "title": "Nueva solicitud de captación",
+      "description": "Se registró una nueva solicitud de ingreso."
+    },
+    "ATTENDANCE_SUGGESTION": {
+      "title": "Sugerencia de asistencia",
+      "description": "Hay una nueva sugerencia de asistencia para revisar."
+    },
+    "ATTENDANCE_FOLLOW_UP_ASSIGNED": {
+      "title": "Seguimiento de asistencia asignado",
+      "description": "Se asignó un seguimiento de asistencia."
+    },
+    "INSTITUTIONAL_REQUEST_ACTION_REQUIRED": {
+      "title": "Solicitud requiere acción",
+      "description": "Una solicitud institucional necesita atención."
+    },
+    "INSTITUTIONAL_REQUEST_ASSIGNED": {
+      "title": "Solicitud asignada",
+      "description": "Se asignó una solicitud institucional."
+    },
+    "INSTITUTIONAL_REQUEST_CLOSED": {
+      "title": "Solicitud cerrada",
+      "description": "Una solicitud institucional fue cerrada."
+    },
+    "INSTITUTIONAL_REQUEST_REMINDER": {
+      "title": "Recordatorio de solicitud",
+      "description": "Hay una solicitud institucional pendiente."
+    },
+    "INSTITUTIONAL_REQUEST_ESCALATED": {
+      "title": "Solicitud escalada",
+      "description": "Una solicitud institucional fue escalada."
+    },
+    "TRAINING_NOTE_VISIBLE": {
+      "title": "Nota de entrenamiento visible",
+      "description": "Una nota de entrenamiento está disponible."
+    },
+    "TRAINING_NOTE_COACH_REVIEW": {
+      "title": "Nota pendiente de revisión",
+      "description": "Una nota de entrenamiento requiere revisión del coach."
+    },
+    "UNKNOWN": {
+      "title": "Notificación",
+      "description": "Hay una nueva notificación disponible."
+    }
+  },
+  "relativeTime": {
+    "now": "Ahora",
+    "yesterday": "Ayer",
+    "minutesAgo": "Hace {count} min",
+    "hoursAgo": "Hace {count} h",
+    "daysAgo": "{count, plural, =1 {Hace 1 día} other {Hace # días}}",
+    "monthsAgo": "{count, plural, =1 {Hace 1 mes} other {Hace # meses}}"
+  }
+}

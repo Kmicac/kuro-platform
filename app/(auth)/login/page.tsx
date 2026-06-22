@@ -105,7 +105,6 @@ export default function LoginPage() {
           setFormState('error:network')
         }
       } else {
-        console.error('[login] unexpected error', err)
         setFormState('error:network')
       }
     }

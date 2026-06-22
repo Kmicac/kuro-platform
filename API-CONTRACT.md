@@ -1,6 +1,6 @@
 # API Contract
 
-- Generated at: 2026-06-13
+- Generated at: 2026-06-21
 - Backend version: `0.0.1`
 - Source basis: current backend code in this repository
 - API version: `v1`
@@ -88,7 +88,7 @@ for completeness and are consumed by the KURO mobile app (Flutter, separate repo
 
 ## Active Endpoint Index
 
-Controller-verified on 2026-05-28. This index is the parity list used to keep the official Postman collection aligned with implemented NestJS controllers. Detailed request/response notes remain in the domain sections below.
+Controller-verified on 2026-06-21. This index is the parity list used to keep the official Postman collection aligned with implemented NestJS controllers. Detailed request/response notes remain in the domain sections below.
 
 - `DELETE /organizations/:organizationId/branches/:branchId/class-sessions/:sessionId/attendance/:studentId`
 - `DELETE /organizations/:organizationId/branches/:branchId/class-sessions/:sessionId/attendance/intent`
@@ -167,6 +167,7 @@ Controller-verified on 2026-05-28. This index is the parity list used to keep th
 - `GET /organizations/:organizationId/integrations/:integrationId/webhook-events`
 - `GET /organizations/:organizationId/integrations/:integrationId/webhook-events/:eventId`
 - `GET /organizations/:organizationId/me/capabilities`
+- `GET /organizations/:organizationId/me/profile`
 - `GET /organizations/:organizationId/members`
 - `GET /organizations/:organizationId/memberships/:membershipId`
 - `GET /organizations/:organizationId/notifications`
@@ -532,7 +533,10 @@ Rules:
 - `degree` is not modeled in this foundation because KURO has no confirmed degree source yet; `PersonBeltDto.degree` remains `null`.
 - Read helpers can map this profile to `PersonBeltDto`.
 - Deleted technical profiles are ignored by read services.
-- This foundation does not backfill from `Student`, migrate Promotions, migrate student writers, or change student/mobile/admin read models yet.
+- Authorized backoffice writes can create, update, or restore the membership technical profile through the tenant-scoped membership management endpoint.
+- Setting `currentBelt` to `null` clears the visible technical rank; reads return `PersonBeltDto | null` and will return `null` until a rank is set again.
+- Technical profile writes do not update `Student.currentBelt/currentStripes`, `PromotionRequest`, certificates, notifications, or historical snapshots.
+- This foundation does not backfill from `Student`, migrate Promotions, migrate student writers, or change student/mobile/admin read models.
 - `Student.currentBelt/currentStripes` remain the current legacy source for student-bound surfaces until a later migration is explicitly approved.
 - `PromotionRequest.currentBeltSnapshot/currentStripesSnapshot` remain historical snapshots and are not changed.
 
@@ -1241,7 +1245,50 @@ and the client must use the token from the delivered claim link.
 }
 ```
 
+Notes:
+
+- `/auth/me` is a global authenticated principal snapshot.
+- It does not return membership avatar fields such as `avatarUrl`.
+
 ## 3. Capabilities & Roles
+
+### Current organization visible profile
+
+`GET /organizations/:organizationId/me/profile`
+
+**Roles permitidos**: JWT-authenticated member with organization access
+**Capability requerida**: org access only
+**Step-up requerido**: no
+**Scope**: current authenticated membership in `organizationId`
+
+#### Response 200/201
+
+```json
+{
+  "organizationId": "string",
+  "membershipId": "string",
+  "userId": "string",
+  "displayName": "Marcos Coach",
+  "firstName": "Marcos",
+  "lastName": "Coach",
+  "email": "marcos@example.com",
+  "avatarUrl": "https://media.example.test/organizations/org_1/memberships/membership_1/avatars/media_1-random.webp",
+  "roleLabel": "Instructor"
+}
+```
+
+Behavior:
+
+- the response is organization-scoped and reflects the current authenticated
+  membership, not a global `User` profile
+- `displayName` may be enriched by membership `preferredName`
+- `avatarUrl` resolves from `OrganizationMembershipProfile.avatarMediaAsset`
+  and returns `null` when there is no active safe public URL
+- `roleLabel` is the visible primary role label and may be `null`
+- `HEAD_COACH` may appear as `roleLabel` when the membership is effective head
+  coach for at least one branch even though it is not a generic assignable role
+- the response must never expose storage internals such as `bucket`,
+  `objectKey`, `provider`, or `mediaAssetId`
 
 ### Effective capabilities
 
@@ -2376,6 +2423,57 @@ Returns the membership detail shape:
 }
 ```
 
+### Upsert membership technical profile
+
+`PUT /organizations/:organizationId/memberships/:membershipId/technical-profile`
+
+**Roles permitted**: authenticated member with organization-wide `MESTRE`/`ORG_ADMIN`, or branch-authorized leadership with effective branch access at `HEAD_COACH` or above for the target membership primary branch.
+**Step-up requerido**: yes, recent authentication required.
+**Scope**: tenant-scoped by `organizationId + membershipId`; branch-scoped leadership is limited to the target membership primary branch.
+
+#### Request body
+
+```json
+{
+  "currentBelt": "ADULT_BLACK",
+  "currentStripes": 2
+}
+```
+
+`currentBelt` must be a value from the existing `PromotionRank` enum or `null` to clear the visible rank. `currentStripes` must be an integer from `0` to `4`.
+
+#### Response
+
+```json
+{
+  "organizationId": "string",
+  "membershipId": "string",
+  "belt": {
+    "rank": "ADULT_BLACK",
+    "degree": null,
+    "stripeCount": 2,
+    "label": "Adult Black"
+  }
+}
+```
+
+When `currentBelt` is `null`, `belt` is `null`.
+
+#### Business rules
+
+- Creates `OrganizationMembershipTechnicalProfile` when the target membership has none.
+- Updates the active profile when it exists.
+- Restores a soft-deleted profile by setting `deletedAt = null` and applying the explicit new values.
+- `ACADEMY_MANAGER` may manage only memberships inside its effective branch/academy scope.
+- `ACADEMY_MANAGER` cannot use `ORGANIZATION_WIDE` scope as multi-branch authority for this endpoint.
+- `ACADEMY_MANAGER` and `HEAD_COACH` cannot manage organization leadership technical profiles.
+- Branch-authorized leadership cannot manage targets without a clear `primaryBranchId`.
+- Does not update `Student.currentBelt/currentStripes`.
+- Does not update `PromotionRequest`, promotion history, certificates, notifications, or snapshots.
+- Does not infer rank from `Student`, `user.students[0]`, Promotion snapshots, certificates, or attendance signals.
+- Does not expose email, phone, billing, notes, date of birth, or storage internals.
+- Writes an audit log entry with actor, target membership, previous rank/stripes, next rank/stripes, and source `ADMIN_TECHNICAL_PROFILE_UPDATE`.
+
 ### Update member roles
 
 `PUT /organizations/:organizationId/memberships/:membershipId/roles`
@@ -2767,6 +2865,12 @@ Returns the student admin view with private data.
 #### Response
 
 `{ items: [...], meta: { page, limit, total } }`
+
+Each student item now may include:
+
+- `avatarUrl: string | null`
+
+`avatarUrl` resolves from the linked student's active `STUDENT` organization membership profile avatar when that profile has an active avatar asset and storage can return a safe public URL. It is `null` when the student has no linked active student membership profile avatar or storage has no public URL. Storage internals are never exposed.
 
 #### Frontend contract note
 
@@ -3775,6 +3879,7 @@ Same synchronous response shape as generate, plus:
     "userId": "user_123",
     "firstName": "Assigned",
     "lastName": "Instructor",
+    "avatarUrl": "https://media.example.test/organizations/org_123/memberships/membership_123/avatars/media_1-random.webp",
     "role": "INSTRUCTOR",
     "primaryBelt": {
       "rank": "ADULT_BLACK",
@@ -3814,6 +3919,7 @@ Same synchronous response shape as generate, plus:
 **Notes**
 
 - `description` mirrors `ClassSession.notes`; `notes` is kept for compatibility with existing class-session surfaces.
+- `instructor.avatarUrl` resolves from the instructor membership's `OrganizationMembershipProfile.avatarMediaAsset` only when the profile is visible, the avatar asset is active, and storage can return a safe public URL. It is `null` otherwise.
 - `instructor.primaryBelt` is a rich `PromotionRank` catalog entry or `null`; frontend must not parse rank strings with `split("_")`.
 - `status` uses the backend enum value `CANCELED`, not `CANCELLED`.
 - `scheduledDate` is serialized as an ISO timestamp (`YYYY-MM-DDT00:00:00.000Z`) by Nest/JSON.
@@ -4020,6 +4126,7 @@ Uses the same `CLASS_SESSION_CONFLICT` response shape documented under create cl
         "primaryBranchId": "string",
         "firstName": "string",
         "lastName": "string",
+        "avatarUrl": "https://media.example.test/organizations/org_123/memberships/membership_student/avatars/media_1-random.webp",
         "status": "ACTIVE",
         "currentBelt": "WHITE",
         "currentStripes": 0
@@ -4042,6 +4149,8 @@ Uses the same `CLASS_SESSION_CONFLICT` response shape documented under create cl
 }
 ```
 
+`student.avatarUrl` resolves from the linked student's active `STUDENT` organization membership profile avatar when storage can return a safe public URL. It is `null` otherwise. The roster still must not expose `bucket`, `objectKey`, provider, or `mediaAssetId`.
+
 ### List session attendance
 
 `GET /organizations/:organizationId/branches/:branchId/class-sessions/:sessionId/attendance`
@@ -4055,12 +4164,51 @@ Uses the same `CLASS_SESSION_CONFLICT` response shape documented under create cl
 
 ```json
 {
-  "items": [],
-  "intents": [],
+  "items": [
+    {
+      "id": "attendance_123",
+      "studentId": "student_123",
+      "status": "PRESENT",
+      "reasonCode": null,
+      "source": "STAFF_MANUAL",
+      "updatedAt": "2026-05-26T10:30:00.000Z",
+      "student": {
+        "id": "student_123",
+        "primaryBranchId": "branch_123",
+        "firstName": "Roger",
+        "lastName": "Silva",
+        "avatarUrl": "https://media.example.test/organizations/org_123/memberships/membership_student/avatars/media_1-random.webp",
+        "status": "ACTIVE",
+        "currentBelt": "ADULT_BLUE",
+        "currentStripes": 2
+      }
+    }
+  ],
+  "intents": [
+    {
+      "id": "intent_123",
+      "studentId": "student_124",
+      "status": "ACTIVE",
+      "canceledAt": null,
+      "cancelReasonCode": null,
+      "cancelReasonNote": null,
+      "updatedAt": "2026-05-26T10:30:00.000Z",
+      "student": {
+        "id": "student_124",
+        "primaryBranchId": "branch_123",
+        "firstName": "Ana",
+        "lastName": "Silva",
+        "avatarUrl": null,
+        "status": "ACTIVE",
+        "currentBelt": "WHITE",
+        "currentStripes": 0
+      }
+    }
+  ],
   "summary": {
-    "total": 0,
+    "total": 1,
     "counts": {
-      "PRESENT": 0,
+      "PRESENT": 1,
       "LATE": 0,
       "ABSENT": 0,
       "EXCUSED": 0
@@ -4081,6 +4229,7 @@ Uses the same `CLASS_SESSION_CONFLICT` response shape documented under create cl
 
 - This is an administrative attendance view, available to branch-authorized `MESTRE`, `ORG_ADMIN`, `ACADEMY_MANAGER`, effective `HEAD_COACH`, and `STAFF`.
 - The backend intentionally returns operational fields needed for attendance correction/audit: student contact basics, attendance `notes`, actor membership ids, check-in token id, correction metadata, and history.
+- `items[].student.avatarUrl` and `intents[].student.avatarUrl` are public URL strings or `null`; storage internals are never exposed.
 - Assigned instructors should use `technical-roster` / instructor execution views when they only need technical class execution context; those views omit student email/phone and private admin-only fields.
 
 **Frontend summary mapping**
@@ -4387,7 +4536,7 @@ No body or optional intent creation payload, depending on use case wiring.
 
 `POST /organizations/:organizationId/branches/:branchId/class-sessions/:sessionId/attendance/suggestions`
 
-Creates staff-authored attendance suggestions for one or more students. This persists `AttendanceSuggestion` as the source of truth and may also create an in-app notification. This is not official attendance, not QR check-in, not staff manual attendance, and not enrollment/RSVP.
+Creates staff-authored attendance suggestions for one or more students. This persists `AttendanceSuggestion` as the source of truth and enqueues an in-app notification event for each newly created valid suggestion. The actor-facing `Notification` is materialized asynchronously by the notifications worker. This is not official attendance, not QR check-in, not staff manual attendance, and not enrollment/RSVP.
 
 **Roles permitted**: `MESTRE`, `ORG_ADMIN`, `ACADEMY_MANAGER`, branch/effective `HEAD_COACH`, `STAFF`, and the assigned `INSTRUCTOR` for the target session
 **Capability requerida**: `attendance.canSuggestAttendance`
@@ -4410,7 +4559,7 @@ Rules:
 - Target is currently `CLASS_SESSION` only.
 - The class session must belong to the requested organization and branch, be `SCHEDULED`, and not be finished.
 - Students must belong to the organization, be active, and be allowed in the branch by primary branch or an approved visit overlapping the session window.
-- Students must have an active recipient `OrganizationMembership` to receive the in-app notification.
+- Students must have an active recipient `OrganizationMembership` to receive the in-app notification event.
 - Existing pending suggestions for the same student/session are deduplicated and returned as `created: false`.
 - Creating a suggestion does not create `AttendanceIntent` or `AttendanceRecord`.
 
@@ -4434,7 +4583,7 @@ Rules:
       "studentId": "student_1",
       "suggestionId": "suggestion_1",
       "status": "PENDING",
-      "notificationId": "notification_1",
+      "notificationId": null,
       "created": true
     },
     {
@@ -4466,7 +4615,7 @@ Rules:
 
 #### Notification
 
-For every newly created valid suggestion, the backend creates one in-app notification for the student's active membership:
+For every newly created valid suggestion, the backend enqueues one worker-backed in-app notification event for the student's active membership. The notification center item appears after the next notifications worker tick or after an authorized operator runs `POST /organizations/:organizationId/notifications/delivery/process`:
 
 ```json
 {
@@ -4486,7 +4635,9 @@ For every newly created valid suggestion, the backend creates one in-app notific
 
 Notification payloads intentionally omit `ClassSession.notes`, attendance operational notes, private staff notes, and internal actor details. Existing pending suggestions do not create a second notification.
 
-Notifications are best-effort after DB persistence. If notification creation fails, the request still returns `201`, the persisted suggestion remains the source of truth, `notificationId` is `null` for that item, and `notificationFailures[]` identifies the affected `suggestionId`/`studentId`.
+Notification event production is best-effort after `AttendanceSuggestion` persistence. If event enqueue fails, the request still returns `201`, the persisted suggestion remains the source of truth, `notificationId` is `null` for that item, and `notificationFailures[]` identifies the affected `suggestionId`/`studentId`.
+
+`notificationId` is not available synchronously for newly created suggestions because the worker creates the final `Notification` row. Existing suggestions created before this worker-backed contract may still expose a historical `notificationId`.
 
 #### Relation to attendance intent and enrolledCount
 
@@ -4531,7 +4682,7 @@ Notifications are best-effort after DB persistence. If notification creation fai
       "suggestedByMembershipId": "membership_staff",
       "status": "PENDING",
       "message": "Te recomendamos asistir a esta clase.",
-      "notificationId": "notification_123",
+      "notificationId": null,
       "respondedAt": null,
       "canceledAt": null,
       "expiresAt": null,
@@ -4542,6 +4693,7 @@ Notifications are best-effort after DB persistence. If notification creation fai
         "primaryBranchId": "branch_123",
         "firstName": "Ana",
         "lastName": "Silva",
+        "avatarUrl": "https://media.example.test/organizations/org_123/memberships/membership_student/avatars/media_1-random.webp",
         "email": "ana@example.com",
         "phone": null,
         "status": "ACTIVE",
@@ -4552,6 +4704,8 @@ Notifications are best-effort after DB persistence. If notification creation fai
   ]
 }
 ```
+
+`items[].student.avatarUrl` resolves from the linked student's active `STUDENT` organization membership profile avatar when storage can return a safe public URL. It is `null` otherwise. The endpoint still must not expose `bucket`, `objectKey`, provider, or `mediaAssetId`.
 
 ### Cancel class-session attendance suggestion
 
@@ -4599,7 +4753,7 @@ Returns only suggestions for the authenticated user's linked `Student` in the or
       "suggestedByMembershipId": "membership_staff",
       "status": "PENDING",
       "message": "Te recomendamos asistir a esta clase.",
-      "notificationId": "notification_123",
+      "notificationId": null,
       "respondedAt": null,
       "canceledAt": null,
       "expiresAt": null,
@@ -6493,6 +6647,23 @@ Array of certificate summary objects:
 ## 16. Communications & Notifications
 
 Communications are implemented through announcements, institutional messages, inbox, request queue, board, metrics, and request operations endpoints. The active endpoints are listed in the controller-verified index above and covered by the official Postman collection.
+
+Product in-app notifications are worker-backed by default. Business producers persist `NotificationEvent` records, the notifications worker creates `NotificationDelivery` rows, and the actor-facing `Notification` feed is materialized asynchronously. `GET /organizations/:organizationId/notifications` therefore reflects delivered notifications, not merely queued events. In Postman/manual QA, run `POST /organizations/:organizationId/notifications/delivery/process` with an authorized notification-delivery manager before asserting that a newly triggered product notification appears in the feed.
+
+Current worker-backed product notification types:
+
+- `ANNOUNCEMENT_PUBLISHED`
+- `INVITATION_ACCEPTED`
+- `ACADEMY_INTAKE_REQUEST_CREATED`
+- `INSTITUTIONAL_REQUEST_ACTION_REQUIRED`
+- `INSTITUTIONAL_REQUEST_ASSIGNED`
+- `INSTITUTIONAL_REQUEST_CLOSED`
+- `INSTITUTIONAL_REQUEST_REMINDER`
+- `INSTITUTIONAL_REQUEST_ESCALATED`
+- `ATTENDANCE_FOLLOW_UP_ASSIGNED`
+- `ATTENDANCE_SUGGESTION`
+- `TRAINING_NOTE_VISIBLE`
+- `TRAINING_NOTE_COACH_REVIEW`
 
 ### Notifications unread count
 

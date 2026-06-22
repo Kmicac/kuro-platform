@@ -17,6 +17,29 @@ export interface PaginatedResponse<T> {
 export type BranchStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED'
 export type StudentStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED'
 
+export type NotificationItem = {
+  id: string
+  type: string
+  resourceType: string
+  resourceId: string
+  payload: Record<string, unknown>
+  createdAt: string
+  readAt: string | null
+}
+
+export type NotificationsListResponse = {
+  items: NotificationItem[]
+  meta: {
+    page: number
+    limit: number
+    total: number
+  }
+}
+
+export type UnreadNotificationsCountResponse = {
+  unreadCount: number
+}
+
 /**
  * Track de promoción — fuente única de verdad del backend.
  * NOTE: MASTER no es un track válido aquí; las age divisions

@@ -17,6 +17,7 @@ import type {
   ClassType,
   InstructorCandidatesResponse,
   IssueQRTokenBody,
+  NotificationsListResponse,
   PromotionRankCatalogEntry,
   QRTokenResponse,
   RecordAttendanceBody,
@@ -24,6 +25,7 @@ import type {
   SuggestAttendanceResponse,
   SuggestionsListResponse,
   CancelSuggestionResponse,
+  UnreadNotificationsCountResponse,
   RiskRoster,
   SessionAttendance,
   SessionTechnicalRoster,
@@ -113,6 +115,44 @@ export const currentMembershipVisibleProfileApi = {
     api.getNullable<CurrentMembershipVisibleProfile>(
       `/organizations/${orgId}/me/profile`
     ),
+}
+
+// ── Notifications ─────────────────────────────────────────────
+
+export const notificationsApi = {
+  list: (
+    orgId: string,
+    params?: {
+      page?: number
+      limit?: number
+    }
+  ) => {
+    const p = new URLSearchParams()
+    if (params?.page) p.set('page', String(params.page))
+    if (params?.limit) p.set('limit', String(params.limit))
+    const q = p.toString() ? `?${p}` : ''
+    return api.get<NotificationsListResponse>(
+      `/organizations/${orgId}/notifications${q}`
+    )
+  },
+
+  getUnreadCount: (orgId: string) =>
+    api.get<UnreadNotificationsCountResponse>(
+      `/organizations/${orgId}/notifications/unread-count`
+    ),
+
+  markRead: (orgId: string, notificationId: string) =>
+    api.post<void>(
+      `/organizations/${orgId}/notifications/${notificationId}/read`
+    ),
+
+  markManyRead: (orgId: string, notificationIds: string[]) =>
+    api.post<void>(`/organizations/${orgId}/notifications/read`, {
+      notificationIds,
+    }),
+
+  markAllRead: (orgId: string) =>
+    api.post<void>(`/organizations/${orgId}/notifications/read-all`),
 }
 
 export function uploadMyAvatar(
