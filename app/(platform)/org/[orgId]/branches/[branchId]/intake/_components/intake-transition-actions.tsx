@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { AlertTriangle, CheckCircle2, Loader2, LockKeyhole } from 'lucide-react'
+import { AlertTriangle, Loader2, LockKeyhole } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 
 import { Button } from '@/components/ui/button'
@@ -131,21 +131,7 @@ export function IntakeTransitionActions({
   }
 
   if (request.status === 'READY_TO_CONVERT') {
-    return (
-      <section className="rounded-xl border border-primary/30 bg-primary/10 p-4">
-        <div className="flex items-start gap-2">
-          <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
-          <div>
-            <p className="text-sm font-medium text-foreground">
-              {t('readyTitle')}
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {t('readyDescription')}
-            </p>
-          </div>
-        </div>
-      </section>
-    )
+    return null
   }
 
   if (TERMINAL_STATUSES.has(request.status)) {

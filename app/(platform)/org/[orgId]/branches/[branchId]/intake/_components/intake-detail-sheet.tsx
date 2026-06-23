@@ -22,6 +22,7 @@ import { ErrorState } from '@/components/shared'
 import { IntakeStatusBadge } from '@/components/kuro'
 import { useIntakeRequestDetail } from '@/lib/hooks'
 import type { IntakeRequestDetail } from '@/lib/api/types'
+import { IntakeConvertPreview } from './intake-convert-preview'
 import { IntakeTransitionActions } from './intake-transition-actions'
 
 export interface IntakeDetailSheetProps {
@@ -223,6 +224,8 @@ function DetailContent({
         orgId={orgId}
         request={request}
       />
+
+      <IntakeConvertPreview orgId={orgId} request={request} />
 
       {request.convertedStudentId && (
         <div className="rounded-xl border border-primary/30 bg-primary/10 p-4">

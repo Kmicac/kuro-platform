@@ -132,5 +132,52 @@
       "identityConflict": "Hay un conflicto de identidad con este email. No se puede continuar hasta resolver el vínculo entre estudiante y usuario.",
       "generic": "No se pudo actualizar la solicitud."
     }
+  },
+  "convert": {
+    "title": "Lista para convertir",
+    "description": "Revisa los datos antes de crear el perfil de alumno.",
+    "notProvided": "No informado",
+    "warning": "La conversión creará un perfil de alumno. La cuenta se reclamará mediante el flujo de invitación/claim en una fase posterior.",
+    "action": "Convertir a alumno",
+    "success": "Solicitud convertida a alumno",
+    "studentPreviewValue": "{name} se creará como alumno con email {email}.",
+    "noPermissionTitle": "Sin permisos para convertir",
+    "noPermissionDescription": "Tu rol puede gestionar el seguimiento, pero no convertir solicitudes a alumnos.",
+    "fields": {
+      "name": "Prospecto",
+      "email": "Email",
+      "phone": "Teléfono",
+      "branch": "Filial",
+      "experience": "Nivel / experiencia",
+      "requestType": "Tipo de solicitud",
+      "studentPreview": "Alumno a crear"
+    },
+    "confirm": {
+      "title": "Confirmar conversión",
+      "description": "Esta acción creará el perfil de alumno a partir de la solicitud de captación.",
+      "reasonLabel": "Motivo de conversión",
+      "reasonPlaceholder": "Ej. Prospecto confirmó que quiere comenzar clases.",
+      "reasonRequired": "Ingresa un motivo para confirmar la conversión.",
+      "cancel": "Cancelar",
+      "submit": "Confirmar conversión",
+      "converting": "Convirtiendo..."
+    },
+    "identityConflict": {
+      "title": "Conflicto de identidad",
+      "actions": {
+        "INVITE_STUDENT_CLAIM": "Ya existe un alumno con este email sin cuenta vinculada. Usa el flujo de invitación/claim del alumno existente.",
+        "CREATE_STUDENT_WITH_EXISTING_USER": "Ya existe un usuario o miembro con este email. La conversión debe vincularse explícitamente con ese usuario antes de crear el alumno.",
+        "LINK_STUDENT_TO_USER": "Existe un alumno y un usuario con el mismo email, pero no están vinculados. Se requiere resolución administrativa antes de continuar.",
+        "CONTACT_ADMIN": "No se puede resolver automáticamente este conflicto. Contacta a un administrador."
+      }
+    },
+    "errors": {
+      "validation": "No se pudo convertir. Revisa los datos enviados.",
+      "forbidden": "No tienes permisos para convertir esta solicitud.",
+      "notFound": "La solicitud ya no existe o pertenece a otra filial.",
+      "conflict": "No se pudo convertir por un conflicto de estado o identidad.",
+      "identityConflict": "No se pudo convertir por un conflicto de identidad.",
+      "generic": "No se pudo convertir la solicitud."
+    }
   }
 }

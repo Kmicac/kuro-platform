@@ -34,6 +34,8 @@ import type {
   AvatarResponseDto,
   CapabilitiesResponse,
   CurrentMembershipVisibleProfile,
+  IntakeConvertBody,
+  IntakeConvertResponse,
   PaginatedResponse,
   IntakeRequest,
   IntakeRequestDetail,
@@ -1045,6 +1047,16 @@ export const intakeApi = {
   ) =>
     api.post<IntakeRequestDetail>(
       `/organizations/${orgId}/intake-requests/${requestId}/transition`,
+      body,
+    ),
+
+  convert: (
+    orgId: string,
+    requestId: string,
+    body: IntakeConvertBody,
+  ) =>
+    api.post<IntakeConvertResponse>(
+      `/organizations/${orgId}/intake-requests/${requestId}/convert`,
       body,
     ),
 

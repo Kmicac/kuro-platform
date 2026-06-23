@@ -8,6 +8,8 @@ import {
 } from '@tanstack/react-query'
 import { intakeApi } from '@/lib/api/endpoints'
 import type {
+  IntakeConvertBody,
+  IntakeConvertResponse,
   IntakeRequestDetail,
   IntakeStatus,
   IntakeTransitionBody,
@@ -113,6 +115,51 @@ export function useTransitionIntakeRequest(
       if (branchId) {
         queryClient.invalidateQueries({
           queryKey: ['intake', orgId, branchId],
+        })
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['intake', orgId] })
+      }
+    },
+  })
+}
+
+export function useConvertIntakeRequest(
+  orgId: string,
+  requestId?: string | null,
+  branchId?: string | null,
+) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (body: IntakeConvertBody) => {
+      if (!requestId) throw new Error('Missing intake request id')
+      return intakeApi.convert(orgId, requestId, body)
+    },
+    onSuccess: (data: IntakeConvertResponse) => {
+      queryClient.setQueryData<IntakeRequestDetail>(
+        intakeDetailKey(orgId, requestId),
+        data.request,
+      )
+
+      if (data.student?.id) {
+        queryClient.invalidateQueries({
+          queryKey: ['student', orgId, data.student.id],
+        })
+      }
+    },
+    onSettled: () => {
+      if (requestId) {
+        queryClient.invalidateQueries({
+          queryKey: intakeDetailKey(orgId, requestId),
+        })
+      }
+
+      if (branchId) {
+        queryClient.invalidateQueries({
+          queryKey: ['intake', orgId, branchId],
+        })
+        queryClient.invalidateQueries({
+          queryKey: ['students', orgId, branchId],
         })
       } else {
         queryClient.invalidateQueries({ queryKey: ['intake', orgId] })

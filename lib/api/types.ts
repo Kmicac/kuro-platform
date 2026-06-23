@@ -1042,6 +1042,37 @@ export type IntakeTransitionBody = {
   assignedToMembershipId?: string | null
 }
 
+export type IntakeConvertBody = {
+  conversionReason: string
+}
+
+export type IntakeConvertResponse = {
+  request: IntakeRequestDetail
+  student: {
+    id: string
+    firstName?: string | null
+    lastName?: string | null
+    email?: string | null
+  } & Record<string, unknown>
+  membership: {
+    id: string
+    organizationId: string
+    userId: string | null
+    status: string
+    scopeType: string
+    primaryBranchId: string | null
+    roles: string[]
+    branchIds: string[]
+  } | null
+  user: Record<string, unknown> | null
+  activation: {
+    required: boolean
+    status: string
+    expiresAt: string | null
+    delivery: unknown
+  } | null
+}
+
 // ── Students ──────────────────────────────────────────────────
 
 export interface StudentListItem {
