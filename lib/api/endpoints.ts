@@ -37,6 +37,7 @@ import type {
   PaginatedResponse,
   IntakeRequest,
   IntakeRequestDetail,
+  IntakeTransitionBody,
   StudentListItem,
   StudentDetail,
   Weekday,
@@ -1035,6 +1036,16 @@ export const intakeApi = {
   getById: (orgId: string, requestId: string) =>
     api.get<IntakeRequestDetail>(
       `/organizations/${orgId}/intake-requests/${requestId}`
+    ),
+
+  transition: (
+    orgId: string,
+    requestId: string,
+    body: IntakeTransitionBody,
+  ) =>
+    api.post<IntakeRequestDetail>(
+      `/organizations/${orgId}/intake-requests/${requestId}/transition`,
+      body,
     ),
 
   list: (

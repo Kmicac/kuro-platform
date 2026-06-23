@@ -1034,6 +1034,14 @@ export interface IntakeRequest {
 
 export type IntakeRequestDetail = IntakeRequest
 
+export type IntakeTransitionBody = {
+  status: IntakeStatus
+  proposedStartAt?: string | null
+  proposedEndAt?: string | null
+  decisionReason?: string | null
+  assignedToMembershipId?: string | null
+}
+
 // ── Students ──────────────────────────────────────────────────
 
 export interface StudentListItem {

@@ -22,6 +22,7 @@ import { ErrorState } from '@/components/shared'
 import { IntakeStatusBadge } from '@/components/kuro'
 import { useIntakeRequestDetail } from '@/lib/hooks'
 import type { IntakeRequestDetail } from '@/lib/api/types'
+import { IntakeTransitionActions } from './intake-transition-actions'
 
 export interface IntakeDetailSheetProps {
   open: boolean
@@ -216,6 +217,12 @@ function DetailContent({
           value={request.convertedStudentId ?? t('notConverted')}
         />
       </section>
+
+      <IntakeTransitionActions
+        key={`${request.id}:${request.status}`}
+        orgId={orgId}
+        request={request}
+      />
 
       {request.convertedStudentId && (
         <div className="rounded-xl border border-primary/30 bg-primary/10 p-4">

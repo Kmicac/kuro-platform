@@ -88,5 +88,49 @@
     "READY_TO_CONVERT": "Lista para convertir",
     "CONVERTED": "Convertida",
     "CANCELLED": "Cancelada"
+  },
+  "transition": {
+    "title": "Seguimiento",
+    "currentStatus": "Estado actual: {status}",
+    "selectedStatus": "Se enviará el cambio de estado a {status}.",
+    "selectAction": "Selecciona una acción para actualizar el estado de esta solicitud.",
+    "readyTitle": "Lista para conversión",
+    "readyDescription": "Lista para conversión. La conversión a alumno se implementará en la siguiente fase.",
+    "terminalTitle": "Estado final",
+    "terminalDescription": "Esta solicitud no tiene acciones de seguimiento disponibles.",
+    "noActionsTitle": "Sin acciones disponibles",
+    "noActionsDescription": "No hay transiciones operativas disponibles para el estado actual.",
+    "noPermissionTitle": "Sin permisos para cambiar estado",
+    "noPermissionDescription": "Tu rol puede ver esta solicitud, pero no gestionar su seguimiento.",
+    "fields": {
+      "proposedStartAt": "Inicio propuesto",
+      "proposedEndAt": "Fin propuesto",
+      "decisionReason": "Motivo / nota operativa",
+      "decisionReasonPlaceholder": "Agrega contexto breve para el equipo operativo."
+    },
+    "actions": {
+      "markReviewing": "Marcar en revisión",
+      "markContacted": "Marcar contactada",
+      "proposeVisit": "Proponer visita",
+      "scheduleVisit": "Programar visita",
+      "markVisitCompleted": "Marcar visita completada",
+      "markNoShow": "Marcar no asistió",
+      "markReadyToConvert": "Marcar lista para convertir",
+      "decline": "Declinada por prospecto",
+      "reject": "Rechazar",
+      "cancel": "Cancelar solicitud",
+      "submit": "Guardar cambio",
+      "saving": "Guardando...",
+      "clear": "Cambiar acción"
+    },
+    "success": "Solicitud actualizada",
+    "errors": {
+      "validation": "No se pudo actualizar. Revisa los datos enviados.",
+      "forbidden": "No tienes permisos para gestionar esta solicitud.",
+      "notFound": "La solicitud ya no existe o pertenece a otra filial.",
+      "invalidTransition": "La transición no está permitida para el estado actual.",
+      "identityConflict": "Hay un conflicto de identidad con este email. No se puede continuar hasta resolver el vínculo entre estudiante y usuario.",
+      "generic": "No se pudo actualizar la solicitud."
+    }
   }
 }
