@@ -36,6 +36,7 @@ import type {
   CurrentMembershipVisibleProfile,
   PaginatedResponse,
   IntakeRequest,
+  IntakeRequestDetail,
   StudentListItem,
   StudentDetail,
   Weekday,
@@ -1031,6 +1032,11 @@ export const instructorsApi = {
 // ── Intake ────────────────────────────────────────────────────
 
 export const intakeApi = {
+  getById: (orgId: string, requestId: string) =>
+    api.get<IntakeRequestDetail>(
+      `/organizations/${orgId}/intake-requests/${requestId}`
+    ),
+
   list: (
     orgId: string,
     branchId: string,

@@ -1007,17 +1007,23 @@ export interface IntakeRequest {
   requesterUserId: string | null
   fullName: string
   email: string
-  phone: string
-  message: string
-  experienceLevel: string
+  phone: string | null
+  message: string | null
+  notes?: string | null
+  experienceLevel: string | null
   requestType: string
   status: IntakeStatus
   preferredStartAt: string | null
   preferredEndAt: string | null
   proposedStartAt: string | null
   proposedEndAt: string | null
+  proposedByMembershipId?: string | null
   assignedToMembershipId: string | null
+  decisionByMembershipId?: string | null
+  decisionAt?: string | null
+  decisionReason?: string | null
   convertedStudentId: string | null
+  convertedMembershipId?: string | null
   source: string
   consentToContact: boolean
   consentAt: string
@@ -1025,6 +1031,8 @@ export interface IntakeRequest {
   updatedAt: string
   branch: Record<string, unknown>
 }
+
+export type IntakeRequestDetail = IntakeRequest
 
 // ── Students ──────────────────────────────────────────────────
 

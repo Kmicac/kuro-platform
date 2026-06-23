@@ -34,3 +34,20 @@ export function useIntakeRequests(
     placeholderData: keepPreviousData,
   })
 }
+
+export function useIntakeRequestDetail(
+  orgId: string,
+  requestId?: string | null,
+  options?: { enabled?: boolean },
+) {
+  return useQuery({
+    queryKey: ['intake-detail', orgId, requestId ?? null],
+    queryFn: () => {
+      if (!requestId) throw new Error('Missing intake request id')
+      return intakeApi.getById(orgId, requestId)
+    },
+    staleTime: STALE.detail,
+    retry: kuroRetry,
+    enabled: Boolean(orgId && requestId && (options?.enabled ?? true)),
+  })
+}

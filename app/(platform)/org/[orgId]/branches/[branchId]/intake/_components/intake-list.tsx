@@ -29,6 +29,7 @@ import {
 } from '@/components/shared'
 import type { IntakeRequest, IntakeStatus } from '@/lib/api/types'
 import { cn } from '@/lib/utils'
+import { IntakeDetailSheet } from './intake-detail-sheet'
 
 interface IntakeListProps {
   orgId: string
@@ -66,6 +67,7 @@ export function IntakeList({ orgId, branchId }: IntakeListProps) {
   const [status, setStatus] = useState<IntakeStatus | 'ALL'>('NEW')
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
+  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null)
 
   const branchQuery = useBranch(orgId, branchId)
   const listQuery = useIntakeRequests(orgId, branchId, {
@@ -167,6 +169,7 @@ export function IntakeList({ orgId, branchId }: IntakeListProps) {
           search={search}
           onRetry={() => listQuery.refetch()}
           orgId={orgId}
+          onManage={setSelectedRequestId}
         />
 
         {meta && meta.total > 0 && !listQuery.error && (
@@ -180,6 +183,15 @@ export function IntakeList({ orgId, branchId }: IntakeListProps) {
           />
         )}
       </div>
+
+      <IntakeDetailSheet
+        open={selectedRequestId != null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedRequestId(null)
+        }}
+        orgId={orgId}
+        requestId={selectedRequestId}
+      />
     </div>
   )
 }
@@ -194,6 +206,7 @@ function ListBody({
   search,
   onRetry,
   orgId,
+  onManage,
 }: {
   isLoading: boolean
   error: unknown
@@ -202,6 +215,7 @@ function ListBody({
   search: string
   onRetry: () => void
   orgId: string
+  onManage: (requestId: string) => void
 }) {
   const t = useTranslations('intake')
   const tErrors = useTranslations('errors.intake')
@@ -280,7 +294,12 @@ function ListBody({
             </thead>
             <tbody className="divide-y divide-border">
               {items.map((it) => (
-                <IntakeRow key={it.id} item={it} orgId={orgId} />
+                <IntakeRow
+                  key={it.id}
+                  item={it}
+                  orgId={orgId}
+                  onManage={onManage}
+                />
               ))}
             </tbody>
           </table>
@@ -290,14 +309,20 @@ function ListBody({
   )
 }
 
-function IntakeRow({ item, orgId }: { item: IntakeRequest; orgId: string }) {
+function IntakeRow({
+  item,
+  orgId,
+  onManage,
+}: {
+  item: IntakeRequest
+  orgId: string
+  onManage: (requestId: string) => void
+}) {
   const t = useTranslations('intake')
   const tType = useTranslations('intake.requestType')
   const tExperience = useTranslations('intake.experience')
-  const tCommon = useTranslations('common')
   const tRel = useTranslations('common.relativeTime')
 
-  const converted = item.status === 'CONVERTED' && item.convertedStudentId
   return (
     <tr className="hover:bg-muted/40 transition-colors">
       <td className="px-4 py-3">
@@ -331,7 +356,9 @@ function IntakeRow({ item, orgId }: { item: IntakeRequest; orgId: string }) {
             {humanizeRequestType(item.requestType, tType)}
           </span>
           <span className="text-muted-foreground">
-            {humanizeExperience(item.experienceLevel, tExperience)}
+            {item.experienceLevel
+              ? humanizeExperience(item.experienceLevel, tExperience)
+              : '—'}
           </span>
         </div>
       </td>
@@ -342,23 +369,22 @@ function IntakeRow({ item, orgId }: { item: IntakeRequest; orgId: string }) {
         {formatRelativeDate(item.createdAt, tRel as unknown as RelTranslator)}
       </td>
       <td className="px-4 py-3 text-right">
-        {converted ? (
-          <Link
-            href={`/org/${orgId}/students/${item.convertedStudentId}`}
-            className="text-xs text-primary hover:underline"
-          >
-            {t('viewStudent')}
-          </Link>
-        ) : (
+        <div className="flex justify-end gap-2">
+          {item.convertedStudentId && (
+            <Button asChild variant="ghost" size="xs">
+              <Link href={`/org/${orgId}/students/${item.convertedStudentId}`}>
+                {t('viewStudent')}
+              </Link>
+            </Button>
+          )}
           <Button
             variant="outline"
             size="xs"
-            disabled
-            title={tCommon('actions.comingSoon')}
+            onClick={() => onManage(item.id)}
           >
             {t('manage')}
           </Button>
-        )}
+        </div>
       </td>
     </tr>
   )
