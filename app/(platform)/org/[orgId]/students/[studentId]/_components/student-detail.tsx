@@ -5,6 +5,7 @@ import { useFormatter, useTranslations } from 'next-intl'
 import {
   Award,
   Calendar,
+  ChevronRight,
   ClipboardCheck,
   Hash,
   Lock,
@@ -23,8 +24,11 @@ import { ApiError } from '@/lib/api/client'
 import { usePromotionRankResolver, useStudent } from '@/lib/hooks'
 import { BeltBadge, StatusBadge } from '@/components/kuro'
 import { PersonAvatar } from '@/components/common/person-avatar'
-import { ErrorState, PageHeader } from '@/components/shared'
-import type { StudentDetail as StudentDetailType } from '@/lib/api/types'
+import { ErrorState } from '@/components/shared'
+import type {
+  PromotionRankCatalogEntry,
+  StudentDetail as StudentDetailType,
+} from '@/lib/api/types'
 import { cn } from '@/lib/utils'
 import { StudentMembershipPanel } from './student-membership-panel'
 import { StudentRankEditor } from './student-rank-editor'
@@ -87,6 +91,10 @@ export function StudentDetail({ orgId, studentId }: StudentDetailProps) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 space-y-4">
           <BjjJourneyCard student={student} />
+          <BeltJourneyCard
+            student={student}
+            beltEntry={resolveBelt(student.currentBelt)}
+          />
           <TechnicalNotesCard notes={student.technicalNotes} />
           <CertificatesCard
             count={student.promotionCertificates?.length ?? 0}
@@ -120,9 +128,11 @@ function Header({
 }: {
   student: StudentDetailType
   orgId: string
-  beltEntry: import('@/lib/api/types').PromotionRankCatalogEntry | null
+  beltEntry: PromotionRankCatalogEntry | null
 }) {
   const tn = useTranslations('navigation')
+  const tb = useTranslations('navigation.breadcrumb')
+  const t = useTranslations('students')
   const tTrack = useTranslations('students.track')
   const fullName = `${student.firstName} ${student.lastName}`.trim()
   const branchName = primaryBranchName(student)
@@ -141,47 +151,95 @@ function Header({
   ]
 
   return (
-    <PageHeader
-      breadcrumbs={breadcrumbs}
-      title={fullName}
-      subtitle={
-        <span className="inline-flex items-center gap-3 flex-wrap">
-          {branchName && (
-            <span className="inline-flex items-center gap-1.5">
-              <MapPin className="h-3.5 w-3.5" />
-              {branchName}
+    <div className="space-y-3">
+      <nav
+        aria-label={tb('aria')}
+        className="flex items-center gap-1.5 text-xs text-muted-foreground"
+      >
+        {breadcrumbs.map((breadcrumb, index) => {
+          const isLast = index === breadcrumbs.length - 1
+          return (
+            <span key={`${breadcrumb.label}-${index}`} className="flex items-center gap-1.5">
+              {breadcrumb.href && !isLast ? (
+                <Link
+                  href={breadcrumb.href}
+                  className="hover:text-foreground transition-colors"
+                >
+                  {breadcrumb.label}
+                </Link>
+              ) : (
+                <span className={isLast ? 'text-foreground font-medium' : undefined}>
+                  {breadcrumb.label}
+                </span>
+              )}
+              {!isLast && <ChevronRight className="h-3 w-3" aria-hidden />}
             </span>
-          )}
-          <span className="inline-flex items-center gap-1.5">
-            <ClipboardCheck className="h-3.5 w-3.5" />
-            {humanizeTrack(tTrack, student.promotionTrack)}
-          </span>
-        </span>
-      }
-      meta={
-        <div className="flex items-center gap-3 flex-wrap">
-          <PersonAvatar
-            avatarUrl={student.avatarUrl}
-            firstName={student.firstName}
-            lastName={student.lastName}
-            displayName={fullName}
-            size="lg"
-          />
-          <div className="flex items-center gap-2 flex-wrap">
-            <StatusBadge status={student.status} />
-            <BeltBadge
-              rank={beltEntry}
-              stripes={student.currentStripes}
-            />
-            <StudentRankEditor
-              key={`${student.id}:${student.membershipId ?? 'none'}:${student.currentBelt ?? 'none'}:${student.currentStripes}`}
-              orgId={orgId}
-              student={student}
-            />
+          )
+        })}
+      </nav>
+
+      <TextureCard>
+        <TextureCardContent className="p-5 sm:p-6">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 items-center gap-4">
+              <PersonAvatar
+                avatarUrl={student.avatarUrl}
+                firstName={student.firstName}
+                lastName={student.lastName}
+                displayName={fullName}
+                size="lg"
+              />
+              <div className="min-w-0 space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="truncate text-2xl font-semibold tracking-tight text-foreground">
+                    {fullName}
+                  </h1>
+                  <StatusBadge status={student.status} />
+                </div>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                  {branchName && (
+                    <span className="inline-flex items-center gap-1.5">
+                      <MapPin className="h-3.5 w-3.5" />
+                      {branchName}
+                    </span>
+                  )}
+                  <span className="inline-flex items-center gap-1.5">
+                    <ClipboardCheck className="h-3.5 w-3.5" />
+                    {humanizeTrack(tTrack, student.promotionTrack)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-border bg-background/60 p-3 shadow-sm lg:min-w-[300px]">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="min-w-0 space-y-1">
+                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                    {t('detail.currentRank')}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <BeltBadge
+                      rank={beltEntry}
+                      stripes={student.currentStripes}
+                    />
+                    {!beltEntry && (
+                      <span className="text-sm font-medium text-muted-foreground">
+                        {t('belt.noRank')}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <StudentRankEditor
+                  key={`${student.id}:${student.membershipId ?? 'none'}:${student.currentBelt ?? 'none'}:${student.currentStripes}`}
+                  orgId={orgId}
+                  student={student}
+                />
+              </div>
+            </div>
           </div>
-        </div>
-      }
-    />
+        </TextureCardContent>
+      </TextureCard>
+    </div>
   )
 }
 
@@ -214,6 +272,73 @@ function BjjJourneyCard({ student }: { student: StudentDetailType }) {
             </p>
           </div>
         ))}
+      </div>
+    </SectionCard>
+  )
+}
+
+function BeltJourneyCard({
+  student,
+  beltEntry,
+}: {
+  student: StudentDetailType
+  beltEntry: PromotionRankCatalogEntry | null
+}) {
+  const t = useTranslations('students')
+  const maxStripes = beltEntry?.maxStripes ?? 4
+  const currentStripes = Math.max(0, Math.min(maxStripes, student.currentStripes))
+  const progress =
+    beltEntry && maxStripes > 0 ? Math.min(100, (currentStripes / maxStripes) * 100) : 0
+
+  return (
+    <SectionCard title={t('detail.beltJourney')} icon={Award}>
+      <div className="space-y-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+              {t('detail.currentRank')}
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <BeltBadge rank={beltEntry} stripes={student.currentStripes} />
+              <span className="text-sm font-semibold text-foreground">
+                {beltEntry?.label ?? t('belt.noRank')}
+              </span>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-border bg-background/60 px-3 py-2 text-right">
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+              {t('detail.stripes')}
+            </p>
+            <p className="text-lg font-semibold tabular-nums text-foreground">
+              {beltEntry
+                ? t('detail.stripeSummary', {
+                    count: currentStripes,
+                    max: maxStripes,
+                  })
+                : '—'}
+            </p>
+          </div>
+        </div>
+
+        {beltEntry ? (
+          <div className="space-y-2">
+            <div className="h-2 rounded-full bg-muted overflow-hidden">
+              <div
+                className="h-full rounded-full bg-primary transition-all"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <div className="flex items-center justify-between text-[10px] uppercase tracking-wide text-muted-foreground">
+              <span>{t('detail.rankProgress')}</span>
+              <span>{Math.round(progress)}%</span>
+            </div>
+          </div>
+        ) : (
+          <p className="rounded-lg border border-dashed border-border bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
+            {t('detail.noRankJourney')}
+          </p>
+        )}
       </div>
     </SectionCard>
   )

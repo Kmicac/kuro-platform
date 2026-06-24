@@ -22,6 +22,7 @@ import { ApiError } from '@/lib/api/client'
 import {
   useBranch,
   useBranchStudents,
+  useDebouncedValue,
   usePromotionRankResolver,
 } from '@/lib/hooks'
 import { PersonAvatar } from '@/components/common/person-avatar'
@@ -45,6 +46,7 @@ interface StudentsListProps {
 }
 
 const PAGE_SIZE = 25
+const STATUS_FILTER_FETCH_LIMIT = 250
 
 const STATUS_FILTER_VALUES: (StudentStatus | 'ALL')[] = [
   'ALL',
@@ -57,32 +59,41 @@ export function StudentsList({ orgId, branchId }: StudentsListProps) {
   const t = useTranslations('students')
   const tc = useTranslations('common')
   const tn = useTranslations('navigation')
-  const [status, setStatus] = useState<StudentStatus | 'ALL'>('ACTIVE')
+  const [status, setStatus] = useState<StudentStatus | 'ALL'>('ALL')
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
+  const debouncedSearch = useDebouncedValue(search, 300)
+  const isStatusFiltered = status !== 'ALL'
 
   const branchQuery = useBranch(orgId, branchId)
   const listQuery = useBranchStudents(orgId, branchId, {
-    page,
-    limit: PAGE_SIZE,
+    page: isStatusFiltered ? 1 : page,
+    limit: isStatusFiltered ? STATUS_FILTER_FETCH_LIMIT : PAGE_SIZE,
+    q: debouncedSearch,
   })
   const resolveBelt = usePromotionRankResolver()
 
   const items = useMemo(() => listQuery.data?.items ?? [], [listQuery.data])
   const meta = listQuery.data?.meta
 
-  const filteredItems = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    return items.filter((s) => {
-      if (status !== 'ALL' && s.status !== status) return false
-      if (!q) return true
-      const haystack =
-        `${s.firstName} ${s.lastName} ${s.email} ${s.phone ?? ''}`.toLowerCase()
-      return haystack.includes(q)
-    })
-  }, [items, status, search])
+  const filteredItems = useMemo(
+    () =>
+      status === 'ALL' ? items : items.filter((student) => student.status === status),
+    [items, status],
+  )
 
-  const totalPages = meta ? Math.max(1, Math.ceil(meta.total / meta.limit)) : 1
+  const visibleItems = useMemo(
+    () =>
+      isStatusFiltered
+        ? filteredItems.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+        : filteredItems,
+    [filteredItems, isStatusFiltered, page],
+  )
+
+  const visibleTotal = isStatusFiltered
+    ? filteredItems.length
+    : meta?.total ?? filteredItems.length
+  const totalPages = Math.max(1, Math.ceil(visibleTotal / PAGE_SIZE))
 
   return (
     <div className="p-6 space-y-6">
@@ -98,9 +109,9 @@ export function StudentsList({ orgId, branchId }: StudentsListProps) {
         title={t('list.title')}
         subtitle={t('list.subtitle')}
         meta={
-          meta?.total != null && (
+          !listQuery.isLoading && (
             <Badge variant="outline" className="text-xs">
-              {t('list.count', { count: meta.total })}
+              {t('list.count', { count: visibleTotal })}
             </Badge>
           )
         }
@@ -113,7 +124,10 @@ export function StudentsList({ orgId, branchId }: StudentsListProps) {
             return (
               <button
                 key={value}
-                onClick={() => setStatus(value)}
+                onClick={() => {
+                  setStatus(value)
+                  setPage(1)
+                }}
                 className={cn(
                   'px-3 py-1.5 rounded-md text-xs font-medium transition-colors border',
                   active
@@ -134,13 +148,19 @@ export function StudentsList({ orgId, branchId }: StudentsListProps) {
             <input
               type="search"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value)
+                setPage(1)
+              }}
               placeholder={tc('search.byNameEmailPhone')}
               className="w-full pl-8 pr-8 py-1.5 text-xs rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-ring"
             />
             {search && (
               <button
-                onClick={() => setSearch('')}
+                onClick={() => {
+                  setSearch('')
+                  setPage(1)
+                }}
                 aria-label={tc('actions.clearSearch')}
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
@@ -153,7 +173,7 @@ export function StudentsList({ orgId, branchId }: StudentsListProps) {
         <ListBody
           isLoading={listQuery.isLoading}
           error={listQuery.error}
-          items={filteredItems}
+          items={visibleItems}
           rawCount={items.length}
           search={search}
           status={status}
@@ -162,11 +182,11 @@ export function StudentsList({ orgId, branchId }: StudentsListProps) {
           resolveBelt={resolveBelt}
         />
 
-        {meta && meta.total > 0 && !listQuery.error && (
+        {visibleTotal > 0 && !listQuery.error && (
           <Pagination
             page={page}
             totalPages={totalPages}
-            total={meta.total}
+            total={visibleTotal}
             isFetching={listQuery.isFetching}
             onPrev={() => setPage((p) => Math.max(1, p - 1))}
             onNext={() => setPage((p) => Math.min(totalPages, p + 1))}
@@ -232,7 +252,7 @@ function ListBody({
   }
 
   if (items.length === 0) {
-    if ((search || status !== 'ALL') && rawCount > 0) {
+    if (search || status !== 'ALL' || rawCount > 0) {
       return (
         <EmptyState
           icon={Search}
