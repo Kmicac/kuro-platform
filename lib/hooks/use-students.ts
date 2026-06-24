@@ -6,7 +6,13 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query'
-import { studentsApi } from '@/lib/api/endpoints'
+import { membershipsApi, studentsApi } from '@/lib/api/endpoints'
+import type {
+  MembershipTechnicalProfileBody,
+  PaginatedResponse,
+  StudentDetail,
+  StudentListItem,
+} from '@/lib/api/types'
 import { STALE, kuroRetry } from './_shared'
 
 export interface UseBranchStudentsParams {
@@ -74,6 +80,78 @@ export function useInviteStudent(orgId: string) {
           queryKey: ['intake-detail', orgId, vars.intakeRequestId],
         })
       }
+    },
+  })
+}
+
+export interface UpdateMembershipTechnicalProfileVars
+  extends MembershipTechnicalProfileBody {
+  membershipId: string
+  studentId: string
+  branchId?: string | null
+}
+
+export function useUpdateMembershipTechnicalProfile(orgId: string) {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      membershipId,
+      currentBelt,
+      currentStripes,
+    }: UpdateMembershipTechnicalProfileVars) =>
+      membershipsApi.updateTechnicalProfile(orgId, membershipId, {
+        currentBelt,
+        currentStripes,
+      }),
+    onSuccess: (data, vars) => {
+      const currentBelt = data.belt?.rank ?? null
+      const currentStripes = data.belt?.stripeCount ?? 0
+
+      qc.setQueryData<StudentDetail>(
+        ['student', orgId, vars.studentId],
+        (current) =>
+          current
+            ? {
+                ...current,
+                currentBelt,
+                currentStripes,
+              }
+            : current,
+      )
+      qc.setQueryData(
+        ['membership-technical-profile', orgId, vars.membershipId],
+        data,
+      )
+
+      if (vars.branchId) {
+        qc.setQueriesData<PaginatedResponse<StudentListItem>>(
+          { queryKey: ['students', orgId, vars.branchId] },
+          (current) =>
+            current
+              ? {
+                  ...current,
+                  items: current.items.map((student) =>
+                    student.id === vars.studentId
+                      ? {
+                          ...student,
+                          currentBelt,
+                          currentStripes,
+                        }
+                      : student,
+                  ),
+                }
+              : current,
+        )
+        qc.invalidateQueries({
+          queryKey: ['students', orgId, vars.branchId],
+          refetchType: 'none',
+        })
+      }
+      qc.invalidateQueries({
+        queryKey: ['student', orgId, vars.studentId],
+        refetchType: 'none',
+      })
     },
   })
 }

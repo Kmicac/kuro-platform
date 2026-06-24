@@ -260,6 +260,14 @@ async function request<T>(
     },
   })
 
+  const requestId = res.headers.get('x-request-id') ?? undefined
+
+  if (res.status === 401 && path.startsWith('/auth/step-up')) {
+    let body: unknown = null
+    try { body = await res.json() } catch { /* body no es JSON */ }
+    throw new ApiError(res.status, body, requestId)
+  }
+
   // ── 401 → intentar refresh una sola vez ──────────────────
   if (res.status === 401 && !_isRetry && !isCookiePath) {
     const newToken = await refreshAccessToken()
@@ -280,8 +288,6 @@ async function request<T>(
     if (typeof window !== 'undefined') window.location.href = '/login'
     throw new ApiError(401, null)
   }
-
-  const requestId = res.headers.get('x-request-id') ?? undefined
 
   if (!res.ok) {
     let body: unknown = null

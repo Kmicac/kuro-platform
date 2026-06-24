@@ -175,6 +175,22 @@ export type AvatarResponseDto = {
   avatarUrl: string | null
 }
 
+export type MembershipTechnicalProfileBody = {
+  currentBelt: PromotionRank | null
+  currentStripes: number
+}
+
+export type MembershipTechnicalProfileResponse = {
+  organizationId: string
+  membershipId: string
+  belt: {
+    rank: PromotionRank
+    degree: string | null
+    stripeCount: number
+    label: string
+  } | null
+}
+
 export type StudentAccountInviteResponse = {
   invitation: {
     id: string
@@ -1102,6 +1118,7 @@ export interface StudentListItem {
   id: string
   organizationId: string
   primaryBranchId: string
+  membershipId: string | null
   firstName: string
   lastName: string
   avatarUrl?: string | null
@@ -1109,7 +1126,7 @@ export interface StudentListItem {
   phone: string
   status: StudentStatus
   promotionTrack: PromotionTrack
-  currentBelt: PromotionRank
+  currentBelt: PromotionRank | null
   currentStripes: number
   createdAt: string
   updatedAt: string

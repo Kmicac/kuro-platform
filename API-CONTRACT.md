@@ -1,6 +1,6 @@
 # API Contract
 
-- Generated at: 2026-06-21
+- Generated at: 2026-06-22
 - Backend version: `0.0.1`
 - Source basis: current backend code in this repository
 - API version: `v1`
@@ -70,6 +70,7 @@ for completeness and are consumed by the KURO mobile app (Flutter, separate repo
 {
   "statusCode": 403,
   "error": "Forbidden",
+  "code": "OPTIONAL_STABLE_CODE",
   "message": "Missing capability",
   "path": "/api/v1/organizations/org_123",
   "requestId": "uuid",
@@ -85,6 +86,37 @@ for completeness and are consumed by the KURO mobile app (Flutter, separate repo
   - `422` Validation error
   - `429` Rate limit
   - `500` Internal server error
+
+- Missing recent-auth / step-up returns `403` and does not invalidate the
+  session:
+
+```json
+{
+  "statusCode": 403,
+  "error": "Forbidden",
+  "code": "RECENT_AUTH_REQUIRED",
+  "message": "Recent authentication required",
+  "path": "/api/v1/organizations/org_123/students/student_123/invite",
+  "requestId": "uuid",
+  "timestamp": "2026-05-26T10:30:00.000Z"
+}
+```
+
+- Student/User identity ambiguity returns a stable conflict body:
+
+```json
+{
+  "code": "STUDENT_USER_IDENTITY_CONFLICT",
+  "message": "A student and user/membership with this email already exist in this organization and are not linked.",
+  "existingStudentId": "string | null",
+  "existingUserId": "string | null",
+  "existingMembershipId": "string | null",
+  "suggestedAction": "INVITE_STUDENT_CLAIM | CREATE_STUDENT_WITH_EXISTING_USER | LINK_STUDENT_TO_USER | CONTACT_ADMIN"
+}
+```
+
+Email is a conflict signal only. Backend never autolinks `Student` and
+`User`/`OrganizationMembership` by email alone.
 
 ## Active Endpoint Index
 
@@ -404,7 +436,8 @@ type VisiblePersonDto = {
 Rules:
 
 - `displayName` is built by the backend from the available real name source.
-- `avatarUrl` is resolved from a visible `OrganizationMembershipProfile` with an active `MEMBER_AVATAR` asset when the storage adapter can produce a safe public URL; otherwise it is `null`.
+- `avatarUrl` is resolved first from the visible `OrganizationMembershipProfile` for the membership represented by that DTO. If that profile has no public active avatar, compatible admin/web and student-visible read models may fall back to another active membership profile for the same `userId` inside the same `organizationId`. If neither source has a safe public URL, it is `null`.
+- Avatar fallback is person-scoped inside one organization only. It must not resolve from global `User`, cross-tenant memberships, inactive memberships, hidden/deleted profiles, inactive/deleted assets, or storage internals.
 - `roleLabel` is included only when derived from real membership/branch/profile data.
 - `publicTitle` is included only when a real organization-scoped membership profile source provides it; it does not replace `roleLabel` or permissions.
 - `belt` uses `PersonBeltDto` and is included only when the endpoint has a real rank source for that person.
@@ -561,7 +594,7 @@ Rules:
 - Public upload/delete endpoints exist only for the authenticated user's own organization-scoped membership avatar.
 - Admin/member-management avatar endpoints do not exist yet.
 - Public DTOs still must not expose `bucket`, `objectKey`, provider, access keys, or `mediaAssetId`.
-- `VisiblePersonDto.avatarUrl` is wired only into compatible read models that already expose an avatar field: student home user, student class detail instructor, and class-session participants.
+- `VisiblePersonDto.avatarUrl` is wired into compatible read models that already expose an avatar field. The resolver prefers the specific membership profile and can fall back to another active same-organization membership profile for the same user when the specific profile has no avatar.
 - Original filenames are ignored for object key generation and are not audited.
 - Avatar upload currently validates but does not re-encode images; EXIF stripping/re-encoding remains a future hardening phase before opening broad public upload if product/security requires it.
 
@@ -1040,6 +1073,21 @@ x-csrf-token: <token>
   "authenticatedAt": "2026-05-26T10:30:00.000Z"
 }
 ```
+
+Step-up is password-based in the current API. It updates
+`lastAuthenticatedAt` for the current tenant session only. The recent-auth
+window is controlled by `AUTH_RECENT_AUTH_WINDOW_SECONDS`; default runtime
+configuration is `900` seconds.
+
+#### Recent-auth flow
+
+1. A sensitive endpoint may return `403` with `code=RECENT_AUTH_REQUIRED`.
+2. The frontend calls `POST /auth/step-up` with `{ "password": "..." }` using
+   the same access token/session.
+3. On `200`, the frontend retries the original sensitive request.
+
+Invalid step-up credentials return `401` and do not mark the session as
+recently authenticated.
 
 ### Current principal
 
@@ -2495,6 +2543,13 @@ When `currentBelt` is `null`, `belt` is `null`.
 
 Returns membership summary after role replacement.
 
+#### Identity conflict 409
+
+When adding `STUDENT` to an existing membership, backend checks whether a
+same-organization unlinked `Student` already uses the membership user's email.
+If so, role replacement is blocked with `STUDENT_USER_IDENTITY_CONFLICT`.
+Backend does not autolink by email.
+
 ### Update member scopes
 
 `PUT /organizations/:organizationId/memberships/:membershipId/scopes`
@@ -2758,6 +2813,25 @@ Same as list item plus:
 - Sends invitation email.
 - Writes audit event.
 
+#### Identity conflict 409
+
+This endpoint is for operational users/members who are not reclaiming an
+existing student record. If the requested email already belongs to a same-
+organization `Student` with `userId = null`, the API returns
+`STUDENT_USER_IDENTITY_CONFLICT` and does not create a separate
+`User`/`OrganizationMembership`.
+
+```json
+{
+  "code": "STUDENT_USER_IDENTITY_CONFLICT",
+  "message": "A student with this email already exists without a linked user account.",
+  "existingStudentId": "student_123",
+  "existingUserId": null,
+  "existingMembershipId": null,
+  "suggestedAction": "INVITE_STUDENT_CLAIM"
+}
+```
+
 ### Reissue invitation
 
 `POST /organizations/:organizationId/users/invitations/:membershipId/reissue`
@@ -2845,6 +2919,27 @@ See membership section above.
 
 Returns the student admin view with private data.
 
+#### Identity rules
+
+- `Student` is the academy's operational athlete/practitioner record.
+- `User` + `OrganizationMembership` is the login, access, roles and avatar identity.
+- `Student.userId` is the formal link between both worlds.
+- Creating a student with no `userId` is blocked when a same-organization membership already owns the email.
+- Creating a student with explicit `userId` remains valid when that user has a membership in the same organization and is not already linked to another student.
+
+#### Identity conflict 409
+
+```json
+{
+  "code": "STUDENT_USER_IDENTITY_CONFLICT",
+  "message": "A user or member with this email already exists in the organization.",
+  "existingStudentId": null,
+  "existingUserId": "user_123",
+  "existingMembershipId": "membership_123",
+  "suggestedAction": "CREATE_STUDENT_WITH_EXISTING_USER"
+}
+```
+
 ### List students by branch
 
 `GET /organizations/:organizationId/branches/:branchId/students`
@@ -2868,9 +2963,12 @@ Returns the student admin view with private data.
 
 Each student item now may include:
 
+- `membershipId: string | null`
 - `avatarUrl: string | null`
 
-`avatarUrl` resolves from the linked student's active `STUDENT` organization membership profile avatar when that profile has an active avatar asset and storage can return a safe public URL. It is `null` when the student has no linked active student membership profile avatar or storage has no public URL. Storage internals are never exposed.
+`membershipId` is the linked student's active `STUDENT` organization membership id when the student is linked to a `User` and active membership in the same organization. It is `null` for unclaimed/unlinked students or students without a matching active student membership. Use this id with `PUT /organizations/:organizationId/memberships/:membershipId/technical-profile` when editing BJJ technical rank from the admin student profile.
+
+`avatarUrl` resolves from the linked student's active `STUDENT` organization membership profile avatar when that profile has an active avatar asset and storage can return a safe public URL. If the student membership profile has no avatar, backend may fall back to another active membership profile for the same `userId` inside the same `organizationId`. It is `null` when no same-organization active membership profile can provide a safe public avatar URL. Storage internals are never exposed.
 
 #### Frontend contract note
 
@@ -2893,9 +2991,11 @@ Each student item now may include:
 The private student view:
 
 - list fields: `id`, `organizationId`, `primaryBranchId`, `firstName`, `lastName`, `email`, `phone`, `status`, `promotionTrack`, `currentBelt`, `currentStripes`, `createdAt`, `updatedAt`
-- detail-only fields: `userId`, `dateOfBirth`, `startedBjjAt`, `joinedOrganizationAt`, `parentTutorName`, `parentTutorPhone`, `parentTutorRelation`, `primaryBranch`, `branchAssignments`, `branchVisits`, `activeBranchVisits`
+- detail-only fields: `membershipId`, `userId`, `dateOfBirth`, `startedBjjAt`, `joinedOrganizationAt`, `parentTutorName`, `parentTutorPhone`, `parentTutorRelation`, `primaryBranch`, `branchAssignments`, `branchVisits`, `activeBranchVisits`
 - private field `technicalNotes` is hidden unless the caller has access
 - `promotionCertificates` is hidden in the private view
+- `membershipId` follows the same linked active `STUDENT` membership rule as the branch student list and is the id to use with the membership technical profile writer
+- `avatarUrl` follows the same rule as the branch student list: active student membership profile first, then same-user active same-organization membership avatar fallback, otherwise `null`
 
 ### Get student technical profile
 
@@ -2953,6 +3053,13 @@ Same writable student fields as create, plus:
 #### Response
 
 Same as student private detail view.
+
+#### Identity conflict 409
+
+If the resulting `email`/`userId` pair would leave a same-organization
+`Student` and `User`/`OrganizationMembership` with the same email but without
+the formal `Student.userId` link, the update is blocked with
+`STUDENT_USER_IDENTITY_CONFLICT`.
 
 ### Archive student
 
@@ -3047,6 +3154,20 @@ Same visit record shape as create.
 
 ```json
 {
+  "id": "string",
+  "studentId": "string",
+  "email": "student@example.test",
+  "expiresAt": "2026-06-02T10:30:00.000Z",
+  "deliveryRequired": true,
+  "delivery": {
+    "channel": "EMAIL",
+    "status": "SENT",
+    "provider": "NOOP | RESEND",
+    "requestedAt": "2026-05-26T10:30:00.000Z",
+    "sentAt": "2026-05-26T10:30:00.000Z",
+    "failureCode": null
+  },
+  "token": null,
   "invitation": {
     "id": "string",
     "organizationId": "string",
@@ -3058,22 +3179,74 @@ Same visit record shape as create.
     "createdAt": "2026-05-26T10:30:00.000Z",
     "token": null,
     "deliveryRequired": true
-  },
-  "delivery": {
-    "channel": "EMAIL",
-    "status": "SENT",
-    "provider": "string",
-    "requestedAt": "2026-05-26T10:30:00.000Z",
-    "sentAt": "2026-05-26T10:30:00.000Z",
-    "failureCode": null
   }
 }
 ```
+
+Top-level fields are the official frontend/mobile contract. `invitation` is
+kept for backward compatibility with earlier admin clients.
+
+`delivery.status=FAILED` is returned when the transactional provider rejects
+the send; `failureCode` is sanitized and never contains a plaintext token.
+
+When `EXPOSE_INVITATION_TOKEN_IN_RESPONSE=true` and `NODE_ENV` is not
+`production`, `token` may contain the plaintext smoke token. In production,
+`token` is always `null`.
+
+#### Email contract
+
+- Subject: `Claim your {organizationName} student account`
+- Text fallback: required and includes the web claim URL.
+- HTML: included when the provider supports HTML, with a `Claim my account`
+  CTA button, visible fallback URL, expiration, support contact, and security
+  footer.
+- Web URL: `{APP_WEB_URL}/accept-student-claim?token=<token>`
+- Mobile deep link: `{APP_MOBILE_DEEP_LINK}/accept-student-claim?token=<token>`
+  only when `APP_MOBILE_DEEP_LINK` is configured.
+- The email never includes a password, and the token appears only inside claim
+  links.
 
 **Side effects**
 
 - Sends claim invitation email.
 - Writes audit event.
+
+#### Stable business outcomes and errors
+
+- Missing recent-auth / step-up: `403` with `code=RECENT_AUTH_REQUIRED`.
+- Student already linked to a user: `409` with
+  `code=STUDENT_ACCOUNT_ALREADY_LINKED`.
+- Individual invite for a student with an active pending claim invitation is
+  allowed: the new invitation supersedes prior pending invitations.
+- Bulk invite for a student with an active pending claim invitation is not an
+  HTTP error; the per-student result is
+  `status=SKIPPED_EXISTING_PENDING_INVITE`.
+- Student/User email ambiguity is represented by the shared
+  `STUDENT_USER_IDENTITY_CONFLICT` contract where implemented. The claim invite
+  endpoint does not autolink by email alone.
+- Email delivery failure is not an HTTP error for a created invitation. The
+  response remains successful and returns `delivery.status=FAILED`,
+  `delivery.sentAt=null`, and a sanitized `delivery.failureCode`.
+
+Example already-linked response:
+
+```json
+{
+  "statusCode": 409,
+  "error": "Conflict",
+  "code": "STUDENT_ACCOUNT_ALREADY_LINKED",
+  "message": "Student account is already linked to a user",
+  "path": "/api/v1/organizations/org_123/students/student_123/invite",
+  "requestId": "uuid",
+  "timestamp": "2026-05-26T10:30:00.000Z"
+}
+```
+
+This remains the official flow for an existing `Student` with no linked user
+account. Backend creates or reuses the `User`, creates or reuses the
+`OrganizationMembership`, ensures `STUDENT`, and sets `Student.userId` only
+through claim acceptance. Backend does not autolink by email outside this
+token-bound flow.
 
 ### Bulk invite student claims
 
@@ -3414,8 +3587,17 @@ The full intake request view.
 
 ```json
 {
-  "request": {},
-  "student": {},
+  "request": {
+    "id": "string",
+    "convertedStudentId": "student_123",
+    "convertedMembershipId": "membership_123"
+  },
+  "student": {
+    "id": "student_123",
+    "organizationId": "string",
+    "primaryBranchId": "string",
+    "userId": "string"
+  },
   "membership": {
     "id": "string",
     "organizationId": "string",
@@ -3435,6 +3617,18 @@ The full intake request view.
   }
 }
 ```
+
+After conversion, admin clients can call
+`POST /organizations/:organizationId/students/:convertedStudentId/invite`
+using either `response.request.convertedStudentId` or `response.student.id`.
+
+#### Identity conflict 409
+
+Conversion never creates a duplicate student/user identity silently. If the
+intake email already belongs to an existing same-organization `Student`, linked
+`User`, or incompatible `OrganizationMembership`, the API returns
+`STUDENT_USER_IDENTITY_CONFLICT` with the relevant existing IDs and a stable
+`suggestedAction`.
 
 ## 9. Classes & Schedules
 
@@ -3919,7 +4113,7 @@ Same synchronous response shape as generate, plus:
 **Notes**
 
 - `description` mirrors `ClassSession.notes`; `notes` is kept for compatibility with existing class-session surfaces.
-- `instructor.avatarUrl` resolves from the instructor membership's `OrganizationMembershipProfile.avatarMediaAsset` only when the profile is visible, the avatar asset is active, and storage can return a safe public URL. It is `null` otherwise.
+- `instructor.avatarUrl` resolves from the instructor membership's visible `OrganizationMembershipProfile.avatarMediaAsset` first. If that membership profile has no public active avatar, backend may fall back to another active membership profile for the same `userId` inside the same `organizationId`. It is `null` when no same-organization active profile can provide a safe public URL.
 - `instructor.primaryBelt` is a rich `PromotionRank` catalog entry or `null`; frontend must not parse rank strings with `split("_")`.
 - `status` uses the backend enum value `CANCELED`, not `CANCELLED`.
 - `scheduledDate` is serialized as an ISO timestamp (`YYYY-MM-DDT00:00:00.000Z`) by Nest/JSON.
@@ -4149,7 +4343,7 @@ Uses the same `CLASS_SESSION_CONFLICT` response shape documented under create cl
 }
 ```
 
-`student.avatarUrl` resolves from the linked student's active `STUDENT` organization membership profile avatar when storage can return a safe public URL. It is `null` otherwise. The roster still must not expose `bucket`, `objectKey`, provider, or `mediaAssetId`.
+`student.avatarUrl` resolves from the linked student's active `STUDENT` organization membership profile avatar when storage can return a safe public URL. If that profile has no avatar, backend may fall back to another active membership profile for the same `userId` inside the same `organizationId`. It is `null` otherwise. The roster still must not expose `bucket`, `objectKey`, provider, or `mediaAssetId`.
 
 ### List session attendance
 
@@ -4705,7 +4899,7 @@ Notification event production is best-effort after `AttendanceSuggestion` persis
 }
 ```
 
-`items[].student.avatarUrl` resolves from the linked student's active `STUDENT` organization membership profile avatar when storage can return a safe public URL. It is `null` otherwise. The endpoint still must not expose `bucket`, `objectKey`, provider, or `mediaAssetId`.
+`items[].student.avatarUrl` resolves from the linked student's active `STUDENT` organization membership profile avatar when storage can return a safe public URL. If that profile has no avatar, backend may fall back to another active membership profile for the same `userId` inside the same `organizationId`. It is `null` otherwise. The endpoint still must not expose `bucket`, `objectKey`, provider, or `mediaAssetId`.
 
 ### Cancel class-session attendance suggestion
 
@@ -5370,7 +5564,7 @@ Current null/degraded fields:
 - `note` is currently `null`. `ClassSession.notes` remains an internal operational/admin field and is not exposed to student mobile.
 - `mat`, `difficultyLabel`, and `uniform` are `null` because the current data model has no dedicated student-safe source fields for them.
 - `instructor.roleLabel` is derived from real membership/branch data only: branch `headCoachMembershipId` takes precedence, then membership roles such as `MESTRE`, `HEAD_COACH`, `INSTRUCTOR`, `ACADEMY_MANAGER`, or `STAFF`. It is `null` only when no visible role source exists.
-- `instructor.avatarUrl` comes from the instructor's visible `OrganizationMembershipProfile.avatarMediaAsset` only when the profile is visible to members, not deleted, points to an active avatar asset, and storage can return a safe public URL. It is `null` otherwise.
+- `instructor.avatarUrl` comes from the instructor membership's visible `OrganizationMembershipProfile.avatarMediaAsset` first. If that membership profile has no public active avatar, backend may fall back to another active membership profile for the same `userId` inside the same `organizationId`. It is `null` otherwise.
 - `instructor.belt` is `PersonBeltDto | null` and comes only from `OrganizationMembershipTechnicalProfile` for the session `instructorMembershipId`. If there is no technical profile, the profile is deleted, or `currentBelt` is `null`, the field is `null`.
 - `Student.currentBelt/currentStripes` are not used as an instructor-profile proxy, even if the instructor user also has a student record.
 - `sessionOverview.goingCount` is the count of active `AttendanceIntent` rows for this session whose student is active and not deleted.
@@ -5555,7 +5749,7 @@ Current null/degraded fields:
 #### Contract rules
 
 - This is a compact mobile Home snapshot. Android should use drill-down endpoints for full profile, full calendar, attendance history, notes, or check-in execution.
-- `user.avatarUrl` comes from the authenticated user's organization membership profile only when the profile is visible to members, not deleted, points to an active avatar asset, and storage can return a safe public URL. It is `null` otherwise.
+- `user.avatarUrl` comes from the authenticated user's organization membership profile first. If that membership profile has no public active avatar, backend may fall back to another active membership profile for the same `userId` inside the same `organizationId`. It is `null` otherwise.
 - The endpoint is intentionally not a class detail endpoint, not an attendance history endpoint, not a training-notes index endpoint, and not a check-in execution endpoint.
 - `currentStripes` is the student's current stripe count for the current belt state. This is the canonical, legacy-stable field; the Home does not return a duplicate `stripesNumber`. `primaryBelt.maxStripes` is the maximum stripes allowed for that rank.
 - `beltName` is the current student-facing belt label and `beltColor` is a stable backend color token for the active rank.
@@ -8558,7 +8752,7 @@ Same as list item plus:
 | Status | Error                 | Message shape                                                       |
 | ------ | --------------------- | ------------------------------------------------------------------- |
 | 401    | Unauthorized          | token absent, expired, invalid, or membership unavailable           |
-| 403    | Forbidden             | missing capability, scope mismatch, recent-auth required            |
+| 403    | Forbidden             | missing capability, scope mismatch, or `RECENT_AUTH_REQUIRED`       |
 | 404    | Not Found             | resource not found or hidden by tenant isolation                    |
 | 409    | Conflict              | duplicate resource, invalid state transition, or lifecycle conflict |
 | 422    | Validation Error      | invalid request body/query structure                                |
@@ -8571,12 +8765,46 @@ Same as list item plus:
 {
   "statusCode": 403,
   "error": "Forbidden",
+  "code": "OPTIONAL_STABLE_CODE",
   "message": "Missing capability",
   "path": "/api/v1/organizations/org_123",
   "requestId": "uuid",
   "timestamp": "2026-05-26T10:30:00.000Z"
 }
 ```
+
+### Recent-auth required
+
+```json
+{
+  "statusCode": 403,
+  "error": "Forbidden",
+  "code": "RECENT_AUTH_REQUIRED",
+  "message": "Recent authentication required",
+  "path": "/api/v1/organizations/org_123/students/student_123/invite",
+  "requestId": "uuid",
+  "timestamp": "2026-05-26T10:30:00.000Z"
+}
+```
+
+### Student/User identity conflict
+
+```json
+{
+  "code": "STUDENT_USER_IDENTITY_CONFLICT",
+  "message": "A student and user/membership with this email already exist in this organization and are not linked.",
+  "existingStudentId": "string | null",
+  "existingUserId": "string | null",
+  "existingMembershipId": "string | null",
+  "suggestedAction": "INVITE_STUDENT_CLAIM | CREATE_STUDENT_WITH_EXISTING_USER | LINK_STUDENT_TO_USER | CONTACT_ADMIN"
+}
+```
+
+This conflict is organization-scoped. Email is only a conflict signal; it is
+not enough to autolink identities. Existing students without accounts use
+student account claim, existing members who need student life use explicit
+student creation with `userId`, and unresolved mismatches stay blocked for
+administrative resolution.
 
 ## 25. Pendientes / no expuestos como activos
 

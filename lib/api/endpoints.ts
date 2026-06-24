@@ -15,6 +15,8 @@ import type {
   ClassSessionListItem,
   ClassSessionStatus,
   ClassType,
+  MembershipTechnicalProfileBody,
+  MembershipTechnicalProfileResponse,
   InstructorCandidatesResponse,
   IssueQRTokenBody,
   NotificationsListResponse,
@@ -119,6 +121,18 @@ export const currentMembershipVisibleProfileApi = {
   get: (orgId: string) =>
     api.getNullable<CurrentMembershipVisibleProfile>(
       `/organizations/${orgId}/me/profile`
+    ),
+}
+
+export const membershipsApi = {
+  updateTechnicalProfile: (
+    orgId: string,
+    membershipId: string,
+    body: MembershipTechnicalProfileBody,
+  ) =>
+    api.put<MembershipTechnicalProfileResponse>(
+      `/organizations/${orgId}/memberships/${membershipId}/technical-profile`,
+      body,
     ),
 }
 

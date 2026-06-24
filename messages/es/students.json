@@ -55,5 +55,40 @@
     "noRankAria": "Sin rango asignado",
     "noRank": "Sin rango",
     "rankWithStripes": "{rank} con {count, plural, =1 {1 grado} other {# grados}}"
+  },
+  "rankEditor": {
+    "action": "Editar rango",
+    "title": "Editar rango técnico",
+    "description": "Actualiza el cinturón y los grados visibles del alumno.",
+    "belt": "Cinturón",
+    "beltPlaceholder": "Selecciona cinturón",
+    "stripes": "Grados",
+    "stripeOption": "{count, plural, =0 {0 grados} =1 {1 grado} other {# grados}}",
+    "save": "Guardar rango",
+    "saving": "Guardando...",
+    "cancel": "Cancelar",
+    "success": "Rango actualizado",
+    "noMembership": "Este alumno aún no tiene una cuenta/membresía activa vinculada. Envía o completa el claim account antes de editar el rango técnico.",
+    "stepUp": {
+      "title": "Confirma tu identidad",
+      "description": "Editar el rango técnico es una acción sensible. Confirma tu contraseña para continuar.",
+      "passwordLabel": "Contraseña",
+      "passwordPlaceholder": "Ingresa tu contraseña",
+      "cancel": "Cancelar",
+      "submit": "Confirmar y guardar",
+      "confirming": "Confirmando...",
+      "errors": {
+        "required": "Ingresa tu contraseña.",
+        "invalid": "No se pudo confirmar tu identidad. Revisa tu contraseña.",
+        "generic": "No se pudo confirmar tu identidad."
+      }
+    },
+    "errors": {
+      "invalidStripes": "Los grados deben estar entre 0 y 4.",
+      "validation": "No se pudo actualizar el rango. Revisa los datos enviados.",
+      "forbidden": "No tienes permisos para editar el rango.",
+      "notFound": "No se encontró la membresía activa del alumno.",
+      "generic": "Error al actualizar rango."
+    }
   }
 }

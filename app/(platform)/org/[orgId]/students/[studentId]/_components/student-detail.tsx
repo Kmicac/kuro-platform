@@ -27,6 +27,7 @@ import { ErrorState, PageHeader } from '@/components/shared'
 import type { StudentDetail as StudentDetailType } from '@/lib/api/types'
 import { cn } from '@/lib/utils'
 import { StudentMembershipPanel } from './student-membership-panel'
+import { StudentRankEditor } from './student-rank-editor'
 
 interface StudentDetailProps {
   orgId: string
@@ -171,6 +172,11 @@ function Header({
             <BeltBadge
               rank={beltEntry}
               stripes={student.currentStripes}
+            />
+            <StudentRankEditor
+              key={`${student.id}:${student.membershipId ?? 'none'}:${student.currentBelt ?? 'none'}:${student.currentStripes}`}
+              orgId={orgId}
+              student={student}
             />
           </div>
         </div>
