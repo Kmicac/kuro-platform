@@ -42,6 +42,7 @@ import type {
   IntakeTransitionBody,
   StudentListItem,
   StudentDetail,
+  StudentAccountInviteResponse,
   Weekday,
 } from './types'
 import type {
@@ -1110,9 +1111,9 @@ export const studentsApi = {
   invite: (
     orgId: string,
     studentId: string,
-    body?: { email?: string; message?: string }
+    body?: { email?: string; expiresInDays?: number }
   ) =>
-    api.post<{ ok: true } | { invitationId: string }>(
+    api.post<StudentAccountInviteResponse>(
       `/organizations/${orgId}/students/${studentId}/invite`,
       body ?? {}
     ),

@@ -1,10 +1,8 @@
 'use client'
 
-import Link from 'next/link'
 import type { ComponentType } from 'react'
 import { useFormatter, useTranslations } from 'next-intl'
 import {
-  CheckCircle2,
   Inbox,
   Mail,
   Phone,
@@ -17,11 +15,11 @@ import {
   SheetDescription,
   SheetTitle,
 } from '@/components/ui/sheet'
-import { Button } from '@/components/ui/button'
 import { ErrorState } from '@/components/shared'
 import { IntakeStatusBadge } from '@/components/kuro'
 import { useIntakeRequestDetail } from '@/lib/hooks'
 import type { IntakeRequestDetail } from '@/lib/api/types'
+import { ConvertedStudentActions } from './converted-student-actions'
 import { IntakeConvertPreview } from './intake-convert-preview'
 import { IntakeTransitionActions } from './intake-transition-actions'
 
@@ -227,26 +225,7 @@ function DetailContent({
 
       <IntakeConvertPreview orgId={orgId} request={request} />
 
-      {request.convertedStudentId && (
-        <div className="rounded-xl border border-primary/30 bg-primary/10 p-4">
-          <div className="flex items-start gap-2">
-            <CheckCircle2 className="mt-0.5 h-4 w-4 text-primary" />
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-foreground">
-                {t('convertedTitle')}
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {t('convertedDescription')}
-              </p>
-            </div>
-          </div>
-          <Button asChild size="sm" className="mt-3">
-            <Link href={`/org/${orgId}/students/${request.convertedStudentId}`}>
-              {t('viewStudent')}
-            </Link>
-          </Button>
-        </div>
-      )}
+      <ConvertedStudentActions orgId={orgId} request={request} />
     </div>
   )
 }

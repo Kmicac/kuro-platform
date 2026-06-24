@@ -179,5 +179,56 @@
       "identityConflict": "No se pudo convertir por un conflicto de identidad.",
       "generic": "No se pudo convertir la solicitud."
     }
+  },
+  "convertedStudent": {
+    "title": "Alumno creado",
+    "description": "El perfil de alumno ya fue creado. Puedes abrir su ficha o enviar la invitación de cuenta para que reclame su acceso.",
+    "missingStudentId": "La solicitud fue convertida, pero no se recibió el identificador del alumno.",
+    "viewStudent": "Ver alumno",
+    "sendInvite": "Enviar invitación de cuenta",
+    "sending": "Enviando invitación...",
+    "checkingPermission": "Verificando permisos...",
+    "noPermission": "No tienes permisos para enviar invitaciones de cuenta.",
+    "alreadyLinked": "Este alumno ya tiene una cuenta vinculada. No necesita invitación de claim.",
+    "successSent": "Se envió la invitación de cuenta al email del alumno.",
+    "successStarted": "Se inició el flujo de invitación de cuenta.",
+    "deliveryFailed": "La invitación fue creada, pero falló el envío.",
+    "sent": "Invitación enviada",
+    "started": "Flujo iniciado",
+    "sentDescription": "La respuesta del servidor confirma que la invitación fue enviada por email.",
+    "startedDescription": "La invitación fue creada o solicitada, pero la respuesta del servidor no confirma entrega por email. Revisa el delivery backend.",
+    "deliveryFailedDescription": "Backend creó o procesó la invitación, pero reportó fallo de delivery. Revisa provider/logs de email.",
+    "stepUp": {
+      "title": "Confirma tu identidad",
+      "description": "Enviar una invitación de cuenta es una acción sensible. Confirma tu contraseña para continuar.",
+      "passwordLabel": "Contraseña",
+      "passwordPlaceholder": "Ingresa tu contraseña",
+      "cancel": "Cancelar",
+      "submit": "Confirmar y enviar",
+      "confirming": "Confirmando...",
+      "errors": {
+        "required": "Ingresa tu contraseña.",
+        "invalid": "No se pudo confirmar tu identidad. Revisa tu contraseña.",
+        "generic": "No se pudo confirmar tu identidad."
+      }
+    },
+    "identityConflict": {
+      "actions": {
+        "INVITE_STUDENT_CLAIM": "Ya existe un alumno con este email sin cuenta vinculada. Usa el flujo de invitación/claim del alumno existente.",
+        "CREATE_STUDENT_WITH_EXISTING_USER": "Ya existe un usuario o miembro con este email. La cuenta debe vincularse explícitamente antes de continuar.",
+        "LINK_STUDENT_TO_USER": "Existe un alumno y un usuario con el mismo email, pero no están vinculados. Se requiere resolución administrativa antes de continuar.",
+        "CONTACT_ADMIN": "No se puede resolver automáticamente este conflicto. Contacta a un administrador."
+      }
+    },
+    "errors": {
+      "validation": "No se pudo enviar la invitación. Revisa los datos enviados.",
+      "forbidden": "No tienes permisos para enviar invitaciones.",
+      "notFound": "No se encontró el alumno convertido.",
+      "conflict": "No se pudo iniciar la invitación por un conflicto de identidad o estado.",
+      "alreadyLinked": "Este alumno ya tiene una cuenta vinculada.",
+      "pendingInvite": "Este alumno ya tiene una invitación pendiente.",
+      "stepUpRequired": "Confirma tu identidad nuevamente para enviar esta invitación.",
+      "generic": "Error al enviar invitación."
+    }
   }
 }

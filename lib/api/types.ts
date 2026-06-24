@@ -175,6 +175,29 @@ export type AvatarResponseDto = {
   avatarUrl: string | null
 }
 
+export type StudentAccountInviteResponse = {
+  invitation: {
+    id: string
+    organizationId: string
+    branchId: string
+    studentId: string
+    email: string
+    status: string
+    expiresAt: string
+    createdAt: string
+    token: null
+    deliveryRequired: boolean
+  }
+  delivery: {
+    channel: string
+    status: string
+    provider: string | null
+    requestedAt: string
+    sentAt: string | null
+    failureCode: string | null
+  } | null
+}
+
 // ── Branch ───────────────────────────────────────────────────
 
 export interface BranchPublicSurface {

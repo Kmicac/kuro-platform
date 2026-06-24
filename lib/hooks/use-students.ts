@@ -49,20 +49,31 @@ export function useStudent(orgId: string, studentId: string) {
 export interface InviteStudentVars {
   studentId: string
   email?: string
-  message?: string
+  expiresInDays?: number
+  branchId?: string | null
+  intakeRequestId?: string | null
 }
 
 export function useInviteStudent(orgId: string) {
   const qc = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ studentId, email, message }: InviteStudentVars) =>
+    mutationFn: ({ studentId, email, expiresInDays }: InviteStudentVars) =>
       studentsApi.invite(orgId, studentId, {
         ...(email ? { email } : {}),
-        ...(message ? { message } : {}),
+        ...(expiresInDays ? { expiresInDays } : {}),
       }),
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ['student', orgId, vars.studentId] })
+      if (vars.branchId) {
+        qc.invalidateQueries({ queryKey: ['students', orgId, vars.branchId] })
+        qc.invalidateQueries({ queryKey: ['intake', orgId, vars.branchId] })
+      }
+      if (vars.intakeRequestId) {
+        qc.invalidateQueries({
+          queryKey: ['intake-detail', orgId, vars.intakeRequestId],
+        })
+      }
     },
   })
 }
