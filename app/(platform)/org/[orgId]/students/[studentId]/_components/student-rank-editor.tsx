@@ -25,6 +25,7 @@ import {
 import { ApiError, authApi } from '@/lib/api/client'
 import type { PromotionRank, StudentDetail } from '@/lib/api/types'
 import {
+  useCapabilities,
   usePromotionRankCatalog,
   useUpdateMembershipTechnicalProfile,
 } from '@/lib/hooks'
@@ -41,6 +42,7 @@ export function StudentRankEditor({
 }) {
   const t = useTranslations('students.rankEditor')
   const catalogQuery = usePromotionRankCatalog()
+  const capabilitiesQuery = useCapabilities(orgId)
   const mutation = useUpdateMembershipTechnicalProfile(orgId)
   const [open, setOpen] = useState(false)
   const [selectedBelt, setSelectedBelt] = useState<PromotionRank | ''>(
@@ -57,8 +59,12 @@ export function StudentRankEditor({
   const rankOptions =
     catalogQuery.data?.filter((rank) => rank.track === student.promotionTrack) ?? []
   const membershipId = student.membershipId
+  const canEditTechnicalProfile =
+    capabilitiesQuery.data?.capabilities?.usersMemberships
+      ?.canManageRolesAndScopes ?? false
   const canSubmit = Boolean(
     membershipId &&
+      canEditTechnicalProfile &&
       selectedBelt &&
       STRIPE_OPTIONS.includes(Number(selectedStripes) as 0 | 1 | 2 | 3 | 4),
   )
@@ -139,6 +145,10 @@ export function StudentRankEditor({
         </div>
       </div>
     )
+  }
+
+  if (capabilitiesQuery.isLoading || !canEditTechnicalProfile) {
+    return null
   }
 
   return (

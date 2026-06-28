@@ -46,7 +46,6 @@ interface StudentsListProps {
 }
 
 const PAGE_SIZE = 25
-const STATUS_FILTER_FETCH_LIMIT = 250
 
 const STATUS_FILTER_VALUES: (StudentStatus | 'ALL')[] = [
   'ALL',
@@ -63,12 +62,11 @@ export function StudentsList({ orgId, branchId }: StudentsListProps) {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebouncedValue(search, 300)
-  const isStatusFiltered = status !== 'ALL'
 
   const branchQuery = useBranch(orgId, branchId)
   const listQuery = useBranchStudents(orgId, branchId, {
-    page: isStatusFiltered ? 1 : page,
-    limit: isStatusFiltered ? STATUS_FILTER_FETCH_LIMIT : PAGE_SIZE,
+    page,
+    limit: PAGE_SIZE,
     q: debouncedSearch,
   })
   const resolveBelt = usePromotionRankResolver()
@@ -82,15 +80,7 @@ export function StudentsList({ orgId, branchId }: StudentsListProps) {
     [items, status],
   )
 
-  const visibleItems = useMemo(
-    () =>
-      isStatusFiltered
-        ? filteredItems.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
-        : filteredItems,
-    [filteredItems, isStatusFiltered, page],
-  )
-
-  const visibleTotal = isStatusFiltered
+  const visibleTotal = status !== 'ALL'
     ? filteredItems.length
     : meta?.total ?? filteredItems.length
   const totalPages = Math.max(1, Math.ceil(visibleTotal / PAGE_SIZE))
@@ -173,7 +163,7 @@ export function StudentsList({ orgId, branchId }: StudentsListProps) {
         <ListBody
           isLoading={listQuery.isLoading}
           error={listQuery.error}
-          items={visibleItems}
+          items={filteredItems}
           rawCount={items.length}
           search={search}
           status={status}
@@ -222,7 +212,6 @@ function ListBody({
 }) {
   const t = useTranslations('students')
   const te = useTranslations('errors')
-  const tEmpty = useTranslations('empty-states')
   if (isLoading) {
     return (
       <TextureCard>
@@ -252,20 +241,29 @@ function ListBody({
   }
 
   if (items.length === 0) {
-    if (search || status !== 'ALL' || rawCount > 0) {
+    if (search) {
       return (
         <EmptyState
           icon={Search}
-          title={tEmpty('students.filteredTitle')}
-          description={tEmpty('students.filteredDescription')}
+          title={t('list.empty.searchTitle')}
+          description={t('list.empty.searchDescription')}
+        />
+      )
+    }
+    if (status !== 'ALL' || rawCount > 0) {
+      return (
+        <EmptyState
+          icon={Search}
+          title={t('list.empty.filterTitle')}
+          description={t('list.empty.filterDescription')}
         />
       )
     }
     return (
       <EmptyState
         icon={Users}
-        title={tEmpty('students.emptyTitle')}
-        description={tEmpty('students.emptyDescription')}
+        title={t('list.empty.title')}
+        description={t('list.empty.description')}
       />
     )
   }

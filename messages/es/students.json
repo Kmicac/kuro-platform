@@ -13,6 +13,14 @@
       "INACTIVE": "Inactivos",
       "SUSPENDED": "Suspendidos"
     },
+    "empty": {
+      "title": "Sin alumnos en esta filial",
+      "description": "Cuando se den de alta nuevos alumnos aparecerán aquí.",
+      "filterTitle": "No hay alumnos para este filtro",
+      "filterDescription": "Cambia el estado seleccionado para ver más alumnos.",
+      "searchTitle": "No encontramos alumnos con esa búsqueda",
+      "searchDescription": "Busca por nombre, email o teléfono con otro término."
+    },
     "table": {
       "student": "Alumno",
       "belt": "Faixa",
