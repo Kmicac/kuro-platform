@@ -6,8 +6,13 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query'
-import { membershipsApi, studentsApi } from '@/lib/api/endpoints'
+import {
+  membershipsApi,
+  studentsApi,
+  trainingNotesApi,
+} from '@/lib/api/endpoints'
 import type {
+  CreateTrainingNoteBody,
   MembershipTechnicalProfileBody,
   PaginatedResponse,
   StudentDetail,
@@ -49,6 +54,56 @@ export function useStudent(orgId: string, studentId: string) {
     staleTime: STALE.detail,
     retry: kuroRetry,
     enabled: Boolean(orgId && studentId),
+  })
+}
+
+export function useStudentTrainingNotes(
+  orgId: string,
+  studentId: string,
+  enabled = true,
+  params?: { classSessionId?: string },
+) {
+  const classSessionId = params?.classSessionId
+
+  return useQuery({
+    queryKey: ['student-training-notes', orgId, studentId, { classSessionId }],
+    queryFn: () =>
+      trainingNotesApi.listByStudent(orgId, studentId, {
+        ...(classSessionId ? { classSessionId } : {}),
+      }),
+    staleTime: STALE.resource,
+    retry: kuroRetry,
+    enabled: Boolean(orgId && studentId && enabled),
+  })
+}
+
+export interface CreateStudentTrainingNoteVars
+  extends CreateTrainingNoteBody {
+  studentId: string
+}
+
+export function useCreateStudentTrainingNote(orgId: string) {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      studentId,
+      body,
+      visibility,
+      noteType,
+      classSessionId,
+    }: CreateStudentTrainingNoteVars) =>
+      trainingNotesApi.createForStudent(orgId, studentId, {
+        body,
+        visibility,
+        noteType,
+        ...(classSessionId ? { classSessionId } : {}),
+      }),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({
+        queryKey: ['student-training-notes', orgId, vars.studentId],
+      })
+    },
   })
 }
 

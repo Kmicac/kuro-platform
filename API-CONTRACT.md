@@ -224,8 +224,11 @@ Controller-verified on 2026-06-21. This index is the parity list used to keep th
 - `GET /organizations/:organizationId/students/me/attendance`
 - `GET /organizations/:organizationId/students/me/billing`
 - `GET /organizations/:organizationId/students/me/billing-charges/:chargeId`
+- `GET /organizations/:organizationId/students/me/payments`
+- `GET /organizations/:organizationId/students/me/payments/:paymentId`
 - `GET /organizations/:organizationId/students/me/calendar`
 - `GET /organizations/:organizationId/students/me/class-sessions/:sessionId`
+- `GET /organizations/:organizationId/students/me/class-sessions/:sessionId/personal-notes`
 - `GET /organizations/:organizationId/students/me/class-sessions/:sessionId/attendance/participants`
 - `POST /organizations/:organizationId/students/me/check-ins/qr`
 - `GET /organizations/:organizationId/students/me/home`
@@ -258,6 +261,7 @@ Controller-verified on 2026-06-21. This index is the parity list used to keep th
 - `PATCH /organizations/:organizationId/students/:studentId`
 - `PATCH /organizations/:organizationId/students/:studentId/branch-visits/:visitId`
 - `PATCH /organizations/:organizationId/students/:studentId/membership`
+- `PATCH /organizations/:organizationId/students/me/class-sessions/:sessionId/personal-notes/:noteId`
 - `PATCH /organizations/:organizationId/training-notes/:noteId`
 - `POST /auth/accept-invitation`
 - `POST /auth/accept-student-claim`
@@ -294,6 +298,7 @@ Controller-verified on 2026-06-21. This index is the parity list used to keep th
 - `GET /organizations/:organizationId/students/me/attendance-suggestions`
 - `POST /organizations/:organizationId/students/me/attendance-suggestions/:suggestionId/accept`
 - `POST /organizations/:organizationId/students/me/attendance-suggestions/:suggestionId/decline`
+- `POST /organizations/:organizationId/students/me/class-sessions/:sessionId/personal-notes`
 - `POST /organizations/:organizationId/branches/:branchId/class-sessions/generate`
 - `POST /organizations/:organizationId/branches/:branchId/class-sessions/generate-missing`
 - `POST /organizations/:organizationId/branches/:branchId/general-income`
@@ -2516,8 +2521,11 @@ When `currentBelt` is `null`, `belt` is `null`.
 - `ACADEMY_MANAGER` cannot use `ORGANIZATION_WIDE` scope as multi-branch authority for this endpoint.
 - `ACADEMY_MANAGER` and `HEAD_COACH` cannot manage organization leadership technical profiles.
 - Branch-authorized leadership cannot manage targets without a clear `primaryBranchId`.
-- Does not update `Student.currentBelt/currentStripes`.
+- For target memberships linked to an active `Student` in the same organization through the same `userId`, the writer also updates `Student.currentBelt/currentStripes` in the same transaction. The historical Student contract remains the source consumed by `GET /students/:studentId` and branch student list responses for student rank display.
+- If the target membership is not linked to an active Student, the membership technical profile write still succeeds and no Student row is updated.
 - Does not update `PromotionRequest`, promotion history, certificates, notifications, or snapshots.
+
+Frontend/admin should edit student rank by calling this membership technical profile writer with the `membershipId` exposed by student detail/list, then refetch student detail or branch student list. No separate Student rank writer exists in V1.
 - Does not infer rank from `Student`, `user.students[0]`, Promotion snapshots, certificates, or attendance signals.
 - Does not expose email, phone, billing, notes, date of birth, or storage internals.
 - Writes an audit log entry with actor, target membership, previous rank/stripes, next rank/stripes, and source `ADMIN_TECHNICAL_PROFILE_UPDATE`.
@@ -4112,7 +4120,9 @@ Same synchronous response shape as generate, plus:
 
 **Notes**
 
-- `description` mirrors `ClassSession.notes`; `notes` is kept for compatibility with existing class-session surfaces.
+- In this branch-operational detail endpoint, `description` mirrors `ClassSession.notes`; `notes` is kept for compatibility with existing class-session surfaces.
+- `ClassSession.notes` is treated as internal/operational session text, not as a guaranteed student-safe public class description.
+- There is no dedicated session-level `publicDescription` field in the current `ClassSession` model. Student-safe public description currently comes only from `ClassSchedule.description` in the dedicated student session-detail read model.
 - `instructor.avatarUrl` resolves from the instructor membership's visible `OrganizationMembershipProfile.avatarMediaAsset` first. If that membership profile has no public active avatar, backend may fall back to another active membership profile for the same `userId` inside the same `organizationId`. It is `null` when no same-organization active profile can provide a safe public URL.
 - `instructor.primaryBelt` is a rich `PromotionRank` catalog entry or `null`; frontend must not parse rank strings with `split("_")`.
 - `status` uses the backend enum value `CANCELED`, not `CANCELLED`.
@@ -5337,6 +5347,18 @@ Uses the same `ATTENDANCE_CORRECTION_WINDOW_CLOSED` response shape documented un
 }
 ```
 
+#### Calendar class-session semantics
+
+- `ClassSchedule.description` is the only current student-safe public class-description source.
+- `ClassSession.notes` is an internal/operational field. In student/self context it must not be exposed as `description`.
+- `description` in calendar/session read models is context-sensitive:
+  - student/self context: `null` when the source would be `ClassSession.notes`
+  - admin/manager/assigned-instructor context: may mirror `ClassSession.notes`
+- `links.notes` is context-sensitive:
+  - student/self calendar: `/organizations/:organizationId/students/me/notes?classSessionId=:sessionId`
+  - admin/instructor calendar with a concrete student context: `/organizations/:organizationId/students/:studentId/training-notes?classSessionId=:sessionId`
+  - branch/org calendar without a concrete student context: `null`
+
 ### Student self profile
 
 `GET /organizations/:organizationId/students/me`
@@ -5508,12 +5530,20 @@ Current null/degraded fields:
   "id": "session_123",
   "type": "CLASS_SESSION",
   "title": "No-Gi Fundamentals",
-  "description": "Guard retention and escapes",
-  "note": null,
+  "description": "Base weekly fundamentals class",
+  "note": "guard focus",
   "startAt": "2026-06-01T22:00:00.000Z",
   "endAt": "2026-06-01T23:00:00.000Z",
   "durationMinutes": 60,
   "status": "SCHEDULED",
+  "studentPersonalNotes": [
+    {
+      "id": "personal_note_123",
+      "body": "Frame first, then hip escape and recover guard.",
+      "createdAt": "2026-06-01T23:10:00.000Z",
+      "updatedAt": "2026-06-02T09:00:00.000Z"
+    }
+  ],
   "branch": {
     "id": "branch_123",
     "name": "HQ",
@@ -5561,7 +5591,8 @@ Current null/degraded fields:
 
 - This is the mobile/student optimized class detail endpoint. It is separate from the admin/calendar detail endpoint and does not change that existing contract.
 - `description` comes from the linked `ClassSchedule.description` when the session was created from a schedule and that description exists. It is `null` for ad hoc sessions or schedules without description.
-- `note` is currently `null`. `ClassSession.notes` remains an internal operational/admin field and is not exposed to student mobile.
+- `note` comes from `ClassSession.notes`. It is a public session-specific note for students when present and `null` otherwise.
+- `studentPersonalNotes` contains only the authenticated student's private notes for that class session. Backend never mixes notes from another student, instructor, or admin into this array.
 - `mat`, `difficultyLabel`, and `uniform` are `null` because the current data model has no dedicated student-safe source fields for them.
 - `instructor.roleLabel` is derived from real membership/branch data only: branch `headCoachMembershipId` takes precedence, then membership roles such as `MESTRE`, `HEAD_COACH`, `INSTRUCTOR`, `ACADEMY_MANAGER`, or `STAFF`. It is `null` only when no visible role source exists.
 - `instructor.avatarUrl` comes from the instructor membership's visible `OrganizationMembershipProfile.avatarMediaAsset` first. If that membership profile has no public active avatar, backend may fall back to another active membership profile for the same `userId` inside the same `organizationId`. It is `null` otherwise.
@@ -5575,13 +5606,61 @@ Current null/degraded fields:
 
 - Requires a valid access token and a linked student profile in the requested organization.
 - Returns `404 Class session not found` when the session does not exist, belongs to another tenant, or is outside the student's visible branch set.
-- Does not expose emails, phone numbers, billing data, attendance history, internal notes, medical data, payment ids, raw provider payloads, private roles, or permission internals.
+- Does not expose emails, phone numbers, billing data, attendance history, medical data, payment ids, raw provider payloads, private roles, provider secrets, or permission internals.
 
 #### Errors
 
 - `401 Unauthorized`: missing or invalid token.
 - `403 Forbidden`: authenticated user has no linked student profile in the organization.
 - `404 Not Found`: session missing or not visible to the student.
+
+### Student class session personal notes
+
+`GET /organizations/:organizationId/students/me/class-sessions/:sessionId/personal-notes`
+
+`POST /organizations/:organizationId/students/me/class-sessions/:sessionId/personal-notes`
+
+`PATCH /organizations/:organizationId/students/me/class-sessions/:sessionId/personal-notes/:noteId`
+
+**Roles permitted**: authenticated tenant member with linked student profile
+**Capability required**: student self access through `trainingCalendar.canReadStudentSelfCalendar`
+**Step-up required**: no
+**Scope**: BRANCH_SCOPED, restricted to the linked student and the student's primary branch plus approved visit branches active on the class date
+
+#### Response shapes
+
+`GET`
+
+```json
+{
+  "items": [
+    {
+      "id": "personal_note_123",
+      "body": "Frame first, then hip escape and recover guard.",
+      "createdAt": "2026-06-01T23:10:00.000Z",
+      "updatedAt": "2026-06-02T09:00:00.000Z"
+    }
+  ]
+}
+```
+
+`POST` and `PATCH`
+
+```json
+{
+  "id": "personal_note_123",
+  "body": "Frame first, hip escape, then recover to open guard.",
+  "createdAt": "2026-06-01T23:10:00.000Z",
+  "updatedAt": "2026-06-02T09:00:00.000Z"
+}
+```
+
+#### Contract rules
+
+- These notes are student-private and are not exposed through instructor/admin training-note endpoints.
+- Backend resolves the student exclusively from the authenticated principal; there is no `studentId` parameter in these self-service routes.
+- `PATCH` returns `404` when `noteId` does not belong to the authenticated student's note set for that session.
+- Empty or no-op updates are rejected instead of silently rewriting timestamps.
 
 ### Student class session attendance participants
 
@@ -5875,8 +5954,9 @@ Same class session item shape used by the training calendar, with the selected s
 **Security notes**
 
 - The endpoint returns `404 Class session not found` both when the session id does not exist and when it belongs to a branch the principal cannot read. This avoids cross-branch id inference.
-- For student/self context, `ClassSession.notes` is treated as internal operational notes and is not exposed as `description`; `description` is `null`.
+- For student/self context, `description` in this generic endpoint remains `null`. Student-safe public description is only exposed through `GET /organizations/:organizationId/students/me/class-sessions/:sessionId`.
 - For admin/manager or assigned-instructor context, `description` may contain `ClassSession.notes`.
+- There is no dedicated session-level public-description field in this generic endpoint. `ClassSession.notes` continues to power the operational/admin meaning of `description` here.
 - Mobile/student should prefer `GET /organizations/:organizationId/students/me/class-sessions/:sessionId` for Next Class / View Details and class card drill-downs from Home. This generic calendar detail remains for existing admin/instructor-compatible calendar flows.
 
 **Validation**
@@ -6033,23 +6113,28 @@ Training notes are implemented in `src/training-notes/training-notes.controller.
   "items": [
     {
       "id": "note_123",
-      "organizationId": "org_123",
-      "branchId": "branch_123",
-      "studentId": "student_123",
+      "title": "Plan semanal",
+      "body": "Weekly plan: passing entries and guard retention.",
+      "bodyPreview": "Weekly plan: passing entries and guard retention.",
+      "source": "INSTRUCTOR",
+      "sourceLabel": "Instructor",
       "status": "ACTIVE",
       "classSessionId": null,
       "periodStart": "2026-06-01T00:00:00.000Z",
       "periodEnd": "2026-06-07T00:00:00.000Z",
       "visibility": "VISIBLE_TO_STUDENT",
       "noteType": "WEEKLY_PLAN",
-      "body": "string",
-      "revisionNumber": 1,
+      "classSession": null,
+      "author": {
+        "id": "membership_456",
+        "name": "Coach Name"
+      },
+      "updatedBy": {
+        "id": "membership_456",
+        "name": "Coach Name"
+      },
       "createdAt": "2026-06-01T10:00:00.000Z",
-      "updatedAt": "2026-06-01T10:00:00.000Z",
-      "branch": {},
-      "author": {},
-      "updatedBy": null,
-      "classSession": null
+      "updatedAt": "2026-06-01T10:00:00.000Z"
     }
   ]
 }
@@ -6059,6 +6144,23 @@ Training notes are implemented in `src/training-notes/training-notes.controller.
 
 - This is the student-safe endpoint Android should use for the Training Notes module.
 - Student self reads are filtered by note visibility and status. `INSTRUCTOR_PRIVATE` and `STAFF_PRIVATE` notes must never appear here.
+- Student self reads only materialize notes with `status=ACTIVE` that pass the policy visibility check for the linked student. In practice today, student self should rely on `visibility=VISIBLE_TO_STUDENT`; `SHARED_WITH_COACHES`, `INSTRUCTOR_PRIVATE`, and `STAFF_PRIVATE` are not student-visible.
+- `title` is a backend-derived mobile field mapped from real `TrainingNoteType` values:
+  - `WEEKLY_PLAN` -> `Plan semanal`
+  - `MONTHLY_PLAN` -> `Plan mensual`
+  - `TRAINING_FOCUS` -> `Nota tecnica`
+  - `INSTRUCTOR_FEEDBACK` -> `Nota de progreso`
+  - `SESSION_NOTE` -> `Nota de entrenamiento`
+  - `STUDENT_REQUEST` -> `Solicitud del alumno`
+- `bodyPreview` is derived in backend from `body` and truncated to 140 chars when needed.
+- `source` / `sourceLabel` are mobile read-model fields:
+  - self-authored note -> `SELF` / `Private`
+  - coach/admin/leadership authored visible note -> `INSTRUCTOR` / `Instructor`
+  - fallback -> `ACADEMY` / `Academy`
+- `classSession` is reduced to a student-safe mobile shape with `id`, `date`, `name`, `trainingMode`, and `level`.
+- `trainingMode` only resolves when the linked `ClassSession.classType` is `GI` or `NO_GI`; otherwise it is `null`.
+- `level` is always `null` today because `ClassSession` has no level field in the current schema.
+- `tags` are not supported by this endpoint today.
 - The current model has no note read-receipt domain, so unread counts are not available.
 
 ## 14. Instructors
@@ -6858,6 +6960,77 @@ Current worker-backed product notification types:
 - `ATTENDANCE_SUGGESTION`
 - `TRAINING_NOTE_VISIBLE`
 - `TRAINING_NOTE_COACH_REVIEW`
+- `NEW_CLASS_SESSION_CREATED`
+- `CLASS_SESSION_UPDATED`
+- `CLASS_SESSION_CANCELED`
+- `CLASS_SESSION_NOTE_PUBLISHED`
+- `BILLING_CHARGE_CREATED`
+- `BILLING_PAYMENT_CONFIRMED`
+
+Implemented class/billing notification producers:
+
+| NotificationType | Trigger | Audience | ResourceType | Mobile action |
+| --- | --- | --- | --- | --- |
+| `NEW_CLASS_SESSION_CREATED` | `ClassSession` created manually or from a schedule | active linked students with access to the session branch/scope | `CLASS_SESSION` | `OPEN_CLASS_SESSION` -> `kuro://class-sessions/{classSessionId}` |
+| `CLASS_SESSION_UPDATED` | student-facing fields change: title/type/date/start/end/capacity/instructor | active linked students with `AttendanceIntent.ACTIVE` or an attendance record for the session | `CLASS_SESSION` | `OPEN_CLASS_SESSION` -> `kuro://class-sessions/{classSessionId}` |
+| `CLASS_SESSION_CANCELED` | session transitions to `CANCELED` | active linked students with `AttendanceIntent.ACTIVE` or an attendance record for the session | `CLASS_SESSION` | `OPEN_CLASS_SESSION` -> `kuro://class-sessions/{classSessionId}` |
+| `CLASS_SESSION_NOTE_PUBLISHED` | public `ClassSession.notes` becomes or remains non-empty and changes | active linked students with `AttendanceIntent.ACTIVE` or an attendance record for the session | `CLASS_SESSION` | `OPEN_CLASS_SESSION` -> `kuro://class-sessions/{classSessionId}` |
+| `BILLING_CHARGE_CREATED` | branch-local student billing charge is created | owner student's active student membership only | `BILLING_CHARGE` | `OPEN_BILLING` -> `kuro://billing` |
+| `BILLING_PAYMENT_CONFIRMED` | manual or Mercado Pago student payment is `APPROVED` | owner student's active student membership only | `PAYMENT_RECORD` | `OPEN_BILLING` -> `kuro://billing` |
+
+Pending producers:
+
+- `CLASS_STARTING_SOON`: requires a scheduler/job that selects upcoming sessions and dedupes reminder windows; not implemented in this phase.
+- `BILLING_CHARGE_DUE_SOON`: requires a billing scheduler/lifecycle pass; not implemented in this phase.
+- `BILLING_CHARGE_OVERDUE`: requires a billing scheduler/lifecycle pass; not implemented in this phase.
+
+Class notification payloads are summarized and use this shape:
+
+```json
+{
+  "summary": "Class session updated",
+  "classSessionId": "class_session_id",
+  "classTitle": "Fundamentals AM",
+  "branchId": "branch_id",
+  "branchName": "Alliance Matrix",
+  "startAt": "2026-06-01T10:00:00.000Z",
+  "instructorName": "Coach Name"
+}
+```
+
+Billing charge/payment payloads are summarized and use:
+
+```json
+{
+  "summary": "Billing charge created",
+  "billingChargeId": "billing_charge_id",
+  "studentId": "student_id",
+  "branchId": "branch_id",
+  "dueDate": "2026-06-30T00:00:00.000Z",
+  "amount": "100.00",
+  "currency": "ARS"
+}
+```
+
+```json
+{
+  "summary": "Billing payment confirmed",
+  "paymentRecordId": "payment_record_id",
+  "billingChargeId": "billing_charge_id",
+  "studentId": "student_id",
+  "branchId": "branch_id",
+  "amount": "100.00",
+  "currency": "ARS",
+  "status": "APPROVED"
+}
+```
+
+Events that do not notify:
+
+- `studentPersonalNotes` under `/students/me/class-sessions/:sessionId/personal-notes` never create notifications.
+- Class updates that do not change student-facing important fields do not create `CLASS_SESSION_UPDATED`.
+- Billing general income and non-approved student payments do not create student mobile notifications.
+- Firebase/FCM push notifications, device tokens, OS permissions, email, WhatsApp, SMS, and notification preferences are out of scope for this phase.
 
 ### Notifications unread count
 
@@ -6898,18 +7071,39 @@ Current worker-backed product notification types:
 {
   "items": [
     {
-      "id": "string",
-      "type": "ACADEMY_INTAKE_REQUEST_CREATED",
-      "resourceType": "ACADEMY_INTAKE_REQUEST",
-      "resourceId": "string",
-      "payload": {},
-      "createdAt": "2026-05-26T10:30:00.000Z",
-      "readAt": null
+      "id": "notif_123",
+      "type": "TRAINING_NOTE_VISIBLE",
+      "title": "Nueva nota de entrenamiento",
+      "message": "Coach Name compartio una nota contigo.",
+      "resourceType": "TRAINING_NOTE",
+      "resourceId": "note_123",
+      "payload": {
+        "summary": "New training note available",
+        "studentId": "student_123",
+        "branchId": "branch_123",
+        "noteType": "WEEKLY_PLAN",
+        "actorName": "Coach Name"
+      },
+      "action": {
+        "type": "OPEN_TRAINING_NOTE",
+        "deepLink": "kuro://training-notes/note_123"
+      },
+      "icon": "training-note",
+      "category": "TRAINING",
+      "createdAt": "2026-06-25T10:30:00.000Z",
+      "readAt": null,
+      "isUnread": true
     }
   ],
   "meta": { "page": 1, "limit": 20, "total": 1 }
 }
 ```
+
+Notes:
+
+- `readAt === null` means unread, and the response also includes derived `isUnread`.
+- `payload` remains present, but mobile should rely on the derived `title`, `message`, `action`, `icon`, and `category` instead of branching on raw payload structure.
+- Current dedicated mobile mappings are `TRAINING_NOTE_VISIBLE`, `ATTENDANCE_SUGGESTION`, `ANNOUNCEMENT_PUBLISHED`, `NEW_CLASS_SESSION_CREATED`, `CLASS_SESSION_UPDATED`, `CLASS_SESSION_CANCELED`, `CLASS_SESSION_NOTE_PUBLISHED`, `CLASS_STARTING_SOON`, `BILLING_CHARGE_CREATED`, `BILLING_CHARGE_DUE_SOON`, `BILLING_CHARGE_OVERDUE`, and `BILLING_PAYMENT_CONFIRMED`. Other current types fall back to a safe generic notification card and `OPEN_NOTIFICATIONS`.
 
 ### Mark many notifications read
 
@@ -7005,8 +7199,421 @@ Current worker-backed product notification types:
 - `INSTITUTIONAL_REQUEST_REMINDER`
 - `INSTITUTIONAL_REQUEST_ESCALATED`
 - `ATTENDANCE_FOLLOW_UP_ASSIGNED`
+- `ATTENDANCE_SUGGESTION`
 - `TRAINING_NOTE_VISIBLE`
 - `TRAINING_NOTE_COACH_REVIEW`
+- `NEW_CLASS_SESSION_CREATED`
+- `CLASS_SESSION_UPDATED`
+- `CLASS_SESSION_CANCELED`
+- `CLASS_SESSION_NOTE_PUBLISHED`
+- `CLASS_STARTING_SOON`
+- `BILLING_CHARGE_CREATED`
+- `BILLING_CHARGE_DUE_SOON`
+- `BILLING_CHARGE_OVERDUE`
+- `BILLING_PAYMENT_CONFIRMED`
+
+## Mobile Student App
+
+Audited on 2026-06-25 against controller, use-case, policy, repository, and notification-producer code. Examples below use representative ids/values, but the field set and nesting reflect the real response shapes produced by backend today.
+
+### Billing
+
+Verdict: `Ready`
+
+Current contract:
+
+- `GET /organizations/:organizationId/students/me/billing` is the mobile-safe summary read model. It covers `summary.status`, `summary.nextPaymentDueDate`, `summary.nextPaymentAmount`, `summary.openBalance`, `membership`, `openCharges`, and `recentPayments`.
+- `GET /organizations/:organizationId/students/me/payments` is the paginated self-service payment history endpoint.
+- `GET /organizations/:organizationId/students/me/payments/:paymentId` is the self-service payment detail endpoint.
+- `GET /organizations/:organizationId/students/me/billing-charges/:chargeId` remains the charge-centric self-service detail endpoint. It includes the payment rows attached to that charge.
+- `POST /organizations/:organizationId/students/me/billing-charges/:chargeId/mercado-pago/preference` creates or reuses a Checkout Pro preference and returns the redirect/open URLs.
+
+Clarifications:
+
+- `paymentMethods.mercadoPago.publicKey` is the client-safe Mercado Pago publishable key for the branch integration. In the current contract it is mainly a readiness signal for Checkout Pro availability, not the source of truth for which URL mobile must open.
+- Mobile should use `sandboxInitPoint` or `initPoint` from the preference response for the current Checkout Pro flow. The backend already decides environment and generates the provider preference. `publicKey` is safe to expose, but mobile does not need to derive checkout from it today.
+- Mercado Pago `accessToken` is never exposed by any self-service billing response. It stays server-side in integration config and provider client code only.
+- `GET /students/me/billing` is enough for:
+  - payment status: yes, via `summary.status`
+  - next payment due: yes, via `summary.nextPaymentDueDate` and `summary.nextPaymentAmount`
+  - last payment: yes, via `recentPayments[0]` when present
+  - payment history: yes, through `GET /organizations/:organizationId/students/me/payments`; `recentPayments` remains a 5-item preview
+- `View Full Billing Details` contract:
+  - payment-history preview uses `recentPayments`
+  - full list can open `GET /organizations/:organizationId/students/me/payments`
+  - open-charge cards can open `GET /organizations/:organizationId/students/me/billing-charges/:chargeId`
+  - payment items can open `GET /organizations/:organizationId/students/me/payments/:paymentId`
+
+Real response example: `GET /organizations/:organizationId/students/me/billing`
+
+```json
+{
+  "summary": {
+    "status": "DUE_SOON",
+    "nextPaymentDueDate": "2026-06-10",
+    "nextPaymentAmount": {
+      "amount": 100,
+      "currency": "BRL",
+      "formatted": "R$ 100,00"
+    },
+    "openBalance": {
+      "amount": 100,
+      "currency": "BRL",
+      "formatted": "R$ 100,00"
+    }
+  },
+  "membership": {
+    "studentId": "student_1",
+    "branchId": "branch_1",
+    "branchName": "SNP Centro",
+    "planName": "Mensal",
+    "nextBillingDate": "2026-06-10"
+  },
+  "openCharges": [
+    {
+      "id": "charge_1",
+      "description": "June membership",
+      "status": "OPEN",
+      "dueDate": "2026-06-10",
+      "amount": {
+        "amount": 100,
+        "currency": "BRL",
+        "formatted": "R$ 100,00"
+      },
+      "amountPaid": {
+        "amount": 0,
+        "currency": "BRL",
+        "formatted": "R$ 0,00"
+      },
+      "outstandingAmount": {
+        "amount": 100,
+        "currency": "BRL",
+        "formatted": "R$ 100,00"
+      },
+      "canPayWithMercadoPago": true
+    }
+  ],
+  "recentPayments": [
+    {
+      "id": "payment_1",
+      "date": "2026-05-10",
+      "status": "PAID",
+      "method": "MERCADO_PAGO",
+      "amount": {
+        "amount": 90,
+        "currency": "BRL",
+        "formatted": "R$ 90,00"
+      },
+      "chargeId": "charge_previous"
+    }
+  ],
+  "paymentMethods": {
+    "mercadoPago": {
+      "available": true,
+      "environment": "test",
+      "publicKey": "APP_USR-public"
+    }
+  },
+  "links": {
+    "profile": "/organizations/org_1/students/me/profile"
+  }
+}
+```
+
+Real response example: `GET /organizations/:organizationId/students/me/billing-charges/:chargeId`
+
+```json
+{
+  "id": "charge_123",
+  "status": "OPEN",
+  "description": "June membership",
+  "dueDate": "2026-06-10",
+  "amount": {
+    "amount": 100,
+    "currency": "BRL",
+    "formatted": "R$ 100,00"
+  },
+  "amountPaid": {
+    "amount": 0,
+    "currency": "BRL",
+    "formatted": "R$ 0,00"
+  },
+  "outstandingAmount": {
+    "amount": 100,
+    "currency": "BRL",
+    "formatted": "R$ 100,00"
+  },
+  "payments": [
+    {
+      "id": "payment_123",
+      "status": "PENDING",
+      "provider": "MERCADO_PAGO",
+      "method": "MERCADO_PAGO",
+      "date": "2026-06-09",
+      "amount": {
+        "amount": 100,
+        "currency": "BRL",
+        "formatted": "R$ 100,00"
+      }
+    }
+  ],
+  "checkout": {
+    "canCreatePreference": true,
+    "lastPreferenceId": "pref_123"
+  }
+}
+```
+
+Real response example: `GET /organizations/:organizationId/students/me/payments`
+
+```json
+{
+  "items": [
+    {
+      "id": "payment_1",
+      "chargeId": "charge_1",
+      "date": "2026-04-20",
+      "status": "PAID",
+      "method": "MERCADO_PAGO",
+      "provider": "MERCADO_PAGO",
+      "amount": {
+        "amount": 350,
+        "currency": "BRL",
+        "formatted": "R$ 350,00"
+      },
+      "description": "Mensualidad Abril 2026"
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "limit": 20,
+    "total": 35
+  }
+}
+```
+
+Real response example: `GET /organizations/:organizationId/students/me/payments/:paymentId`
+
+```json
+{
+  "id": "payment_1",
+  "chargeId": "charge_1",
+  "charge": {
+    "id": "charge_1",
+    "description": "Mensualidad Abril 2026",
+    "dueDate": "2026-04-20"
+  },
+  "date": "2026-04-20",
+  "status": "PAID",
+  "method": "MERCADO_PAGO",
+  "provider": "MERCADO_PAGO",
+  "amount": {
+    "amount": 350,
+    "currency": "BRL",
+    "formatted": "R$ 350,00"
+  },
+  "externalProvider": "MERCADO_PAGO",
+  "externalReference": "provider_payment_id_or_reference",
+  "recordedAt": "2026-04-20T12:00:00.000Z"
+}
+```
+
+Real response example: `POST /organizations/:organizationId/students/me/billing-charges/:chargeId/mercado-pago/preference`
+
+```json
+{
+  "chargeId": "charge_1",
+  "provider": "MERCADO_PAGO",
+  "publicKey": "APP_USR-123456-public",
+  "preferenceId": "pref_123",
+  "externalReference": "billing_charge:charge_1",
+  "initPoint": "https://www.mercadopago.com/init/pref_123",
+  "sandboxInitPoint": "https://sandbox.mercadopago.com/init/pref_123",
+  "amount": 100,
+  "currency": "ARS",
+  "status": "READY",
+  "environment": "test",
+  "reused": false
+}
+```
+
+### Training Notes
+
+Verdict: `Ready`
+
+Current contract:
+
+- `GET /organizations/:organizationId/students/me/notes` returns a student/mobile read model, while staff flows keep using the canonical staff note view on `GET /students/:studentId/training-notes`.
+- Notes created by instructor/admin appear in `/students/me/notes` when they remain `ACTIVE` and `visibility` allows student access. In practice today that means student-visible notes, not instructor/staff private notes.
+- Student self list is sorted by `createdAt desc`.
+- Student/self can filter by class with `GET /organizations/:organizationId/students/me/notes?classSessionId=:sessionId`.
+
+Visibility and status rules for student self:
+
+- Visible to the student: `status=ACTIVE` and `visibility=VISIBLE_TO_STUDENT`
+- Not visible to the student: `INSTRUCTOR_PRIVATE`, `STAFF_PRIVATE`, `SHARED_WITH_COACHES`, `ARCHIVED`, `VOIDED`
+- `noteType` does not independently grant visibility. For student self-create, the only allowed combination is `noteType=STUDENT_REQUEST` plus `visibility=VISIBLE_TO_STUDENT`. For coach-created visible notes, current types can include `INSTRUCTOR_FEEDBACK`, `TRAINING_FOCUS`, `SESSION_NOTE`, `MONTHLY_PLAN`, or `WEEKLY_PLAN`
+
+Field-level audit:
+
+- Author/source: yes, the response now includes `source`, `sourceLabel`, `author`, and `updatedBy`
+- Class session: yes, `classSession` is embedded when `classSessionId` exists
+- Navigate to past class: yes. Mobile can use `classSessionId` with `GET /organizations/:organizationId/students/me/class-sessions/:sessionId`
+- Sufficient today for:
+  - title: yes, backend-derived from real `TrainingNoteType`
+  - body preview: yes, backend-derived as `bodyPreview`
+  - fecha: yes, from `createdAt` and/or `periodStart` / `periodEnd`
+  - programa/clase: yes, from `classSession.name` when linked
+  - Gi/No-Gi: yes when `ClassSession.classType` is `GI` or `NO_GI`, otherwise `null`
+  - nivel: no, current schema has no class-session level field so response returns `null`
+  - tags/chips: no dedicated field
+
+Gap classification:
+
+- `title`: resolved by current mobile read model
+- `source` label such as `Instructor` or `Admin`: resolved by current mobile read model
+- `Gi/No-Gi`: resolved when session type is explicitly `GI` or `NO_GI`
+- `nivel`: current gap is schema-level; response returns `null`
+- `tags/chips`: unsupported; UI should not expect them from backend today
+
+Permission matrix:
+
+- Student can create a training note: yes, but only `visibility=VISIBLE_TO_STUDENT` plus `noteType=STUDENT_REQUEST`
+- Student can link their own note to `classSessionId`: yes, when the class session belongs to the student's primary branch in this phase
+- Student-created note linked to `classSessionId` is visible to:
+  - the student through `GET /students/me/notes`
+  - coach roles with branch access (`MESTRE`, `ORG_ADMIN`, `ACADEMY_MANAGER`, `HEAD_COACH`, `INSTRUCTOR`) through staff endpoints
+- Student-private visibility exists: no
+- Coach-visible-only visibility exists: yes, `SHARED_WITH_COACHES`, but student self cannot create it
+- Staff-only internal visibility exists: yes, `STAFF_PRIVATE`
+- Instructor can read student-created visible note: yes
+- Mestre/admin can read student-created visible note: yes
+- Generic `STAFF` can read student-created visible note: no, unless that membership also carries a coach/leadership role; `STAFF_PRIVATE` is a separate internal visibility
+- Student can edit their own note: yes, only while it remains their own active `VISIBLE_TO_STUDENT` + `STUDENT_REQUEST`
+- Student can archive or void their own note: no
+- Instructor/admin can respond in-thread: no dedicated reply/thread model exists
+- Instructor/admin can follow up by updating the same note when policy allows it: yes, but that is a revision of one note, not a threaded conversation
+- Notes support revisions/history: yes
+- Notes support replies/threading: no
+- Notes linked to a past class remain linkable/readable by `classSessionId`; there is no separate past-class conversation domain
+
+Product case: student asks the professor about a class
+
+- Status: `B. Parcialmente soportado`
+- Supported today:
+  - student can create a `STUDENT_REQUEST`
+  - student can attach `classSessionId`
+  - branch coach roles can see that note
+  - notification hooks can notify head coach / academy manager / assigned instructor
+- Missing for full support:
+  - dedicated conversation or reply model
+  - separate question/comment semantics distinct from general training notes
+  - message threading, resolution state, or instructor reply record
+- Current recommendation:
+  - do not present this as a chat/thread feature
+  - mobile may treat it as a one-note request/follow-up flow only
+
+Why current solution uses a self-service read model:
+
+- The current canonical note model is intentionally body-first and policy-shaped.
+- Adding `title` and `tags` directly to the canonical `TrainingNote` should not happen casually.
+- Mobile-specific cards are solved by the existing self-service endpoint deriving stable display fields from note + class-session context, without changing the canonical `TrainingNote` schema.
+
+Real response example: `GET /organizations/:organizationId/students/me/notes`
+
+```json
+{
+  "studentId": "student_123",
+  "items": [
+    {
+      "id": "note_123",
+      "title": "Plan semanal",
+      "body": "Focus on guard retention and hip movement this week.",
+      "bodyPreview": "Focus on guard retention and hip movement this week.",
+      "source": "INSTRUCTOR",
+      "sourceLabel": "Instructor",
+      "status": "ACTIVE",
+      "classSessionId": null,
+      "periodStart": "2026-06-01T00:00:00.000Z",
+      "periodEnd": "2026-06-07T00:00:00.000Z",
+      "visibility": "VISIBLE_TO_STUDENT",
+      "noteType": "WEEKLY_PLAN",
+      "classSession": null,
+      "author": {
+        "id": "membership_456",
+        "name": "Coach Name"
+      },
+      "updatedBy": {
+        "id": "membership_456",
+        "name": "Coach Name"
+      },
+      "createdAt": "2026-06-01T10:00:00.000Z",
+      "updatedAt": "2026-06-02T09:30:00.000Z"
+    }
+  ]
+}
+```
+
+### Notifications
+
+Verdict: `Ready`
+
+Current contract:
+
+- `GET /organizations/:organizationId/notifications/unread-count` is sufficient for the bell badge. It returns `{ "unreadCount": number }` scoped to the authenticated membership.
+- `GET /organizations/:organizationId/notifications?page=1&limit=20` now returns delivered notification rows enriched with `title`, `message`, `action`, `icon`, `category`, and `isUnread`, while keeping `type`, `resourceType`, `resourceId`, `payload`, `createdAt`, and `readAt`.
+- `POST /organizations/:organizationId/notifications/:notificationId/read` and `POST /organizations/:organizationId/notifications/read-all` support read state.
+
+Current mobile read model:
+
+- Every item includes `id`, `type`, `title`, `message`, `resourceType`, `resourceId`, `payload`, `action.type`, `action.deepLink`, `icon`, `category`, `createdAt`, `readAt`, and `isUnread`.
+- `unread-count` remains sufficient for the bell badge and does not require any client-side derivation from the feed.
+- `mark read`, `mark many`, and `read all` keep the same semantics; `isUnread` is derived from persisted `readAt`.
+
+Supported `NotificationType` audit:
+
+| NotificationType | Producer module | ResourceType | Payload shape delivered today | Student mobile? | Expected title/message | Recommended action |
+| --- | --- | --- | --- | --- | --- | --- |
+| `ANNOUNCEMENT_PUBLISHED` | `communications` publish announcement flow | `ANNOUNCEMENT` | `{ summary, title, scopeType, branchId }` | `Conditional` | title: `Nuevo aviso de la academia`; message: payload `title` when present, otherwise fallback estable | `OPEN_ANNOUNCEMENT` -> `kuro://announcements/{resourceId}` |
+| `INVITATION_ACCEPTED` | `auth` invitation acceptance flow | `MEMBERSHIP` | `{ summary, organizationName }` | `Conditional` | title: membership active; message: organization name | open student home/profile |
+| `ACADEMY_INTAKE_REQUEST_CREATED` | `public-branch intake` flow | `ACADEMY_INTAKE_REQUEST` | `{ requestId, branchId, fullName, requestType }` | `No` | operational intake alert | no student-mobile deep link |
+| `INSTITUTIONAL_REQUEST_ACTION_REQUIRED` | `communications` request creation/reply flow | `INSTITUTIONAL_MESSAGE` | `{ summary, title, requestStatus, requestPriority, branchId }` | `No` in normal flow | request requires action | no student-mobile deep link |
+| `INSTITUTIONAL_REQUEST_ASSIGNED` | `communications` request operations flow | `INSTITUTIONAL_MESSAGE` | `{ summary, title, requestPriority, branchId }` | `No` in normal flow | request assigned | no student-mobile deep link |
+| `INSTITUTIONAL_REQUEST_CLOSED` | `communications` request status flow | `INSTITUTIONAL_MESSAGE` | `{ summary, title, requestStatus, resolutionCategory, branchId }` | `Conditional` | request closed | open own institutional request detail if student created it |
+| `INSTITUTIONAL_REQUEST_REMINDER` | `communications` automation flow | `INSTITUTIONAL_MESSAGE` | `{ summary, messageId, title, automationKind, requestStatus, requestPriority, branchId }` | `No` in normal flow | request reminder | no student-mobile deep link |
+| `INSTITUTIONAL_REQUEST_ESCALATED` | `communications` automation flow | `INSTITUTIONAL_MESSAGE` | `{ summary, messageId, title, automationKind, requestPriority, branchId }` | `No` in normal flow | request escalation | no student-mobile deep link |
+| `ATTENDANCE_FOLLOW_UP_ASSIGNED` | `attendance` follow-up assignment flow | `ATTENDANCE_FOLLOW_UP` | `{ summary, studentId, studentName, branchId, riskLevel, recommendedAction }` | `No` in expected flow | follow-up assigned | no student-mobile deep link |
+| `ATTENDANCE_SUGGESTION` | `attendance suggestions` flow | `ATTENDANCE_SUGGESTION` | `{ summary, organizationId, branchId, classSessionId, suggestionId, message }` | `Yes` | title: `Sugerencia de asistencia`; message: payload `message` when present, otherwise fallback estable | `OPEN_ATTENDANCE` -> `kuro://attendance` |
+| `TRAINING_NOTE_VISIBLE` | `training-notes` visible-note hook | `TRAINING_NOTE` | `{ summary, studentId, branchId, noteType, actorName }` | `Yes` | title: `Nueva nota de entrenamiento`; message: actor-aware fallback estable | `OPEN_TRAINING_NOTE` -> `kuro://training-notes/{resourceId}` |
+| `TRAINING_NOTE_COACH_REVIEW` | `training-notes` student-request hook | `TRAINING_NOTE` | `{ summary, studentId, studentName, branchId, noteType, classSessionId }` | `No` | coach review needed | no student-mobile deep link |
+| `NEW_CLASS_SESSION_CREATED` | `classes` create session/create from schedule flows | `CLASS_SESSION` | `{ summary, classSessionId, classTitle, branchId, branchName, startAt, instructorName }` | `Yes` | title: `Nueva clase disponible`; message: class-title aware | `OPEN_CLASS_SESSION` -> `kuro://class-sessions/{classSessionId}` |
+| `CLASS_SESSION_UPDATED` | `classes` update session flow | `CLASS_SESSION` | `{ summary, classSessionId, classTitle, branchId, branchName, startAt, instructorName }` | `Yes` | title: `Clase actualizada`; message: class-title aware | `OPEN_CLASS_SESSION` -> `kuro://class-sessions/{classSessionId}` |
+| `CLASS_SESSION_CANCELED` | `classes` cancel session flow | `CLASS_SESSION` | `{ summary, classSessionId, classTitle, branchId, branchName, startAt, instructorName }` | `Yes` | title: `Clase cancelada`; message: class-title aware | `OPEN_CLASS_SESSION` -> `kuro://class-sessions/{classSessionId}` |
+| `CLASS_SESSION_NOTE_PUBLISHED` | `classes` update public `ClassSession.notes` flow | `CLASS_SESSION` | `{ summary, classSessionId, classTitle, branchId, branchName, startAt, instructorName }` | `Yes` | title: `Nueva nota de clase`; message: class-title aware | `OPEN_CLASS_SESSION` -> `kuro://class-sessions/{classSessionId}` |
+| `CLASS_STARTING_SOON` | pending scheduler/job | `CLASS_SESSION` | same class session summary payload when implemented | `Yes` when implemented | title: `Tu clase empieza pronto` | `OPEN_CLASS_SESSION` -> `kuro://class-sessions/{classSessionId}` |
+| `BILLING_CHARGE_CREATED` | `billing` create charge flow | `BILLING_CHARGE` | `{ summary, billingChargeId, studentId, branchId, dueDate, amount, currency }` | `Yes` | title: `Nuevo pago pendiente`; message: stable billing copy | `OPEN_BILLING` -> `kuro://billing` |
+| `BILLING_CHARGE_DUE_SOON` | pending billing scheduler/lifecycle | `BILLING_CHARGE` | same billing charge summary payload when implemented | `Yes` when implemented | title: `Pago proximo a vencer` | `OPEN_BILLING` -> `kuro://billing` |
+| `BILLING_CHARGE_OVERDUE` | pending billing scheduler/lifecycle | `BILLING_CHARGE` | same billing charge summary payload when implemented | `Yes` when implemented | title: `Pago vencido` | `OPEN_BILLING` -> `kuro://billing` |
+| `BILLING_PAYMENT_CONFIRMED` | `billing` manual payment and Mercado Pago reconciliation flows | `PAYMENT_RECORD` | `{ summary, paymentRecordId, billingChargeId, studentId, branchId, amount, currency, status }` | `Yes` | title: `Pago confirmado`; message: stable billing copy | `OPEN_BILLING` -> `kuro://billing` |
+
+Student-mobile coverage today:
+
+- billing notifications: yes for `BILLING_CHARGE_CREATED` and `BILLING_PAYMENT_CONFIRMED`; due-soon/overdue remain pending scheduler/lifecycle producers
+- training notes: yes, `TRAINING_NOTE_VISIBLE`
+- class starting soon: mobile mapping exists, producer pending scheduler/job
+- schedule changes: yes for created/updated/canceled/public `ClassSession.notes`
+- attendance milestones: no producer today
+- announcements: yes, when a student membership is part of the audience resolved by announcement visibility/scope
+- academy intake/messages:
+  - academy intake created: no, operational only
+  - institutional messages: only `INSTITUTIONAL_REQUEST_CLOSED` can reasonably hit a student when the student created the request
+
+Pending producer gaps:
+
+- billing alerts: no producer today
+- class starting soon: no producer today
+- schedule changes: no producer today
+- attendance milestones: no producer today
 
 ## 17. Public Profile (Discovery)
 
@@ -7513,6 +8120,8 @@ Security:
 - `studentId` is resolved from `Student.userId === principal.sub`.
 - Financial reads are limited to the student's current `primaryBranchId`.
 - The response never exposes Mercado Pago access token, webhook secret, raw provider payloads, private billing notes, or external provider raw references.
+- `recentPayments` is intentionally limited to the latest 5 `PaymentRecord` rows and is not a paginated full payment-history feed.
+- `paymentMethods.mercadoPago.publicKey` is the client-safe Mercado Pago publishable key. It is exposed only to signal Checkout Pro availability for the current branch and must not be confused with the provider `accessToken`, which is never returned.
 
 ### Student self billing charge detail
 
@@ -7574,6 +8183,102 @@ Errors:
 - `404` when the charge does not exist or does not belong to the authenticated student's current branch-local billing context.
 - `403` for cross-organization access according to the standard auth context checks.
 
+### Student self payment history
+
+`GET /organizations/:organizationId/students/me/payments`
+
+**Roles permitted**: authenticated TENANT student with linked `Student`
+**Capability required**: self-service, no operator billing capability required
+**Step-up required**: no
+**Scope**: SELF, branch-local to `Student.primaryBranchId`
+
+This is the paginated payment-history endpoint for student mobile self-service. It returns only `PaymentRecord` rows for the authenticated student's current branch-local billing context.
+
+#### Query params
+
+| Param      | Tipo   | Default | Descripción                       |
+| ---------- | ------ | ------- | --------------------------------- |
+| `page`     | number | `1`     | page                              |
+| `limit`    | number | `20`    | size                              |
+| `method`   | enum   | -       | optional `PaymentMethod` filter   |
+| `status`   | enum   | -       | optional `PaymentStatus` filter   |
+| `currency` | string | -       | optional currency filter          |
+| `dateFrom` | date   | -       | optional `recordedAt` lower bound |
+| `dateTo`   | date   | -       | optional `recordedAt` upper bound |
+
+#### Response
+
+```json
+{
+  "items": [
+    {
+      "id": "payment_1",
+      "chargeId": "charge_1",
+      "date": "2026-04-20",
+      "status": "PAID",
+      "method": "MERCADO_PAGO",
+      "provider": "MERCADO_PAGO",
+      "amount": {
+        "amount": 350,
+        "currency": "BRL",
+        "formatted": "R$ 350,00"
+      },
+      "description": "Mensualidad Abril 2026"
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "limit": 20,
+    "total": 35
+  }
+}
+```
+
+Security:
+
+- Backend resolves the student from `principal.sub + organizationId`; there is no `studentId` path or query contract in self-service.
+- Never exposes Mercado Pago `accessToken`, provider config, webhook secrets, or raw provider payloads.
+
+### Student self payment detail
+
+`GET /organizations/:organizationId/students/me/payments/:paymentId`
+
+**Roles permitted**: authenticated TENANT student with linked `Student`
+**Capability required**: self-service, no operator billing capability required
+**Step-up required**: no
+**Scope**: SELF, branch-local to `Student.primaryBranchId`
+
+#### Response
+
+```json
+{
+  "id": "payment_1",
+  "chargeId": "charge_1",
+  "charge": {
+    "id": "charge_1",
+    "description": "Mensualidad Abril 2026",
+    "dueDate": "2026-04-20"
+  },
+  "date": "2026-04-20",
+  "status": "PAID",
+  "method": "MERCADO_PAGO",
+  "provider": "MERCADO_PAGO",
+  "amount": {
+    "amount": 350,
+    "currency": "BRL",
+    "formatted": "R$ 350,00"
+  },
+  "externalProvider": "MERCADO_PAGO",
+  "externalReference": "provider_payment_id_or_reference",
+  "recordedAt": "2026-04-20T12:00:00.000Z"
+}
+```
+
+Errors:
+
+- `404` when the payment does not exist or does not belong to the authenticated student in the current branch-local billing context.
+- `403` for cross-organization access according to the standard auth context checks.
+
 ### Student self Mercado Pago preference
 
 `POST /organizations/:organizationId/students/me/billing-charges/:chargeId/mercado-pago/preference`
@@ -7608,6 +8313,7 @@ Rules:
 - `404` when the charge does not belong to the authenticated student.
 - `409` when the charge is paid, canceled, void, already linked to a different provider, or has no outstanding balance.
 - `503` when Mercado Pago is not configured for the student's current branch.
+- Current mobile flow is Checkout Pro redirect/open. Flutter should open `sandboxInitPoint` when `environment !== "production"` and `sandboxInitPoint` is present; otherwise it should open `initPoint`. The returned `publicKey` is client-safe but not sufficient by itself to complete checkout in the current contract.
 - `environment !== "production"` plus non-null `sandboxInitPoint` means Flutter should open `sandboxInitPoint`; production should open `initPoint`.
 - Success, failure, or pending redirect is not payment confirmation. Flutter must call the charge-detail endpoint after redirect; webhook/reconciliation remains the source of truth.
 
@@ -8900,8 +9606,8 @@ administrative resolution.
 
 ### Notifications
 
-- `NotificationType`: `ANNOUNCEMENT_PUBLISHED`, `INVITATION_ACCEPTED`, `ACADEMY_INTAKE_REQUEST_CREATED`, `INSTITUTIONAL_REQUEST_ACTION_REQUIRED`, `INSTITUTIONAL_REQUEST_ASSIGNED`, `INSTITUTIONAL_REQUEST_CLOSED`, `INSTITUTIONAL_REQUEST_REMINDER`, `INSTITUTIONAL_REQUEST_ESCALATED`, `ATTENDANCE_FOLLOW_UP_ASSIGNED`, `ATTENDANCE_SUGGESTION`, `TRAINING_NOTE_VISIBLE`, `TRAINING_NOTE_COACH_REVIEW`
-- `NotificationResourceType`: `ANNOUNCEMENT`, `MEMBERSHIP`, `ACADEMY_INTAKE_REQUEST`, `INSTITUTIONAL_MESSAGE`, `ATTENDANCE_FOLLOW_UP`, `ATTENDANCE_SUGGESTION`, `TRAINING_NOTE`
+- `NotificationType`: `ANNOUNCEMENT_PUBLISHED`, `INVITATION_ACCEPTED`, `ACADEMY_INTAKE_REQUEST_CREATED`, `INSTITUTIONAL_REQUEST_ACTION_REQUIRED`, `INSTITUTIONAL_REQUEST_ASSIGNED`, `INSTITUTIONAL_REQUEST_CLOSED`, `INSTITUTIONAL_REQUEST_REMINDER`, `INSTITUTIONAL_REQUEST_ESCALATED`, `ATTENDANCE_FOLLOW_UP_ASSIGNED`, `ATTENDANCE_SUGGESTION`, `TRAINING_NOTE_VISIBLE`, `TRAINING_NOTE_COACH_REVIEW`, `NEW_CLASS_SESSION_CREATED`, `CLASS_SESSION_UPDATED`, `CLASS_SESSION_CANCELED`, `CLASS_SESSION_NOTE_PUBLISHED`, `CLASS_STARTING_SOON`, `BILLING_CHARGE_CREATED`, `BILLING_CHARGE_DUE_SOON`, `BILLING_CHARGE_OVERDUE`, `BILLING_PAYMENT_CONFIRMED`
+- `NotificationResourceType`: `ANNOUNCEMENT`, `MEMBERSHIP`, `ACADEMY_INTAKE_REQUEST`, `INSTITUTIONAL_MESSAGE`, `ATTENDANCE_FOLLOW_UP`, `ATTENDANCE_SUGGESTION`, `TRAINING_NOTE`, `CLASS_SESSION`, `BILLING_CHARGE`, `PAYMENT_RECORD`
 - `NotificationEventStatus`: `PENDING`, `PROCESSING`, `FANNED_OUT`, `FAILED`
 - `NotificationDeliveryChannel`: `IN_APP`
 - `NotificationDeliveryStatus`: `PENDING`, `PROCESSING`, `DELIVERED`, `FAILED`

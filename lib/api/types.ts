@@ -1147,3 +1147,85 @@ export interface StudentDetail extends StudentListItem {
   activeBranchVisits: unknown[]
   promotionCertificates: unknown[]
 }
+
+// ── Training notes ───────────────────────────────────────────
+
+export type TrainingNoteStatus = 'ACTIVE' | 'ARCHIVED' | 'VOIDED'
+export type TrainingNoteVisibility =
+  | 'VISIBLE_TO_STUDENT'
+  | 'SHARED_WITH_COACHES'
+  | 'STAFF_PRIVATE'
+  | 'INSTRUCTOR_PRIVATE'
+export type TrainingNoteType =
+  | 'WEEKLY_PLAN'
+  | 'MONTHLY_PLAN'
+  | 'TRAINING_FOCUS'
+  | 'INSTRUCTOR_FEEDBACK'
+  | 'SESSION_NOTE'
+  | 'STUDENT_REQUEST'
+export type TrainingNoteSource = 'SELF' | 'INSTRUCTOR' | 'ACADEMY'
+
+export interface TrainingNoteActor {
+  id?: string
+  name?: string
+  membershipId?: string
+  firstName?: string
+  lastName?: string
+  displayName?: string
+  email?: string
+}
+
+export interface TrainingNoteBranch {
+  id?: string
+  name?: string
+}
+
+export interface TrainingNoteClassSession {
+  id?: string
+  date?: string | null
+  name?: string | null
+  title?: string | null
+  trainingMode?: string | null
+  classType?: string | null
+  level?: string | null
+  startAt?: string | null
+  endAt?: string | null
+  scheduledDate?: string | null
+}
+
+export interface TrainingNote {
+  id: string
+  organizationId?: string
+  branchId?: string | null
+  studentId?: string
+  title?: string
+  status: TrainingNoteStatus
+  classSessionId: string | null
+  periodStart: string | null
+  periodEnd: string | null
+  visibility: TrainingNoteVisibility
+  noteType: TrainingNoteType | null
+  body: string
+  bodyPreview?: string
+  source?: TrainingNoteSource
+  sourceLabel?: string
+  revisionNumber?: number
+  createdAt: string
+  updatedAt: string
+  branch?: TrainingNoteBranch | null
+  author?: TrainingNoteActor | null
+  updatedBy?: TrainingNoteActor | null
+  classSession?: TrainingNoteClassSession | null
+}
+
+export interface StudentTrainingNotesResponse {
+  studentId: string
+  items: TrainingNote[]
+}
+
+export interface CreateTrainingNoteBody {
+  body: string
+  visibility: TrainingNoteVisibility
+  noteType: TrainingNoteType
+  classSessionId?: string
+}

@@ -45,6 +45,9 @@ import type {
   StudentListItem,
   StudentDetail,
   StudentAccountInviteResponse,
+  CreateTrainingNoteBody,
+  StudentTrainingNotesResponse,
+  TrainingNote,
   Weekday,
 } from './types'
 import type {
@@ -132,6 +135,31 @@ export const membershipsApi = {
   ) =>
     api.put<MembershipTechnicalProfileResponse>(
       `/organizations/${orgId}/memberships/${membershipId}/technical-profile`,
+      body,
+    ),
+}
+
+export const trainingNotesApi = {
+  listByStudent: (
+    orgId: string,
+    studentId: string,
+    params?: { classSessionId?: string },
+  ) => {
+    const p = new URLSearchParams()
+    if (params?.classSessionId) p.set('classSessionId', params.classSessionId)
+    const q = p.toString() ? `?${p}` : ''
+    return api.get<StudentTrainingNotesResponse>(
+      `/organizations/${orgId}/students/${studentId}/training-notes${q}`,
+    )
+  },
+
+  createForStudent: (
+    orgId: string,
+    studentId: string,
+    body: CreateTrainingNoteBody,
+  ) =>
+    api.post<TrainingNote>(
+      `/organizations/${orgId}/students/${studentId}/training-notes`,
       body,
     ),
 }

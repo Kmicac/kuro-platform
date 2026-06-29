@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { useFormatter, useTranslations } from 'next-intl'
 import {
@@ -8,10 +9,12 @@ import {
   ChevronRight,
   ClipboardCheck,
   Hash,
+  Loader2,
   Lock,
   Mail,
   MapPin,
   Phone,
+  Plus,
   User,
   UserCircle2,
   Users,
@@ -20,15 +23,45 @@ import {
   TextureCard,
   TextureCardContent,
 } from '@/components/ui/texture-card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import { ApiError } from '@/lib/api/client'
-import { usePromotionRankResolver, useStudent } from '@/lib/hooks'
+import {
+  useCapabilities,
+  useCreateStudentTrainingNote,
+  usePromotionRankResolver,
+  useStudent,
+  useStudentTrainingNotes,
+} from '@/lib/hooks'
 import { BeltBadge, StatusBadge } from '@/components/kuro'
 import { PersonAvatar } from '@/components/common/person-avatar'
 import { ErrorState } from '@/components/shared'
 import type {
   PromotionRankCatalogEntry,
   StudentDetail as StudentDetailType,
+  TrainingNote,
+  TrainingNoteActor,
+  TrainingNoteType,
+  TrainingNoteVisibility,
 } from '@/lib/api/types'
+import { notifyError, notifySuccess } from '@/lib/utils/toast'
 import { cn } from '@/lib/utils'
 import { StudentMembershipPanel } from './student-membership-panel'
 import { StudentRankEditor } from './student-rank-editor'
@@ -95,7 +128,7 @@ export function StudentDetail({ orgId, studentId }: StudentDetailProps) {
             student={student}
             beltEntry={resolveBelt(student.currentBelt)}
           />
-          <TechnicalNotesCard notes={student.technicalNotes} />
+          <TechnicalNotesCard orgId={orgId} studentId={student.id} />
           <CertificatesCard
             count={student.promotionCertificates?.length ?? 0}
           />
@@ -344,21 +377,324 @@ function BeltJourneyCard({
   )
 }
 
-function TechnicalNotesCard({ notes }: { notes: string | null }) {
+function TechnicalNotesCard({
+  orgId,
+  studentId,
+}: {
+  orgId: string
+  studentId: string
+}) {
   const t = useTranslations('students')
-  const tEmpty = useTranslations('empty-states')
+  const tn = useTranslations('students.trainingNotes')
+  const capabilitiesQuery = useCapabilities(orgId)
+  const trainingNoteCaps = capabilitiesQuery.data?.capabilities?.trainingNotes
+  const hasCapabilities = Boolean(capabilitiesQuery.data)
+  const canRead = trainingNoteCaps?.canReadTrainingNote ?? false
+  const canCreate = trainingNoteCaps?.canCreateTrainingNote ?? false
+  const notesQuery = useStudentTrainingNotes(
+    orgId,
+    studentId,
+    hasCapabilities && canRead,
+  )
+
+  if (hasCapabilities && !canRead) {
+    return null
+  }
+
   return (
-    <SectionCard title={t('detail.technicalNotes')} icon={ClipboardCheck}>
-      {notes ? (
-        <p className="text-sm text-foreground whitespace-pre-line leading-relaxed">
-          {notes}
-        </p>
+    <SectionCard
+      title={t('detail.technicalNotes')}
+      icon={ClipboardCheck}
+      action={
+        canCreate ? (
+          <CreateTrainingNoteDialog orgId={orgId} studentId={studentId} />
+        ) : null
+      }
+    >
+      {capabilitiesQuery.isLoading || notesQuery.isLoading ? (
+        <div className="space-y-2">
+          <div className="h-16 rounded-lg bg-muted/50 animate-pulse" />
+          <div className="h-16 rounded-lg bg-muted/30 animate-pulse" />
+        </div>
+      ) : notesQuery.error ? (
+        <div className="rounded-lg border border-dashed border-border bg-muted/20 p-3">
+          <p className="text-sm text-muted-foreground">
+            {tn('loadError')}
+          </p>
+          <Button
+            type="button"
+            variant="link"
+            size="sm"
+            className="mt-1 h-auto px-0"
+            onClick={() => notesQuery.refetch()}
+          >
+            {tn('retry')}
+          </Button>
+        </div>
+      ) : notesQuery.data?.items.length ? (
+        <TrainingNotesList notes={notesQuery.data.items} />
       ) : (
-        <p className="text-sm text-muted-foreground italic">
-          {tEmpty('studentDetail.noNotes')}
-        </p>
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground italic">
+            {tn('empty')}
+          </p>
+          {canCreate ? (
+            <CreateTrainingNoteDialog
+              orgId={orgId}
+              studentId={studentId}
+              variant="empty"
+            />
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              {tn('noCreatePermission')}
+            </p>
+          )}
+        </div>
       )}
     </SectionCard>
+  )
+}
+
+function TrainingNotesList({ notes }: { notes: TrainingNote[] }) {
+  const tn = useTranslations('students.trainingNotes')
+  const format = useFormatter()
+
+  return (
+    <ul className="space-y-3">
+      {notes.map((note) => (
+        <li
+          key={note.id}
+          className="rounded-lg border border-border bg-background/50 p-3"
+        >
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0 space-y-1">
+              <p className="line-clamp-1 text-sm font-medium text-foreground">
+                {noteTitle(note)}
+              </p>
+              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                <span>{authorLabel(note.author, tn('unknownAuthor'))}</span>
+                <span aria-hidden>·</span>
+                <span>{formatDateTime(format, note.createdAt) ?? '—'}</span>
+                {note.sourceLabel && (
+                  <>
+                    <span aria-hidden>·</span>
+                    <span>{note.sourceLabel}</span>
+                  </>
+                )}
+              </div>
+            </div>
+            <Badge variant="outline" className="shrink-0">
+              {visibilityLabel(tn, note.visibility)}
+            </Badge>
+          </div>
+          <p className="mt-2 line-clamp-2 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
+            {note.bodyPreview ?? note.body}
+          </p>
+          {note.classSessionId && (
+            <AssociatedClassSummary note={note} format={format} />
+          )}
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+function AssociatedClassSummary({
+  note,
+  format,
+}: {
+  note: TrainingNote
+  format: ReturnType<typeof useFormatter>
+}) {
+  const tn = useTranslations('students.trainingNotes')
+  const className =
+    note.classSession?.name ??
+    note.classSession?.title ??
+    null
+  const classDate =
+    note.classSession?.date ??
+    note.classSession?.scheduledDate ??
+    note.classSession?.startAt ??
+    null
+  const formattedClassDate = classDate
+    ? formatDate(format, classDate)
+    : null
+
+  return (
+    <div className="mt-3 rounded-md border border-border/70 bg-muted/20 px-3 py-2">
+      <div className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+        <Calendar className="h-3 w-3" />
+        {tn('associatedClass')}
+      </div>
+      <div className="mt-1 text-sm text-foreground">
+        {className ? (
+          <span className="font-medium">{className}</span>
+        ) : (
+          <span>{tn('linkedToClass')}</span>
+        )}
+        {formattedClassDate && (
+          <span className="text-muted-foreground"> · {formattedClassDate}</span>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function CreateTrainingNoteDialog({
+  orgId,
+  studentId,
+  variant = 'default',
+}: {
+  orgId: string
+  studentId: string
+  variant?: 'default' | 'empty'
+}) {
+  const tn = useTranslations('students.trainingNotes')
+  const [open, setOpen] = useState(false)
+  const [body, setBody] = useState('')
+  const [visibility, setVisibility] =
+    useState<TrainingNoteVisibility>('STAFF_PRIVATE')
+  const [noteType, setNoteType] = useState<TrainingNoteType>('TRAINING_FOCUS')
+  const mutation = useCreateStudentTrainingNote(orgId)
+  const trimmedBody = body.trim()
+
+  const reset = () => {
+    setBody('')
+    setVisibility('STAFF_PRIVATE')
+    setNoteType('TRAINING_FOCUS')
+  }
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!trimmedBody) return
+
+    mutation.mutate(
+      { studentId, body: trimmedBody, visibility, noteType },
+      {
+        onSuccess: () => {
+          notifySuccess(tn('createSuccess'))
+          setOpen(false)
+          reset()
+        },
+        onError: (error) => {
+          notifyError(tn('createError'), error)
+        },
+      },
+    )
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen)
+        if (!nextOpen && !mutation.isPending) reset()
+      }}
+    >
+      <Button
+        type="button"
+        variant={variant === 'empty' ? 'outline' : 'secondary'}
+        size="sm"
+        onClick={() => setOpen(true)}
+      >
+        <Plus className="mr-1.5 h-3.5 w-3.5" />
+        {variant === 'empty' ? tn('create') : tn('new')}
+      </Button>
+
+      <DialogContent className="sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle>{tn('new')}</DialogTitle>
+          <DialogDescription>{tn('dialogDescription')}</DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="training-note-type">{tn('type')}</Label>
+            <Select
+              value={noteType}
+              onValueChange={(value) => setNoteType(value as TrainingNoteType)}
+              disabled={mutation.isPending}
+            >
+              <SelectTrigger id="training-note-type">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="TRAINING_FOCUS">
+                  {tn('typeTrainingFocus')}
+                </SelectItem>
+                <SelectItem value="INSTRUCTOR_FEEDBACK">
+                  {tn('typeInstructorFeedback')}
+                </SelectItem>
+                <SelectItem value="SESSION_NOTE">
+                  {tn('typeSessionNote')}
+                </SelectItem>
+                <SelectItem value="WEEKLY_PLAN">
+                  {tn('typeWeeklyPlan')}
+                </SelectItem>
+                <SelectItem value="MONTHLY_PLAN">
+                  {tn('typeMonthlyPlan')}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="training-note-body">{tn('content')}</Label>
+            <Textarea
+              id="training-note-body"
+              value={body}
+              onChange={(event) => setBody(event.target.value)}
+              minLength={1}
+              rows={6}
+              className="min-h-32 resize-y"
+              placeholder={tn('contentPlaceholder')}
+              disabled={mutation.isPending}
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="training-note-visibility">
+              {tn('visibility')}
+            </Label>
+            <Select
+              value={visibility}
+              onValueChange={(value) =>
+                setVisibility(value as TrainingNoteVisibility)
+              }
+              disabled={mutation.isPending}
+            >
+              <SelectTrigger id="training-note-visibility">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="STAFF_PRIVATE">
+                  {tn('visibilityStaff')}
+                </SelectItem>
+                <SelectItem value="SHARED_WITH_COACHES">
+                  {tn('visibilityCoaches')}
+                </SelectItem>
+                <SelectItem value="VISIBLE_TO_STUDENT">
+                  {tn('visibilityStudent')}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="submit"
+              disabled={mutation.isPending || !trimmedBody}
+            >
+              {mutation.isPending && (
+                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              )}
+              {tn('save')}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -541,20 +877,25 @@ function BranchAssignmentCard({
 function SectionCard({
   title,
   icon: Icon,
+  action,
   children,
 }: {
   title: string
   icon: React.ComponentType<{ className?: string }>
+  action?: React.ReactNode
   children: React.ReactNode
 }) {
   return (
     <TextureCard>
       <TextureCardContent className="p-5 space-y-4">
-        <div className="flex items-center gap-2.5">
-          <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary">
-            <Icon className="h-4 w-4" />
-          </span>
-          <p className="text-sm font-semibold text-foreground">{title}</p>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+              <Icon className="h-4 w-4" />
+            </span>
+            <p className="text-sm font-semibold text-foreground">{title}</p>
+          </div>
+          {action}
         </div>
         {children}
       </TextureCardContent>
@@ -651,6 +992,59 @@ function formatDate(
   } catch {
     return null
   }
+}
+
+function formatDateTime(
+  format: ReturnType<typeof useFormatter>,
+  iso?: string | null,
+) {
+  if (!iso) return null
+  try {
+    return format.dateTime(new Date(iso), {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  } catch {
+    return null
+  }
+}
+
+function noteTitle(note: TrainingNote) {
+  if (note.title) return note.title
+
+  const firstLine = note.body
+    .split('\n')
+    .map((line) => line.trim())
+    .find(Boolean)
+
+  return truncate(firstLine ?? note.body, 72)
+}
+
+function authorLabel(author: TrainingNoteActor | null | undefined, fallback: string) {
+  if (!author) return fallback
+  if (author.name) return author.name
+  if (author.displayName) return author.displayName
+  const fullName = [author.firstName, author.lastName].filter(Boolean).join(' ')
+  return fullName || author.email || author.membershipId || author.id || fallback
+}
+
+function visibilityLabel(t: Translator, visibility: TrainingNoteVisibility) {
+  if (visibility === 'VISIBLE_TO_STUDENT') {
+    return t('visibilityStudent')
+  }
+  if (visibility === 'SHARED_WITH_COACHES') {
+    return t('visibilityCoaches')
+  }
+  return t('visibilityStaff')
+}
+
+function truncate(value: string, maxLength: number) {
+  const normalized = value.trim()
+  if (normalized.length <= maxLength) return normalized
+  return `${normalized.slice(0, maxLength - 1).trimEnd()}…`
 }
 
 function primaryBranchName(student: StudentDetailType): string | null {
